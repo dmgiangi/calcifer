@@ -3,13 +3,13 @@
     "pin": 32,
     "mode": "DS18B20",
     "name": "room-sensor",
-    "pollingInterval": 20000
+    "pollingInterval": 10000
   },
   {
     "pin": 33,
     "mode": "DS18B20",
     "name": "boiler-sensor",
-    "pollingInterval": 20000
+    "pollingInterval": 10000
   },
   {
     "pin": 23,

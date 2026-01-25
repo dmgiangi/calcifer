@@ -36,6 +36,7 @@ enum PinModeType
     YL_69_SENSOR,
     DS18B20,
     THERMOCOUPLE, // Represents a complete SPI thermocouple interface (CS, SCK, SO)
+    FAN,          // AC dimmer fan control (relay + TRIAC dimmer + zero-cross detection)
     INVALID
 };
 
@@ -47,6 +48,10 @@ struct PinConfig
     int pin;                // Primary GPIO (e.g., Control, ADC, or CS for SPI)
     int pinClock;           // Optional: SPI Clock (SCK)
     int pinData;            // Optional: SPI MISO (SO)
+    int pinDimmer;          // Optional: AC Dimmer TRIAC control GPIO (FAN mode)
+    int pinZeroCross;       // Optional: Zero-crossing detection GPIO (FAN mode)
+    int minPwm;             // Optional: Minimum PWM threshold for hardware (FAN mode, 0-100)
+    String curveType;       // Optional: Dimming curve type (FAN mode: "LINEAR", "RMS", "LOGARITHMIC")
     PinModeType mode;       // Operation mode
     String name;            // Human-readable name
     int defaultState;       // Initial state

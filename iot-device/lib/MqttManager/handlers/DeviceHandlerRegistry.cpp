@@ -12,6 +12,7 @@
 #include "Yl69Handler.h"
 #include "Ds18b20Handler.h"
 #include "ThermocoupleHandler.h"
+#include "FanHandler.h"
 #include <Logger.h>
 
 static const char* TAG = "Registry";
@@ -63,6 +64,7 @@ void DeviceHandlerRegistry::registerDefaultHandlers() {
     registerHandler(std::make_unique<Yl69Handler>());
     registerHandler(std::make_unique<Ds18b20Handler>());
     registerHandler(std::make_unique<ThermocoupleHandler>());
+    registerHandler(std::make_unique<FanHandler>());
 
     LOG_INFO(TAG, "Registered %d default handlers", handlers.size());
 }
