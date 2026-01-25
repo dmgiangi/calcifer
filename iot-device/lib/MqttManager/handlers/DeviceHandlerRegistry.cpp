@@ -12,6 +12,9 @@
 #include "Yl69Handler.h"
 #include "Ds18b20Handler.h"
 #include "ThermocoupleHandler.h"
+#include <Logger.h>
+
+static const char* TAG = "Registry";
 
 // Static member definitions
 std::map<PinModeType, std::unique_ptr<IDeviceHandler>> DeviceHandlerRegistry::handlers;
@@ -21,7 +24,7 @@ void DeviceHandlerRegistry::registerHandler(std::unique_ptr<IDeviceHandler> hand
     if (handler) {
         PinModeType mode = handler->getHandledMode();
         handlers[mode] = std::move(handler);
-        Serial.printf("[Registry] Registered handler for mode %d\n", static_cast<int>(mode));
+        LOG_DEBUG(TAG, "Registered handler for mode %d", static_cast<int>(mode));
     }
 }
 
@@ -35,8 +38,8 @@ bool DeviceHandlerRegistry::initDevice(const PinConfig& cfg,
         return true;
     }
     
-    Serial.printf("[Registry] No handler registered for mode %d (GPIO%d: %s)\n",
-                  static_cast<int>(cfg.mode), cfg.pin, cfg.name.c_str());
+    LOG_WARN(TAG, "No handler registered for mode %d (GPIO%d: %s)",
+             static_cast<int>(cfg.mode), cfg.pin, cfg.name.c_str());
     return false;
 }
 
@@ -61,7 +64,7 @@ void DeviceHandlerRegistry::registerDefaultHandlers() {
     registerHandler(std::make_unique<Ds18b20Handler>());
     registerHandler(std::make_unique<ThermocoupleHandler>());
 
-    Serial.printf("[Registry] Registered %d default handlers\n", handlers.size());
+    LOG_INFO(TAG, "Registered %d default handlers", handlers.size());
 }
 
 void DeviceHandlerRegistry::clear() {

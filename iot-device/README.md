@@ -201,6 +201,52 @@ Actuators publish their current state to `/state` topics under the following con
 
 For detailed ESP32 pin capabilities and validation rules, see [PinConfig Documentation](lib/PinConfig/README.md).
 
+## 🔧 Build Configurations & Logging
+
+This project uses a compile-time logging system that can be configured for different build environments.
+
+### Log Levels
+
+| Level | Value | Description |
+|:------|:------|:------------|
+| `LOG_LEVEL_NONE` | 0 | No logging (maximum performance) |
+| `LOG_LEVEL_ERROR` | 1 | Critical errors only |
+| `LOG_LEVEL_WARN` | 2 | Errors + warnings |
+| `LOG_LEVEL_INFO` | 3 | Errors + warnings + info messages |
+| `LOG_LEVEL_DEBUG` | 4 | All messages (default for development) |
+
+### Build Environments
+
+| Environment | Log Level | Use Case |
+|:------------|:----------|:---------|
+| `az-delivery-devkit-v4` | DEBUG (4) | Development and debugging |
+| `production` | ERROR (1) | Production deployment |
+
+### Building
+
+```bash
+# Development build (full logging)
+pio run -e az-delivery-devkit-v4
+
+# Production build (minimal logging, optimized)
+pio run -e production
+
+# Upload development build
+pio run -e az-delivery-devkit-v4 --target upload
+
+# Upload production build
+pio run -e production --target upload
+```
+
+### Performance Impact
+
+Serial logging can significantly impact performance:
+- **Blocking I/O**: At 115200 baud, 100 characters take ~8.7ms to transmit
+- **CPU Overhead**: String formatting consumes processing cycles
+- **Timing Jitter**: Can affect time-sensitive operations
+
+In production builds, all logging calls compile to `((void)0)` (no-op), resulting in **zero runtime overhead**.
+
 ## 🧪 Testing & Mock Server
 
 The `mock-server` folder contains a complete environment to test the MQTT interaction without needing external infrastructure.

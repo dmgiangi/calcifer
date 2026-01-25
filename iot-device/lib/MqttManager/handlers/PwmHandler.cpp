@@ -4,6 +4,9 @@
 
 #include "PwmHandler.h"
 #include <map>
+#include <Logger.h>
+
+static const char* TAG = "PWM";
 
 // Static map to store current state per pin (for state publishing)
 std::map<int, String> PwmHandler::currentState;
@@ -22,7 +25,7 @@ void PwmHandler::init(const PinConfig& cfg,
                        std::vector<MqttConsumer>& consumers,
                        const String& clientId) {
     if (!nextPwmChannel || *nextPwmChannel >= 16) {
-        Serial.printf("[Init] No PWM channels available, GPIO%d skipped\n", cfg.pin);
+        LOG_WARN(TAG, "No PWM channels available, GPIO%d skipped", cfg.pin);
         return;
     }
 
@@ -52,7 +55,7 @@ void PwmHandler::init(const PinConfig& cfg,
         ledcWrite(channel, duty);
         // Update static state map
         PwmHandler::setState(pin, String(duty));
-        Serial.printf("[Consumer] PWM ch %d duty <- %d\n", channel, duty);
+        LOG_DEBUG(TAG, "PWM ch %d duty <- %d", channel, duty);
     };
 
     consumers.push_back(std::move(c));
@@ -65,7 +68,7 @@ void PwmHandler::init(const PinConfig& cfg,
             });
     }
 
-    Serial.printf("[Init] GPIO%d (%s) as PWM -> cmd: %s, state: %s, channel=%d, default=%d\n",
-                  cfg.pin, cfg.name.c_str(), cmdTopic.c_str(), stateTopic.c_str(), channel, cfg.defaultState);
+    LOG_INFO(TAG, "GPIO%d (%s) -> cmd: %s, state: %s, channel=%d, default=%d",
+             cfg.pin, cfg.name.c_str(), cmdTopic.c_str(), stateTopic.c_str(), channel, cfg.defaultState);
 }
 

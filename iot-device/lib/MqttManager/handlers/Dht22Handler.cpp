@@ -4,6 +4,9 @@
 
 #include "Dht22Handler.h"
 #include <DHT.h>
+#include <Logger.h>
+
+static const char* TAG = "DHT22";
 
 // Static member definition
 std::map<int, std::unique_ptr<DHT>> Dht22Handler::sensors;
@@ -49,7 +52,7 @@ void Dht22Handler::init(const PinConfig& cfg,
             return String("error");
         });
 
-    Serial.printf("[Init] GPIO%d (%s) as DHT22 -> topics %s, %s\n",
-                  cfg.pin, cfg.name.c_str(), topicTemp.c_str(), topicHum.c_str());
+    LOG_INFO(TAG, "GPIO%d (%s) -> topics %s, %s",
+             cfg.pin, cfg.name.c_str(), topicTemp.c_str(), topicHum.c_str());
 }
 

@@ -3,6 +3,9 @@
 //
 
 #include "AnalogInputHandler.h"
+#include <Logger.h>
+
+static const char* TAG = "AnalogInput";
 
 void AnalogInputHandler::init(const PinConfig& cfg,
                                std::vector<MqttProducer>& producers,
@@ -16,7 +19,7 @@ void AnalogInputHandler::init(const PinConfig& cfg,
     producers.emplace_back(cfg.pin, topic, cfg.pollingInterval, 0,
         [](int pin) { return String(analogRead(pin)); });
     
-    Serial.printf("[Init] GPIO%d (%s) as INPUT_ANALOG -> topic %s\n",
-                  cfg.pin, cfg.name.c_str(), topic.c_str());
+    LOG_INFO(TAG, "GPIO%d (%s) -> topic %s",
+             cfg.pin, cfg.name.c_str(), topic.c_str());
 }
 

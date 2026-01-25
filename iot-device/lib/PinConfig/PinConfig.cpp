@@ -6,6 +6,9 @@
 #include "PinConfig.h"
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
+#include <Logger.h>
+
+static const char* TAG = "PinConfig";
 
 // ----------------------------
 // Constants
@@ -153,20 +156,20 @@ std::vector<PinConfig> loadConfiguration(const char *filename)
 
     // --- Open file ---
     if (!SPIFFS.exists(filename)) {
-         Serial.printf("[PinConfig] Config file %s not found!\n", filename);
+         LOG_ERROR(TAG, "Config file %s not found!", filename);
          return {};
     }
 
     File file = SPIFFS.open(filename, "r");
     if (!file)
     {
-        Serial.printf("[PinConfig] Failed to open file %s\n", filename);
+        LOG_ERROR(TAG, "Failed to open file %s", filename);
         return {};
     }
 
     if (file.size() == 0)
     {
-        Serial.printf("[PinConfig] Config file %s is empty!\n", filename);
+        LOG_ERROR(TAG, "Config file %s is empty!", filename);
         file.close();
         return {};
     }
@@ -181,14 +184,14 @@ std::vector<PinConfig> loadConfiguration(const char *filename)
 
     if (err)
     {
-        Serial.printf("[PinConfig] JSON parse error in %s: %s\n", filename, err.c_str());
+        LOG_ERROR(TAG, "JSON parse error in %s: %s", filename, err.c_str());
         return {};
     }
 
     // Expecting the document to be a JSON array at the root
-    if (!doc.is<JsonArray>()) 
+    if (!doc.is<JsonArray>())
     {
-        Serial.printf("[PinConfig] Expected JSON array at root in %s\n", filename);
+        LOG_ERROR(TAG, "Expected JSON array at root in %s", filename);
         return {};
     }
 
@@ -209,14 +212,14 @@ std::vector<PinConfig> loadConfiguration(const char *filename)
 
         if (pin == -1 || modeStr.isEmpty())
         {
-            Serial.println("[PinConfig] Invalid pin entry, skipping...");
+            LOG_WARN(TAG, "Invalid pin entry, skipping...");
             continue;
         }
 
         PinModeType mode = parseMode(modeStr);
         if (mode == INVALID)
         {
-            Serial.printf("[PinConfig] Invalid mode: %s\n", modeStr.c_str());
+            LOG_WARN(TAG, "Invalid mode: %s", modeStr.c_str());
             continue;
         }
 
@@ -232,19 +235,19 @@ std::vector<PinConfig> loadConfiguration(const char *filename)
 
         if (!isValidConfig(cfg))
         {
-            Serial.printf("[PinConfig] Invalid hardware config for %s (GPIO%d)\n",
-                          nameStr.c_str(), pin);
+            LOG_WARN(TAG, "Invalid hardware config for %s (GPIO%d)",
+                     nameStr.c_str(), pin);
             continue;
         }
 
         configs.push_back(cfg);
 
         if (mode == THERMOCOUPLE) {
-            Serial.printf("[PinConfig] Loaded: %s (CS:%d, SCK:%d, SO:%d)\n", 
-                          modeStr.c_str(), cfg.pin, cfg.pinClock, cfg.pinData);
+            LOG_INFO(TAG, "Loaded: %s (CS:%d, SCK:%d, SO:%d)",
+                     modeStr.c_str(), cfg.pin, cfg.pinClock, cfg.pinData);
         } else {
-            Serial.printf("[PinConfig] Loaded: GPIO%d as %s (%s)\n",
-                          cfg.pin, modeStr.c_str(), cfg.name.c_str());
+            LOG_INFO(TAG, "Loaded: GPIO%d as %s (%s)",
+                     cfg.pin, modeStr.c_str(), cfg.name.c_str());
         }
     }
 

@@ -4,6 +4,9 @@
 
 #include "DigitalOutputHandler.h"
 #include <map>
+#include <Logger.h>
+
+static const char* TAG = "DigitalOutput";
 
 // Static map to store current state per pin (for state publishing)
 std::map<int, String> DigitalOutputHandler::currentState;
@@ -50,8 +53,8 @@ void DigitalOutputHandler::init(const PinConfig& cfg,
         digitalWrite(p, physicalValue);
         // Update static state map
         DigitalOutputHandler::setState(pin, String(logicalValue));
-        Serial.printf("[Consumer] GPIO%d set to %d (Physical: %d) via MQTT\n",
-                      p, logicalValue, physicalValue);
+        LOG_DEBUG(TAG, "GPIO%d set to %d (Physical: %d) via MQTT",
+                  p, logicalValue, physicalValue);
     };
 
     consumers.push_back(std::move(c));
@@ -64,7 +67,7 @@ void DigitalOutputHandler::init(const PinConfig& cfg,
             });
     }
 
-    Serial.printf("[Init] GPIO%d (%s) as OUTPUT_DIGITAL -> cmd: %s, state: %s, default=%d (Inverted: %s)\n",
-                  cfg.pin, cfg.name.c_str(), cmdTopic.c_str(), stateTopic.c_str(), cfg.defaultState, inverted ? "Yes" : "No");
+    LOG_INFO(TAG, "GPIO%d (%s) -> cmd: %s, state: %s, default=%d (Inverted: %s)",
+             cfg.pin, cfg.name.c_str(), cmdTopic.c_str(), stateTopic.c_str(), cfg.defaultState, inverted ? "Yes" : "No");
 }
 

@@ -3,6 +3,9 @@
 //
 
 #include "ThermocoupleHandler.h"
+#include <Logger.h>
+
+static const char* TAG = "Thermocouple";
 
 // Static member definition
 std::map<int, std::unique_ptr<MAX6675>> ThermocoupleHandler::sensors;
@@ -37,7 +40,7 @@ void ThermocoupleHandler::init(const PinConfig& cfg,
             return String("error");
         });
 
-    Serial.printf("[Init] GPIO%d (%s) as THERMOCOUPLE (CS:%d, SCK:%d, SO:%d) -> topic %s\n",
-                  cfg.pin, cfg.name.c_str(), cfg.pin, cfg.pinClock, cfg.pinData, topic.c_str());
+    LOG_INFO(TAG, "GPIO%d (%s) (CS:%d, SCK:%d, SO:%d) -> topic %s",
+             cfg.pin, cfg.name.c_str(), cfg.pin, cfg.pinClock, cfg.pinData, topic.c_str());
 }
 

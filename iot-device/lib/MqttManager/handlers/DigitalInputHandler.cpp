@@ -3,6 +3,9 @@
 //
 
 #include "DigitalInputHandler.h"
+#include <Logger.h>
+
+static const char* TAG = "DigitalInput";
 
 void DigitalInputHandler::init(const PinConfig& cfg,
                                 std::vector<MqttProducer>& producers,
@@ -20,7 +23,7 @@ void DigitalInputHandler::init(const PinConfig& cfg,
             return String(val);
         });
     
-    Serial.printf("[Init] GPIO%d (%s) as INPUT_DIGITAL -> topic %s (Inverted: %s)\n",
-                  cfg.pin, cfg.name.c_str(), topic.c_str(), inverted ? "Yes" : "No");
+    LOG_INFO(TAG, "GPIO%d (%s) -> topic %s (Inverted: %s)",
+             cfg.pin, cfg.name.c_str(), topic.c_str(), inverted ? "Yes" : "No");
 }
 

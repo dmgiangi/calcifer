@@ -7,6 +7,9 @@
 #include <WiFi.h>
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
+#include <Logger.h>
+
+static const char* TAG = "WiFi";
 
 // ----------------------------
 // Data structure for WiFi config
@@ -29,18 +32,18 @@ static WiFiConfig loadWiFiConfig(const char *filename) {
     WiFiConfig config = {"", "", true, "", "", "", "", 15000};
 
     if (!SPIFFS.exists(filename)) {
-        Serial.printf("[WiFiManager] Config file %s not found!\n", filename);
+        LOG_ERROR(TAG, "Config file %s not found!", filename);
         return config;
     }
 
     File file = SPIFFS.open(filename, "r");
     if (!file) {
-        Serial.printf("[WiFiManager] Failed to open file %s\n", filename);
+        LOG_ERROR(TAG, "Failed to open file %s", filename);
         return config;
     }
 
     if (file.size() == 0) {
-        Serial.printf("[WiFiManager] Config file %s is empty!\n", filename);
+        LOG_ERROR(TAG, "Config file %s is empty!", filename);
         file.close();
         return config;
     }
@@ -53,7 +56,7 @@ static WiFiConfig loadWiFiConfig(const char *filename) {
     DeserializationError err = deserializeJson(doc, fileContent);
 
     if (err) {
-        Serial.printf("[WiFiManager] JSON parse error in %s: %s\n", filename, err.c_str());
+        LOG_ERROR(TAG, "JSON parse error in %s: %s", filename, err.c_str());
         return config;
     }
 
@@ -76,7 +79,7 @@ bool connectToWiFi(const char *filename) {
     WiFiConfig config = loadWiFiConfig(filename);
 
     if (config.ssid.isEmpty()) {
-        Serial.println("[WiFiManager] SSID missing!");
+        LOG_ERROR(TAG, "SSID missing!");
         return false;
     }
 
@@ -84,7 +87,7 @@ bool connectToWiFi(const char *filename) {
 
     // DHCP vs Static IP configuration
     if (config.useDhcp) {
-        Serial.println("[WiFiManager] Using DHCP");
+        LOG_INFO(TAG, "Using DHCP");
     } else {
         if (!config.ip.isEmpty() && !config.gateway.isEmpty() && !config.subnet.isEmpty()) {
             IPAddress ip, gateway, subnet, dns;
@@ -93,35 +96,32 @@ bool connectToWiFi(const char *filename) {
                  if (!config.dns.isEmpty()) dns.fromString(config.dns);
 
                  if (!WiFi.config(ip, gateway, subnet, dns)) {
-                     Serial.println("[WiFiManager] Failed to configure static IP");
+                     LOG_ERROR(TAG, "Failed to configure static IP");
                  } else {
-                     Serial.printf("[WiFiManager] Static IP: %s\n", ip.toString().c_str());
+                     LOG_INFO(TAG, "Static IP: %s", ip.toString().c_str());
                  }
             } else {
-                Serial.println("[WiFiManager] Invalid IP address format in config");
+                LOG_ERROR(TAG, "Invalid IP address format in config");
             }
         } else {
-            Serial.println("[WiFiManager] Missing static IP fields, fallback to DHCP");
+            LOG_WARN(TAG, "Missing static IP fields, fallback to DHCP");
         }
     }
 
     // Start WiFi connection
     WiFi.begin(config.ssid.c_str(), config.password.c_str());
 
-    Serial.printf("[WiFiManager] Connecting to %s", config.ssid.c_str());
+    LOG_INFO(TAG, "Connecting to %s...", config.ssid.c_str());
     unsigned long start = millis();
     while (WiFi.status() != WL_CONNECTED && (millis() - start) < (unsigned long)config.connectTimeout) {
         delay(500);
-        Serial.print(".");
     }
-    Serial.println();
 
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.printf("[WiFiManager] Connected! IP: %s\n",
-                      WiFi.localIP().toString().c_str());
+        LOG_INFO(TAG, "Connected! IP: %s", WiFi.localIP().toString().c_str());
         return true;
     }
 
-    Serial.println("[WiFiManager] Connection failed.");
+    LOG_ERROR(TAG, "Connection failed.");
     return false;
 }

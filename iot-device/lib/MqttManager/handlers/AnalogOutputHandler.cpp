@@ -4,6 +4,9 @@
 
 #include "AnalogOutputHandler.h"
 #include <map>
+#include <Logger.h>
+
+static const char* TAG = "AnalogOutput";
 
 // Static map to store current state per pin (for state publishing)
 std::map<int, String> AnalogOutputHandler::currentState;
@@ -43,7 +46,7 @@ void AnalogOutputHandler::init(const PinConfig& cfg,
         dacWrite(p, value);
         // Update static state map
         AnalogOutputHandler::setState(pin, String(value));
-        Serial.printf("[Consumer] GPIO%d DAC <- %d\n", p, value);
+        LOG_DEBUG(TAG, "GPIO%d DAC <- %d", p, value);
     };
 
     consumers.push_back(std::move(c));
@@ -56,7 +59,7 @@ void AnalogOutputHandler::init(const PinConfig& cfg,
             });
     }
 
-    Serial.printf("[Init] GPIO%d (%s) as OUTPUT_ANALOG -> cmd: %s, state: %s\n",
-                  cfg.pin, cfg.name.c_str(), cmdTopic.c_str(), stateTopic.c_str());
+    LOG_INFO(TAG, "GPIO%d (%s) -> cmd: %s, state: %s",
+             cfg.pin, cfg.name.c_str(), cmdTopic.c_str(), stateTopic.c_str());
 }
 

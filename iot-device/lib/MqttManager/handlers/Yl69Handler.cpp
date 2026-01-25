@@ -3,6 +3,9 @@
 //
 
 #include "Yl69Handler.h"
+#include <Logger.h>
+
+static const char* TAG = "YL69";
 
 void Yl69Handler::init(const PinConfig& cfg,
                         std::vector<MqttProducer>& producers,
@@ -21,7 +24,7 @@ void Yl69Handler::init(const PinConfig& cfg,
             return String(percent);
         });
     
-    Serial.printf("[Init] GPIO%d (%s) as YL69 -> topic %s\n",
-                  cfg.pin, cfg.name.c_str(), topic.c_str());
+    LOG_INFO(TAG, "GPIO%d (%s) -> topic %s",
+             cfg.pin, cfg.name.c_str(), topic.c_str());
 }
 

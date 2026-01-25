@@ -3,6 +3,9 @@
 //
 
 #include "Ds18b20Handler.h"
+#include <Logger.h>
+
+static const char* TAG = "DS18B20";
 
 // Static member definitions
 std::map<int, std::unique_ptr<OneWire>> Ds18b20Handler::oneWireInstances;
@@ -28,9 +31,9 @@ void Ds18b20Handler::init(const PinConfig& cfg,
     sensor->begin();
 
     if (sensor->getDeviceCount() == 0) {
-        Serial.printf("[Init] Warning: No DS18B20 found on GPIO%d\n", cfg.pin);
+        LOG_WARN(TAG, "No DS18B20 found on GPIO%d", cfg.pin);
     } else {
-        Serial.printf("[Init] Found %d DS18B20 on GPIO%d\n", sensor->getDeviceCount(), cfg.pin);
+        LOG_INFO(TAG, "Found %d DS18B20 on GPIO%d", sensor->getDeviceCount(), cfg.pin);
     }
 
     // 3. Store unique_ptrs in maps to keep them alive
@@ -53,7 +56,7 @@ void Ds18b20Handler::init(const PinConfig& cfg,
             return String("error");
         });
 
-    Serial.printf("[Init] GPIO%d (%s) as DS18B20 -> topic %s\n",
-                  cfg.pin, cfg.name.c_str(), topic.c_str());
+    LOG_INFO(TAG, "GPIO%d (%s) -> topic %s",
+             cfg.pin, cfg.name.c_str(), topic.c_str());
 }
 

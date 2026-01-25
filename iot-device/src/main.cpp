@@ -10,6 +10,9 @@
 #include <MqttManager.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <Logger.h>
+
+static const char* TAG = "Setup";
 
 WiFiClient wifiClient;               // deve vivere per tutta la durata
 PubSubClient mqttClient(wifiClient); // MQTT client basato su WiFiClient
@@ -24,11 +27,10 @@ void waitForCondition(const char *stepName,
 {
     while (!condition())
     {
-        Serial.printf("[Setup] %s failed. Retrying in %lu ms...\n",
-                      stepName, retryDelay);
+        LOG_WARN(TAG, "%s failed. Retrying in %lu ms...", stepName, retryDelay);
         delay(retryDelay);
     }
-    Serial.printf("[Setup] %s OK\n", stepName);
+    LOG_INFO(TAG, "%s OK", stepName);
 }
 
 // ----------------------------
@@ -39,7 +41,7 @@ bool loadPinConfiguration(const char *filename)
     pinConfigs = loadConfiguration(filename);
     if (pinConfigs.empty())
     {
-        Serial.printf("[Setup] No pins defined in %s!\n", filename);
+        LOG_ERROR(TAG, "No pins defined in %s!", filename);
         return false;
     }
     return true;
@@ -60,8 +62,8 @@ bool registerPinsToMqtt()
 // ----------------------------
 void setup()
 {
-    Serial.begin(115200);
-    Serial.println("\n[Setup] Starting ESP32 IoT Application...");
+    LOG_INIT(115200);
+    LOG_INFO(TAG, "Starting ESP32 IoT Application...");
 
     // --- Mount filesystem ---
     waitForCondition("SPIFFS mount", []()
@@ -87,7 +89,7 @@ void setup()
     waitForCondition("MQTT connection", []()
                      { return MqttManager::connect(mqttClient); });
 
-    Serial.println("[Setup] System initialized successfully!");
+    LOG_INFO(TAG, "System initialized successfully!");
 }
 
 // ----------------------------
