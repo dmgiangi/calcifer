@@ -37,25 +37,18 @@ void DigitalOutputHandler::init(const PinConfig& cfg,
     String cmdTopic = "/" + clientId + "/digital_output/" + cfg.name + "/set";
     String stateTopic = "/" + clientId + "/digital_output/" + cfg.name + "/state";
 
-    MqttConsumer c;
-    c.pin = cfg.pin;
-    c.topic = cmdTopic;
-    c.lastValue = String(cfg.defaultState);
-    c.fallbackValue = String(cfg.defaultState);
-    c.interval = cfg.pollingInterval;
-    c.lastUpdate = millis();
-
     bool inverted = cfg.inverted;
     int pin = cfg.pin;
-    c.onMessage = [inverted, pin](int p, const String &msg) {
-        int logicalValue = (msg == "1" || msg == "HIGH") ? HIGH : LOW;
-        int physicalValue = (inverted) ? !logicalValue : logicalValue;
-        digitalWrite(p, physicalValue);
-        // Update static state map
-        DigitalOutputHandler::setState(pin, String(logicalValue));
-        LOG_DEBUG(TAG, "GPIO%d set to %d (Physical: %d) via MQTT",
-                  p, logicalValue, physicalValue);
-    };
+    auto c = MqttConsumer::createForActuator(cfg, cmdTopic,
+        [inverted, pin](int p, const String &msg) {
+            int logicalValue = (msg == "1" || msg == "HIGH") ? HIGH : LOW;
+            int physicalValue = (inverted) ? !logicalValue : logicalValue;
+            digitalWrite(p, physicalValue);
+            // Update static state map
+            DigitalOutputHandler::setState(pin, String(logicalValue));
+            LOG_DEBUG(TAG, "GPIO%d set to %d (Physical: %d) via MQTT",
+                      p, logicalValue, physicalValue);
+        });
 
     consumers.push_back(std::move(c));
 

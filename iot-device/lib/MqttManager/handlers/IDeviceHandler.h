@@ -22,6 +22,31 @@ struct MqttConsumer {
     String fallbackValue;
     unsigned long lastUpdate = 0;
     unsigned long interval = 0;
+
+    /**
+     * @brief Factory method to create a consumer for actuator devices.
+     * Reduces boilerplate in handler init() methods.
+     *
+     * @param cfg Pin configuration
+     * @param topic MQTT topic to subscribe to
+     * @param handler Callback function for incoming messages
+     * @return Configured MqttConsumer instance
+     */
+    static MqttConsumer createForActuator(
+        const PinConfig& cfg,
+        const String& topic,
+        std::function<void(int, const String&)> handler
+    ) {
+        MqttConsumer c;
+        c.pin = cfg.pin;
+        c.topic = topic;
+        c.lastValue = String(cfg.defaultState);
+        c.fallbackValue = String(cfg.defaultState);
+        c.interval = cfg.pollingInterval;
+        c.lastUpdate = millis();
+        c.onMessage = std::move(handler);
+        return c;
+    }
 };
 
 /**

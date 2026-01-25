@@ -32,22 +32,15 @@ void AnalogOutputHandler::init(const PinConfig& cfg,
     String cmdTopic = "/" + clientId + "/analog_output/" + cfg.name + "/set";
     String stateTopic = "/" + clientId + "/analog_output/" + cfg.name + "/state";
 
-    MqttConsumer c;
-    c.pin = cfg.pin;
-    c.topic = cmdTopic;
-    c.lastValue = String(cfg.defaultState);
-    c.fallbackValue = String(cfg.defaultState);
-    c.interval = cfg.pollingInterval;
-    c.lastUpdate = millis();
-
     int pin = cfg.pin;
-    c.onMessage = [pin](int p, const String &msg) {
-        int value = constrain(msg.toInt(), 0, 255);
-        dacWrite(p, value);
-        // Update static state map
-        AnalogOutputHandler::setState(pin, String(value));
-        LOG_DEBUG(TAG, "GPIO%d DAC <- %d", p, value);
-    };
+    auto c = MqttConsumer::createForActuator(cfg, cmdTopic,
+        [pin](int p, const String &msg) {
+            int value = constrain(msg.toInt(), 0, 255);
+            dacWrite(p, value);
+            // Update static state map
+            AnalogOutputHandler::setState(pin, String(value));
+            LOG_DEBUG(TAG, "GPIO%d DAC <- %d", p, value);
+        });
 
     consumers.push_back(std::move(c));
 

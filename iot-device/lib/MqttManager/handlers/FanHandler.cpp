@@ -8,6 +8,12 @@
 
 static const char* TAG = "FAN";
 
+// MQTT value range constant (0-255, so max-min = 254 for interpolation)
+namespace {
+    constexpr int MQTT_VALUE_MAX = 255;
+    constexpr int MQTT_VALUE_RANGE = MQTT_VALUE_MAX - 1;  // 254 for linear interpolation
+}
+
 // Static member initialization
 bool FanHandler::rbdimmerInitialized = false;
 std::set<int> FanHandler::registeredZeroCrossPins;
@@ -63,8 +69,8 @@ uint8_t FanHandler::mapToDimmerLevel(int mqttValue, int minPwm) {
         return 0;
     }
     // Map MQTT 1-255 to minPwm-100 range
-    // Linear interpolation: output = minPwm + (mqttValue - 1) * (100 - minPwm) / (255 - 1)
-    int mapped = minPwm + ((mqttValue - 1) * (100 - minPwm)) / 254;
+    // Linear interpolation: output = minPwm + (mqttValue - 1) * (100 - minPwm) / MQTT_VALUE_RANGE
+    int mapped = minPwm + ((mqttValue - 1) * (100 - minPwm)) / MQTT_VALUE_RANGE;
     return constrain(mapped, minPwm, 100);
 }
 
@@ -138,39 +144,32 @@ void FanHandler::init(const PinConfig& cfg,
     // 7. Setup MQTT topics
     String cmdTopic = "/" + clientId + "/fan/" + cfg.name + "/set";
     String stateTopic = "/" + clientId + "/fan/" + cfg.name + "/state";
-    
-    // 8. Create consumer for command topic
-    MqttConsumer c;
-    c.pin = cfg.pin;
-    c.topic = cmdTopic;
-    c.lastValue = String(cfg.defaultState);
-    c.fallbackValue = String(cfg.defaultState);
-    c.interval = cfg.pollingInterval;
-    c.lastUpdate = millis();
 
+    // 8. Create consumer for command topic
     // Capture needed values for lambda
     int relayPin = cfg.pin;
     int minPwm = cfg.minPwm;
     bool inverted = cfg.inverted;
 
-    c.onMessage = [relayPin, minPwm, inverted, channel](int p, const String& msg) {
-        int mqttValue = constrain(msg.toInt(), 0, 255);
+    auto c = MqttConsumer::createForActuator(cfg, cmdTopic,
+        [relayPin, minPwm, inverted, channel](int p, const String& msg) {
+            int mqttValue = constrain(msg.toInt(), 0, 255);
 
-        if (mqttValue == 0) {
-            // Turn OFF: Relay OFF, Dimmer 0%
-            rbdimmer_set_level(channel, 0);
-            digitalWrite(relayPin, inverted ? HIGH : LOW);
-            FanHandler::setState(relayPin, "0");
-            LOG_DEBUG(TAG, "FAN GPIO%d OFF", relayPin);
-        } else {
-            // Turn ON: Relay ON, Dimmer mapped level
-            uint8_t level = FanHandler::mapToDimmerLevel(mqttValue, minPwm);
-            digitalWrite(relayPin, inverted ? LOW : HIGH);
-            rbdimmer_set_level(channel, level);
-            FanHandler::setState(relayPin, String(mqttValue));
-            LOG_DEBUG(TAG, "FAN GPIO%d <- %d (dimmer: %d%%)", relayPin, mqttValue, level);
-        }
-    };
+            if (mqttValue == 0) {
+                // Turn OFF: Relay OFF, Dimmer 0%
+                rbdimmer_set_level(channel, 0);
+                digitalWrite(relayPin, inverted ? HIGH : LOW);
+                FanHandler::setState(relayPin, "0");
+                LOG_DEBUG(TAG, "FAN GPIO%d OFF", relayPin);
+            } else {
+                // Turn ON: Relay ON, Dimmer mapped level
+                uint8_t level = FanHandler::mapToDimmerLevel(mqttValue, minPwm);
+                digitalWrite(relayPin, inverted ? LOW : HIGH);
+                rbdimmer_set_level(channel, level);
+                FanHandler::setState(relayPin, String(mqttValue));
+                LOG_DEBUG(TAG, "FAN GPIO%d <- %d (dimmer: %d%%)", relayPin, mqttValue, level);
+            }
+        });
 
     consumers.push_back(std::move(c));
 

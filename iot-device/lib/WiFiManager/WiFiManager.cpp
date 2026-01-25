@@ -11,6 +11,12 @@
 
 static const char* TAG = "WiFi";
 
+// WiFi configuration constants
+namespace {
+    constexpr int DEFAULT_CONNECT_TIMEOUT_MS = 15000;
+    constexpr int WIFI_POLL_INTERVAL_MS = 500;
+}
+
 // ----------------------------
 // Data structure for WiFi config
 // ----------------------------
@@ -29,7 +35,7 @@ struct WiFiConfig {
 // Load WiFi configuration from JSON file
 // ----------------------------
 static WiFiConfig loadWiFiConfig(const char *filename) {
-    WiFiConfig config = {"", "", true, "", "", "", "", 15000};
+    WiFiConfig config = {"", "", true, "", "", "", "", DEFAULT_CONNECT_TIMEOUT_MS};
 
     if (!SPIFFS.exists(filename)) {
         LOG_ERROR(TAG, "Config file %s not found!", filename);
@@ -67,7 +73,7 @@ static WiFiConfig loadWiFiConfig(const char *filename) {
     config.gateway        = doc["gateway"]        | "";
     config.subnet         = doc["subnet"]         | "";
     config.dns            = doc["dns"]            | "";
-    config.connectTimeout = doc["connectTimeout"] | 15000;
+    config.connectTimeout = doc["connectTimeout"] | DEFAULT_CONNECT_TIMEOUT_MS;
 
     return config;
 }
@@ -114,7 +120,7 @@ bool connectToWiFi(const char *filename) {
     LOG_INFO(TAG, "Connecting to %s...", config.ssid.c_str());
     unsigned long start = millis();
     while (WiFi.status() != WL_CONNECTED && (millis() - start) < (unsigned long)config.connectTimeout) {
-        delay(500);
+        delay(WIFI_POLL_INTERVAL_MS);
     }
 
     if (WiFi.status() == WL_CONNECTED) {

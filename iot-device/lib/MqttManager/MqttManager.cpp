@@ -7,6 +7,14 @@
 static const char* TAG = "MQTT";
 
 // ----------------------
+// Constants
+// ----------------------
+namespace {
+    constexpr unsigned long RECONNECT_INTERVAL_MS = 5000;
+    constexpr int SOCKET_TIMEOUT_SEC = 15;
+}
+
+// ----------------------
 // Static/Global Trampoline
 // ----------------------
 static void globalMqttCallback(char *topic, byte *payload, unsigned int length)
@@ -80,7 +88,7 @@ bool MqttManager::connect(PubSubClient &client)
     client.setServer(instance.mqttHost.c_str(), instance.mqttPort);
     client.setCallback(globalMqttCallback);
     client.setKeepAlive(instance.mqttKeepAlive);
-    client.setSocketTimeout(15);
+    client.setSocketTimeout(SOCKET_TIMEOUT_SEC);
 
     return reconnect();
 }
@@ -139,7 +147,7 @@ void MqttManager::loop()
     if (!instance.mqttClient->connected())
     {
         unsigned long now = millis();
-        if (now - instance.lastReconnectAttempt > 5000)
+        if (now - instance.lastReconnectAttempt > RECONNECT_INTERVAL_MS)
         {
             instance.lastReconnectAttempt = now;
             reconnect();
@@ -156,11 +164,8 @@ void MqttManager::loop()
 // ----------------------
 void MqttManager::onMqttMessage(char *topic, byte *payload, unsigned int length)
 {
-    String msg;
-    for (unsigned int i = 0; i < length; i++)
-    {
-        msg += (char)payload[i];
-    }
+    // Direct String construction - avoids multiple heap reallocations
+    String msg((const char*)payload, length);
     String t(topic);
 
     LOG_DEBUG(TAG, "Message received: %s -> %s", t.c_str(), msg.c_str());

@@ -8,6 +8,12 @@
 
 static const char* TAG = "PWM";
 
+// PWM configuration constants
+namespace {
+    constexpr int PWM_FREQUENCY = 5000;   // 5 kHz
+    constexpr int PWM_RESOLUTION = 8;     // 8-bit (0-255)
+}
+
 // Static map to store current state per pin (for state publishing)
 std::map<int, String> PwmHandler::currentState;
 
@@ -30,7 +36,7 @@ void PwmHandler::init(const PinConfig& cfg,
     }
 
     int channel = (*nextPwmChannel)++;
-    ledcSetup(channel, 5000, 8);
+    ledcSetup(channel, PWM_FREQUENCY, PWM_RESOLUTION);
     ledcAttachPin(cfg.pin, channel);
     ledcWrite(channel, cfg.defaultState);
 
@@ -40,23 +46,16 @@ void PwmHandler::init(const PinConfig& cfg,
     String cmdTopic = "/" + clientId + "/pwm/" + cfg.name + "/set";
     String stateTopic = "/" + clientId + "/pwm/" + cfg.name + "/state";
 
-    MqttConsumer c;
-    c.pin = cfg.pin;
-    c.topic = cmdTopic;
-    c.lastValue = String(cfg.defaultState);
-    c.fallbackValue = String(cfg.defaultState);
-    c.interval = cfg.pollingInterval;
-    c.lastUpdate = millis();
-
     // Capture channel and pin by value
     int pin = cfg.pin;
-    c.onMessage = [channel, pin](int p, const String &msg) {
-        int duty = constrain(msg.toInt(), 0, 255);
-        ledcWrite(channel, duty);
-        // Update static state map
-        PwmHandler::setState(pin, String(duty));
-        LOG_DEBUG(TAG, "PWM ch %d duty <- %d", channel, duty);
-    };
+    auto c = MqttConsumer::createForActuator(cfg, cmdTopic,
+        [channel, pin](int p, const String &msg) {
+            int duty = constrain(msg.toInt(), 0, 255);
+            ledcWrite(channel, duty);
+            // Update static state map
+            PwmHandler::setState(pin, String(duty));
+            LOG_DEBUG(TAG, "PWM ch %d duty <- %d", channel, duty);
+        });
 
     consumers.push_back(std::move(c));
 
