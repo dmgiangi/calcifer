@@ -1,0 +1,50 @@
+{
+	"users": [
+		{
+			"name": "admin",
+			"password_hash": "0anNWZPCcHEqrXt7DaGQ3CQVdhiTVlgzorzmtzfX9u1nh2JD",
+			"tags": "administrator"
+		},
+		{
+			"name": "iot_user",
+			"password_hash": "trErhQdKXPvZQaQspU9qFLA03zSvgMtGjHrnuahUgbNoVRPW",
+			"tags": ""
+		}
+	],
+	"vhosts": [
+		{
+			"name": "/"
+		}
+	],
+	"permissions": [
+		{
+			"user": "admin",
+			"vhost": "/",
+			"configure": ".*",
+			"write": ".*",
+			"read": ".*"
+		},
+		{
+			"user": "iot_user",
+			"vhost": "/",
+			"configure": "^mqtt-subscription-.*",
+			"write": ".*",
+			"read": ".*"
+		}
+	],
+	"topic_permissions": [
+		{
+			"user": "iot_user",
+			"vhost": "/",
+			"exchange": "amq.topic",
+			"write": "^\\..*\\..*\\..*\\..*$",
+			"read": ".*"
+		}
+	],
+	"global_parameters": [
+		{
+			"name": "cluster_name",
+			"value": "rabbit@iot-broker"
+		}
+	]
+}

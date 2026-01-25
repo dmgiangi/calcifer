@@ -1,0 +1,29 @@
+services:
+  redis:
+    image: 'redis:latest'
+    ports:
+      - '6379:6379'
+    command:
+      - redis-server
+      # Machine User
+      - "--user"
+      - "machine_user"
+      - "on"
+      - ">machine_user_password"
+      - "~*"
+      - "+@all"
+      # Disable default user
+      - "--user"
+      - "default"
+      - "off"
+  rabbitmq:
+    image: rabbitmq:4.0-management
+    container_name: iot_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+      - "1883:1883"
+    volumes:
+      - ./rabbitmq_enabled_plugins:/etc/rabbitmq/enabled_plugins
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./rabbitmq_definitions.json:/etc/rabbitmq/definitions.json
