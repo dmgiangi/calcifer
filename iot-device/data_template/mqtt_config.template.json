@@ -1,0 +1,9 @@
+{
+  "host": "YOUR_MQTT_BROKER_IP",
+  "port": 1883,
+  "clientId": "YOUR_CLIENT_ID",
+  "username": "YOUR_USERNAME",
+  "password": "YOUR_PASSWORD",
+  "keepAlive": 60,
+  "cleanSession": true
+}

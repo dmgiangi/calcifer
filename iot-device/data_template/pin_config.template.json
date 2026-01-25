@@ -1,0 +1,45 @@
+[
+  {
+    "pin": 32,
+    "mode": "DS18B20",
+    "name": "room-sensor",
+    "pollingInterval": 2000
+  },
+  {
+    "pin": 33,
+    "mode": "DS18B20",
+    "name": "boiler-sensor",
+    "pollingInterval": 2000
+  },
+  {
+    "pin": 23,
+    "sck": 18,
+    "so": 19,
+    "mode": "THERMOCOUPLE",
+    "name": "thermocouple-sensor",
+    "pollingInterval": 1000
+  },
+  {
+    "pin": 26,
+    "mode": "OUTPUT_DIGITAL",
+    "name": "fan-power",
+    "defaultState": 1,
+    "pollingInterval": 30000,
+    "inverted": true
+  },
+  {
+    "pin": 27,
+    "mode": "OUTPUT_DIGITAL",
+    "name": "pump-power",
+    "defaultState": 1,
+    "pollingInterval": 30000,
+    "inverted": true
+  },
+  {
+    "pin": 25,
+    "mode": "PWM",
+    "name": "fan-speed",
+    "defaultState": 0,
+    "pollingInterval": 30000
+  }
+]

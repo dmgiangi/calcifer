@@ -1,0 +1,9 @@
+{
+  "host": "192.168.8.121",
+  "port": 1883,
+  "clientId": "fireplace",
+  "username": "iot_user",
+  "password": "password_iot",
+  "keepAlive": 10,
+  "cleanSession": false
+}

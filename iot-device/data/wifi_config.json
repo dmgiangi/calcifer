@@ -1,0 +1,9 @@
+{
+  "ssid": "WebPocket-8690",
+  "password": "***REMOVED***",
+  "useDhcp": false,
+  "ip": "192.168.8.166",
+  "gateway": "192.168.8.1",
+  "subnet": "255.255.255.0",
+  "dns": "8.8.8.8"
+}
