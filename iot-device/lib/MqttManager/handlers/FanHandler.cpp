@@ -8,10 +8,10 @@
 
 static const char* TAG = "FAN";
 
-// MQTT value range constant (0-255, so max-min = 254 for interpolation)
+// MQTT value range constant (0-100 percentage)
 namespace {
-    constexpr int MQTT_VALUE_MAX = 255;
-    constexpr int MQTT_VALUE_RANGE = MQTT_VALUE_MAX - 1;  // 254 for linear interpolation
+    constexpr int MQTT_VALUE_MAX = 100;
+    constexpr int MQTT_VALUE_RANGE = MQTT_VALUE_MAX - 1;  // 99 for linear interpolation (1-100)
 }
 
 // Static member initialization
@@ -68,10 +68,14 @@ uint8_t FanHandler::mapToDimmerLevel(int mqttValue, int minPwm) {
     if (mqttValue <= 0) {
         return 0;
     }
-    // Map MQTT 1-255 to minPwm-100 range
-    // Linear interpolation: output = minPwm + (mqttValue - 1) * (100 - minPwm) / MQTT_VALUE_RANGE
-    int mapped = minPwm + ((mqttValue - 1) * (100 - minPwm)) / MQTT_VALUE_RANGE;
-    return constrain(mapped, minPwm, 100);
+    if (mqttValue >= MQTT_VALUE_MAX) {
+        return 100;  // Maximum dimmer level
+    }
+    // Map MQTT 1-100 to minPwm-100 range with proper rounding
+    // Linear interpolation: output = minPwm + round((mqttValue - 1) * (100 - minPwm) / MQTT_VALUE_RANGE)
+    int range = 100 - minPwm;
+    int mapped = minPwm + ((mqttValue - 1) * range + MQTT_VALUE_RANGE / 2) / MQTT_VALUE_RANGE;
+    return static_cast<uint8_t>(constrain(mapped, minPwm, 100));
 }
 
 int FanHandler::parseCurveType(const String& curveType) {
@@ -153,7 +157,7 @@ void FanHandler::init(const PinConfig& cfg,
 
     auto c = MqttConsumer::createForActuator(cfg, cmdTopic,
         [relayPin, minPwm, inverted, channel](int p, const String& msg) {
-            int mqttValue = constrain(msg.toInt(), 0, 255);
+            int mqttValue = constrain(msg.toInt(), 0, 100);
 
             if (mqttValue == 0) {
                 // Turn OFF: Relay OFF, Dimmer 0%

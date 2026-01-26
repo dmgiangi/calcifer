@@ -11,11 +11,11 @@
 
 /**
  * @brief Handler for FAN mode (AC dimmer control).
- * 
+ *
  * Coordinates a relay (on/off) with a TRIAC AC dimmer for fan speed control.
  * - Value 0: Relay OFF, Dimmer 0%
- * - Value 1-255: Relay ON, Dimmer mapped from minPwm to 100%
- * 
+ * - Value 1-100: Relay ON, Dimmer mapped from minPwm to 100%
+ *
  * Subscribes to MQTT command topic and publishes state to state topic.
  */
 class FanHandler : public IDeviceHandler {
@@ -30,6 +30,18 @@ public:
     // Static methods for state management (used by producer lambda)
     static String getState(int pin);
     static void setState(int pin, const String& value);
+
+    /**
+     * @brief Maps MQTT value (0-100) to dimmer level (0-100) with minPwm threshold.
+     *
+     * Uses linear interpolation with proper rounding to map the MQTT percentage
+     * input to the effective dimmer range (minPwm to 100%).
+     *
+     * @param mqttValue Value from MQTT (0-100 percentage)
+     * @param minPwm Minimum PWM threshold (0-100)
+     * @return Dimmer level: 0 if mqttValue <= 0, otherwise minPwm to 100
+     */
+    static uint8_t mapToDimmerLevel(int mqttValue, int minPwm);
 
 private:
     // Static flag to track if rbdimmer library has been initialized
@@ -57,15 +69,7 @@ private:
      * @return true if registration succeeded or was already done.
      */
     static bool registerZeroCrossIfNeeded(int pin, uint8_t phase);
-    
-    /**
-     * @brief Maps MQTT value (0-255) to dimmer level (0-100) with minPwm threshold.
-     * @param mqttValue Value from MQTT (0-255)
-     * @param minPwm Minimum PWM threshold (0-100)
-     * @return Dimmer level (0-100)
-     */
-    static uint8_t mapToDimmerLevel(int mqttValue, int minPwm);
-    
+
     /**
      * @brief Parses curve type string to rbdimmer curve enum.
      * @param curveType Curve type string ("LINEAR", "RMS", "LOGARITHMIC")

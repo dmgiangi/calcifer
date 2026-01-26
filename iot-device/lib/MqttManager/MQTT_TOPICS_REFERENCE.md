@@ -14,8 +14,8 @@ Complete reference for all device handlers in the MqttManager library. Each hand
 | `AnalogInputHandler` | Sensor | Producer | `/<clientId>/analog_input/<name>/value` | `0` - `4095` |
 | `AnalogOutputHandler` | Actuator | Consumer + Producer | `/<clientId>/analog_output/<name>/set` (cmd) | `0` - `255` |
 | | | | `/<clientId>/analog_output/<name>/state` (feedback) | `0` - `255` |
-| `FanHandler` | Actuator | Consumer + Producer | `/<clientId>/fan/<name>/set` (cmd) | `0` - `255` |
-| | | | `/<clientId>/fan/<name>/state` (feedback) | `0` - `255` |
+| `FanHandler` | Actuator | Consumer + Producer | `/<clientId>/fan/<name>/set` (cmd) | `0` - `100` (%) |
+| | | | `/<clientId>/fan/<name>/state` (feedback) | `0` - `100` (%) |
 | `Dht22Handler` | Sensor | Producer | `/<clientId>/dht22/<name>/temperature` | Float (°C) |
 | | | | `/<clientId>/dht22/<name>/humidity` | Float (%) |
 | `Yl69Handler` | Sensor | Producer | `/<clientId>/yl69/<name>/value` | `0` - `100` (%) |
@@ -245,7 +245,7 @@ Payload: 128
 | **MQTT Role** | Consumer + Producer |
 | **Command Topic** | `/<clientId>/fan/<name>/set` |
 | **State Topic** | `/<clientId>/fan/<name>/state` |
-| **Payload Format** | Integer `0` - `255` |
+| **Payload Format** | Integer `0` - `100` (percentage) |
 | **Hardware** | Relay + TRIAC Dimmer + Zero-Cross Detector |
 
 #### Pin Configuration
@@ -261,13 +261,13 @@ Payload: 128
 **Command (MQTT → Device):**
 ```
 Topic:   /ESP32_Room1/fan/ceiling-fan/set
-Payload: 128
+Payload: 75
 ```
 
 **State Feedback (Device → MQTT):**
 ```
 Topic:   /ESP32_Room1/fan/ceiling-fan/state
-Payload: 128
+Payload: 75
 ```
 
 #### Behavior
@@ -275,20 +275,20 @@ Payload: 128
 | MQTT Value | Relay State | Dimmer Level |
 |:-----------|:------------|:-------------|
 | `0` | OFF | 0% |
-| `1` - `255` | ON | Mapped from `minPwm` to 100% |
+| `1` - `100` | ON | Mapped from `minPwm` to 100% |
 
 #### Value Mapping
 
-The MQTT value (1-255) is linearly mapped to the dimmer range:
+The MQTT value (1-100) is linearly mapped to the dimmer range with proper rounding:
 
 ```
-dimmer_level = minPwm + (mqtt_value - 1) * (100 - minPwm) / 254
+dimmer_level = minPwm + round((mqtt_value - 1) * (100 - minPwm) / 99)
 ```
 
-Example with `minPwm: 25`:
-- MQTT `1` → Dimmer 25%
-- MQTT `128` → Dimmer ~62%
-- MQTT `255` → Dimmer 100%
+Example with `minPwm: 40`:
+- MQTT `1` → Dimmer 40% (minimum)
+- MQTT `50` → Dimmer 70% (midpoint)
+- MQTT `100` → Dimmer 100% (maximum)
 
 #### Dimming Curves
 
