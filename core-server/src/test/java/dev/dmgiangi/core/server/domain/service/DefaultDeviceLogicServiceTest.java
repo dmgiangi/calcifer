@@ -48,7 +48,7 @@ class DefaultDeviceLogicServiceTest {
         @Test
         @DisplayName("should return DesiredDeviceState when intent exists")
         void shouldReturnDesiredWhenIntentExists() {
-            final var intent = new UserIntent(DEVICE_ID, DeviceType.RELAY, true, TIMESTAMP);
+            final var intent = new UserIntent(DEVICE_ID, DeviceType.RELAY, new RelayValue(true), TIMESTAMP);
             final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, intent, null, null);
 
             final var result = service.calculateDesired(snapshot);
@@ -56,7 +56,7 @@ class DefaultDeviceLogicServiceTest {
             assertNotNull(result);
             assertEquals(DEVICE_ID, result.id());
             assertEquals(DeviceType.RELAY, result.type());
-            assertEquals(true, result.value());
+            assertEquals(new RelayValue(true), result.value());
         }
 
         @Test
@@ -70,15 +70,15 @@ class DefaultDeviceLogicServiceTest {
         }
 
         @Test
-        @DisplayName("should passthrough StepRelayState value")
-        void shouldPassthroughStepRelayState() {
-            final var intent = new UserIntent(DEVICE_ID, DeviceType.STEP_RELAY, StepRelayState.LEVEL_2, TIMESTAMP);
-            final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.STEP_RELAY, intent, null, null);
+        @DisplayName("should passthrough FanValue")
+        void shouldPassthroughFanValue() {
+            final var intent = new UserIntent(DEVICE_ID, DeviceType.FAN, new FanValue(128), TIMESTAMP);
+            final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.FAN, intent, null, null);
 
             final var result = service.calculateDesired(snapshot);
 
             assertNotNull(result);
-            assertEquals(StepRelayState.LEVEL_2, result.value());
+            assertEquals(new FanValue(128), result.value());
         }
     }
 
@@ -89,7 +89,7 @@ class DefaultDeviceLogicServiceTest {
         @Test
         @DisplayName("should save and publish event when intent exists")
         void shouldSaveAndPublishWhenIntentExists() {
-            final var intent = new UserIntent(DEVICE_ID, DeviceType.RELAY, true, TIMESTAMP);
+            final var intent = new UserIntent(DEVICE_ID, DeviceType.RELAY, new RelayValue(true), TIMESTAMP);
             final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, intent, null, null);
             when(repository.findTwinSnapshot(DEVICE_ID)).thenReturn(Optional.of(snapshot));
 
@@ -99,7 +99,7 @@ class DefaultDeviceLogicServiceTest {
             verify(repository).saveDesiredState(desiredCaptor.capture());
             final var savedDesired = desiredCaptor.getValue();
             assertEquals(DEVICE_ID, savedDesired.id());
-            assertEquals(true, savedDesired.value());
+            assertEquals(new RelayValue(true), savedDesired.value());
 
             final var eventCaptor = ArgumentCaptor.forClass(DesiredStateCalculatedEvent.class);
             verify(eventPublisher).publishEvent(eventCaptor.capture());
@@ -137,7 +137,7 @@ class DefaultDeviceLogicServiceTest {
         @Test
         @DisplayName("onUserIntentChanged should trigger recalculation")
         void onUserIntentChangedShouldTriggerRecalculation() {
-            final var intent = new UserIntent(DEVICE_ID, DeviceType.RELAY, true, TIMESTAMP);
+            final var intent = new UserIntent(DEVICE_ID, DeviceType.RELAY, new RelayValue(true), TIMESTAMP);
             final var event = new UserIntentChangedEvent(this, intent);
             final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, intent, null, null);
             when(repository.findTwinSnapshot(DEVICE_ID)).thenReturn(Optional.of(snapshot));
@@ -151,7 +151,7 @@ class DefaultDeviceLogicServiceTest {
         @Test
         @DisplayName("onReportedStateChanged should trigger recalculation")
         void onReportedStateChangedShouldTriggerRecalculation() {
-            final var reportedState = ReportedDeviceState.known(DEVICE_ID, DeviceType.RELAY, true);
+            final var reportedState = ReportedDeviceState.known(DEVICE_ID, DeviceType.RELAY, new RelayValue(true));
             final var event = new ReportedStateChangedEvent(this, reportedState);
             when(repository.findTwinSnapshot(DEVICE_ID)).thenReturn(Optional.empty());
 

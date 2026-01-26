@@ -22,7 +22,7 @@ class UserIntentTest {
         @DisplayName("should reject null device id")
         void shouldRejectNullDeviceId() {
             final var exception = assertThrows(NullPointerException.class, () ->
-                new UserIntent(null, DeviceType.RELAY, true, TIMESTAMP)
+                new UserIntent(null, DeviceType.RELAY, new RelayValue(true), TIMESTAMP)
             );
             assertEquals("Device id must not be null", exception.getMessage());
         }
@@ -31,7 +31,7 @@ class UserIntentTest {
         @DisplayName("should reject null device type")
         void shouldRejectNullDeviceType() {
             final var exception = assertThrows(NullPointerException.class, () ->
-                new UserIntent(DEVICE_ID, null, true, TIMESTAMP)
+                new UserIntent(DEVICE_ID, null, new RelayValue(true), TIMESTAMP)
             );
             assertEquals("Device type must not be null", exception.getMessage());
         }
@@ -49,7 +49,7 @@ class UserIntentTest {
         @DisplayName("should reject null requestedAt")
         void shouldRejectNullRequestedAt() {
             final var exception = assertThrows(NullPointerException.class, () ->
-                new UserIntent(DEVICE_ID, DeviceType.RELAY, true, null)
+                new UserIntent(DEVICE_ID, DeviceType.RELAY, new RelayValue(true), null)
             );
             assertEquals("RequestedAt must not be null", exception.getMessage());
         }
@@ -60,35 +60,35 @@ class UserIntentTest {
     class TypeValueConsistencyTests {
 
         @Test
-        @DisplayName("RELAY should accept Boolean value")
-        void relayShouldAcceptBoolean() {
-            final var intent = new UserIntent(DEVICE_ID, DeviceType.RELAY, true, TIMESTAMP);
-            assertEquals(true, intent.value());
+        @DisplayName("RELAY should accept RelayValue")
+        void relayShouldAcceptRelayValue() {
+            final var intent = new UserIntent(DEVICE_ID, DeviceType.RELAY, new RelayValue(true), TIMESTAMP);
+            assertEquals(new RelayValue(true), intent.value());
         }
 
         @Test
-        @DisplayName("RELAY should reject non-Boolean value")
-        void relayShouldRejectNonBoolean() {
+        @DisplayName("RELAY should reject non-RelayValue")
+        void relayShouldRejectNonRelayValue() {
             final var exception = assertThrows(IllegalArgumentException.class, () ->
-                new UserIntent(DEVICE_ID, DeviceType.RELAY, "invalid", TIMESTAMP)
+                new UserIntent(DEVICE_ID, DeviceType.RELAY, new FanValue(128), TIMESTAMP)
             );
-            assertEquals("Relay value must be Boolean", exception.getMessage());
+            assertEquals("Relay value must be RelayValue", exception.getMessage());
         }
 
         @Test
-        @DisplayName("STEP_RELAY should accept StepRelayState value")
-        void stepRelayShouldAcceptStepRelayState() {
-            final var intent = new UserIntent(DEVICE_ID, DeviceType.STEP_RELAY, StepRelayState.LEVEL_2, TIMESTAMP);
-            assertEquals(StepRelayState.LEVEL_2, intent.value());
+        @DisplayName("FAN should accept FanValue")
+        void fanShouldAcceptFanValue() {
+            final var intent = new UserIntent(DEVICE_ID, DeviceType.FAN, new FanValue(128), TIMESTAMP);
+            assertEquals(new FanValue(128), intent.value());
         }
 
         @Test
-        @DisplayName("STEP_RELAY should reject non-StepRelayState value")
-        void stepRelayShouldRejectNonStepRelayState() {
+        @DisplayName("FAN should reject non-FanValue")
+        void fanShouldRejectNonFanValue() {
             final var exception = assertThrows(IllegalArgumentException.class, () ->
-                new UserIntent(DEVICE_ID, DeviceType.STEP_RELAY, true, TIMESTAMP)
+                new UserIntent(DEVICE_ID, DeviceType.FAN, new RelayValue(true), TIMESTAMP)
             );
-            assertEquals("Step Relay value must be StepRelayState", exception.getMessage());
+            assertEquals("Fan value must be FanValue", exception.getMessage());
         }
     }
 
@@ -100,7 +100,7 @@ class UserIntentTest {
         @DisplayName("should create UserIntent with current timestamp")
         void shouldCreateWithCurrentTimestamp() {
             final var before = Instant.now();
-            final var intent = UserIntent.now(DEVICE_ID, DeviceType.RELAY, true);
+            final var intent = UserIntent.now(DEVICE_ID, DeviceType.RELAY, new RelayValue(true));
             final var after = Instant.now();
 
             assertNotNull(intent.requestedAt());
@@ -111,11 +111,11 @@ class UserIntentTest {
         @Test
         @DisplayName("should preserve all other fields")
         void shouldPreserveAllFields() {
-            final var intent = UserIntent.now(DEVICE_ID, DeviceType.STEP_RELAY, StepRelayState.FULL_POWER);
+            final var intent = UserIntent.now(DEVICE_ID, DeviceType.FAN, new FanValue(255));
 
             assertEquals(DEVICE_ID, intent.id());
-            assertEquals(DeviceType.STEP_RELAY, intent.type());
-            assertEquals(StepRelayState.FULL_POWER, intent.value());
+            assertEquals(DeviceType.FAN, intent.type());
+            assertEquals(new FanValue(255), intent.value());
         }
     }
 
@@ -126,11 +126,11 @@ class UserIntentTest {
         @Test
         @DisplayName("should return all fields correctly")
         void shouldReturnAllFields() {
-            final var intent = new UserIntent(DEVICE_ID, DeviceType.RELAY, false, TIMESTAMP);
+            final var intent = new UserIntent(DEVICE_ID, DeviceType.RELAY, new RelayValue(false), TIMESTAMP);
 
             assertEquals(DEVICE_ID, intent.id());
             assertEquals(DeviceType.RELAY, intent.type());
-            assertEquals(false, intent.value());
+            assertEquals(new RelayValue(false), intent.value());
             assertEquals(TIMESTAMP, intent.requestedAt());
         }
     }

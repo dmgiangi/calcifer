@@ -21,7 +21,7 @@ class ReportedDeviceStateTest {
         @DisplayName("Should throw NullPointerException when id is null")
         void shouldThrowWhenIdIsNull() {
             final var exception = assertThrows(NullPointerException.class, () ->
-                new ReportedDeviceState(null, DeviceType.RELAY, true, Instant.now(), true)
+                new ReportedDeviceState(null, DeviceType.RELAY, new RelayValue(true), Instant.now(), true)
             );
             assertEquals("Device id must not be null", exception.getMessage());
         }
@@ -30,7 +30,7 @@ class ReportedDeviceStateTest {
         @DisplayName("Should throw NullPointerException when type is null")
         void shouldThrowWhenTypeIsNull() {
             final var exception = assertThrows(NullPointerException.class, () ->
-                new ReportedDeviceState(DEVICE_ID, null, true, Instant.now(), true)
+                new ReportedDeviceState(DEVICE_ID, null, new RelayValue(true), Instant.now(), true)
             );
             assertEquals("Device type must not be null", exception.getMessage());
         }
@@ -39,7 +39,7 @@ class ReportedDeviceStateTest {
         @DisplayName("Should throw NullPointerException when reportedAt is null")
         void shouldThrowWhenReportedAtIsNull() {
             final var exception = assertThrows(NullPointerException.class, () ->
-                new ReportedDeviceState(DEVICE_ID, DeviceType.RELAY, true, null, true)
+                new ReportedDeviceState(DEVICE_ID, DeviceType.RELAY, new RelayValue(true), null, true)
             );
             assertEquals("ReportedAt must not be null", exception.getMessage());
         }
@@ -59,21 +59,21 @@ class ReportedDeviceStateTest {
         }
 
         @Test
-        @DisplayName("Should throw IllegalArgumentException when RELAY value is not Boolean")
-        void shouldThrowWhenRelayValueIsNotBoolean() {
+        @DisplayName("Should throw IllegalArgumentException when RELAY value is not RelayValue")
+        void shouldThrowWhenRelayValueIsNotRelayValue() {
             final var exception = assertThrows(IllegalArgumentException.class, () ->
-                new ReportedDeviceState(DEVICE_ID, DeviceType.RELAY, "invalid", Instant.now(), true)
+                new ReportedDeviceState(DEVICE_ID, DeviceType.RELAY, new FanValue(128), Instant.now(), true)
             );
-            assertEquals("Relay value must be Boolean", exception.getMessage());
+            assertEquals("Relay value must be RelayValue", exception.getMessage());
         }
 
         @Test
-        @DisplayName("Should throw IllegalArgumentException when STEP_RELAY value is not StepRelayState")
-        void shouldThrowWhenStepRelayValueIsNotStepRelayState() {
+        @DisplayName("Should throw IllegalArgumentException when FAN value is not FanValue")
+        void shouldThrowWhenFanValueIsNotFanValue() {
             final var exception = assertThrows(IllegalArgumentException.class, () ->
-                new ReportedDeviceState(DEVICE_ID, DeviceType.STEP_RELAY, true, Instant.now(), true)
+                new ReportedDeviceState(DEVICE_ID, DeviceType.FAN, new RelayValue(true), Instant.now(), true)
             );
-            assertEquals("Step Relay value must be StepRelayState", exception.getMessage());
+            assertEquals("Fan value must be FanValue", exception.getMessage());
         }
     }
 
@@ -85,7 +85,7 @@ class ReportedDeviceStateTest {
         @DisplayName("Should allow null value when isKnown is false")
         void shouldAllowNullValueWhenUnknown() {
             final var state = new ReportedDeviceState(DEVICE_ID, DeviceType.RELAY, null, Instant.now(), false);
-            
+
             assertAll(
                 () -> assertFalse(state.isKnown()),
                 () -> assertNull(state.value())
@@ -96,7 +96,7 @@ class ReportedDeviceStateTest {
         @DisplayName("Should throw IllegalArgumentException when value is not null and isKnown is false")
         void shouldThrowWhenValueIsNotNullAndUnknown() {
             final var exception = assertThrows(IllegalArgumentException.class, () ->
-                new ReportedDeviceState(DEVICE_ID, DeviceType.RELAY, true, Instant.now(), false)
+                new ReportedDeviceState(DEVICE_ID, DeviceType.RELAY, new RelayValue(true), Instant.now(), false)
             );
             assertEquals("Value must be null when state is unknown", exception.getMessage());
         }
@@ -110,25 +110,25 @@ class ReportedDeviceStateTest {
         @DisplayName("Should create valid known state for RELAY")
         void shouldCreateValidKnownRelayState() {
             final var now = Instant.now();
-            final var state = new ReportedDeviceState(DEVICE_ID, DeviceType.RELAY, true, now, true);
+            final var state = new ReportedDeviceState(DEVICE_ID, DeviceType.RELAY, new RelayValue(true), now, true);
 
             assertAll(
                 () -> assertEquals(DEVICE_ID, state.id()),
                 () -> assertEquals(DeviceType.RELAY, state.type()),
-                () -> assertEquals(true, state.value()),
+                () -> assertEquals(new RelayValue(true), state.value()),
                 () -> assertEquals(now, state.reportedAt()),
                 () -> assertTrue(state.isKnown())
             );
         }
 
         @Test
-        @DisplayName("Should create valid known state for STEP_RELAY")
-        void shouldCreateValidKnownStepRelayState() {
+        @DisplayName("Should create valid known state for FAN")
+        void shouldCreateValidKnownFanState() {
             final var now = Instant.now();
-            final var state = new ReportedDeviceState(DEVICE_ID, DeviceType.STEP_RELAY, StepRelayState.LEVEL_3, now, true);
+            final var state = new ReportedDeviceState(DEVICE_ID, DeviceType.FAN, new FanValue(192), now, true);
 
             assertAll(
-                () -> assertEquals(StepRelayState.LEVEL_3, state.value()),
+                () -> assertEquals(new FanValue(192), state.value()),
                 () -> assertTrue(state.isKnown())
             );
         }
@@ -158,10 +158,10 @@ class ReportedDeviceStateTest {
         @Test
         @DisplayName("known() should create state with isKnown=true and provided value")
         void knownShouldCreateKnownState() {
-            final var state = ReportedDeviceState.known(DEVICE_ID, DeviceType.STEP_RELAY, StepRelayState.LEVEL_1);
+            final var state = ReportedDeviceState.known(DEVICE_ID, DeviceType.FAN, new FanValue(64));
 
             assertAll(
-                () -> assertEquals(StepRelayState.LEVEL_1, state.value()),
+                () -> assertEquals(new FanValue(64), state.value()),
                 () -> assertTrue(state.isKnown())
             );
         }

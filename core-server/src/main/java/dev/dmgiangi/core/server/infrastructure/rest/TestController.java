@@ -2,7 +2,6 @@ package dev.dmgiangi.core.server.infrastructure.rest;
 
 import dev.dmgiangi.core.server.domain.model.DeviceId;
 import dev.dmgiangi.core.server.domain.model.DeviceType;
-import dev.dmgiangi.core.server.domain.model.StepRelayState;
 import dev.dmgiangi.core.server.infrastructure.messaging.outbound.event.DeviceCommandEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -21,11 +20,16 @@ public class TestController {
     public void sendCommand(@RequestBody CommandRequest request) {
         Object value = request.value();
 
-        if (request.type() == DeviceType.STEP_RELAY && value instanceof String s) {
-            try {
-                value = StepRelayState.valueOf(s);
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("Invalid StepRelayState: " + s);
+        // Convert String/Number to Integer for FAN type
+        if (request.type() == DeviceType.FAN) {
+            if (value instanceof String s) {
+                try {
+                    value = Integer.parseInt(s);
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("Invalid FAN speed value: " + s);
+                }
+            } else if (value instanceof Number n) {
+                value = n.intValue();
             }
         }
 

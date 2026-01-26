@@ -1,17 +1,24 @@
 package dev.dmgiangi.core.server.domain.model;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+/**
+ * Represents the desired state for a device, calculated from UserIntent, ReportedState and business rules.
+ * This is the "what we want to command" in the Three-State Digital Twin pattern.
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class")
 public record DesiredDeviceState(
     DeviceId id,
     DeviceType type,
-    Object value // Può essere Double, Boolean, Integer
+    DeviceValue value
 ) {
     public DesiredDeviceState {
-        // Validazione di consistenza
-        if (type == DeviceType.RELAY && !(value instanceof Boolean)) {
-            throw new IllegalArgumentException("Relay value must be Boolean");
+        // Type-value consistency validation
+        if (type == DeviceType.RELAY && !(value instanceof RelayValue)) {
+            throw new IllegalArgumentException("Relay value must be RelayValue");
         }
-        if (type == DeviceType.STEP_RELAY && !(value instanceof StepRelayState)) {
-            throw new IllegalArgumentException("Step Relay value must be Integer");
+        if (type == DeviceType.FAN && !(value instanceof FanValue)) {
+            throw new IllegalArgumentException("Fan value must be FanValue");
         }
     }
 }

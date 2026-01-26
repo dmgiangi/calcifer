@@ -1,6 +1,5 @@
 package dev.dmgiangi.core.server.infrastructure.messaging.outbound.trasformer;
 
-import dev.dmgiangi.core.server.domain.model.StepRelayState;
 import dev.dmgiangi.core.server.infrastructure.messaging.outbound.event.DeviceCommandEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +9,6 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -26,7 +24,7 @@ public class CommandPayloadTransformer implements GenericTransformer<DeviceComma
     public List<Message<String>> transform(DeviceCommandEvent event) {
         return switch (event.type()) {
             case RELAY -> handleRelay(event);
-            case STEP_RELAY -> handleStepRelay(event);
+            case FAN -> handleFan(event);
             default -> throw new IllegalArgumentException("Unsupported device type: " + event.type());
         };
     }
@@ -46,26 +44,29 @@ public class CommandPayloadTransformer implements GenericTransformer<DeviceComma
         return Collections.singletonList(createMessage(payload, routingKey));
     }
 
-    private List<Message<String>> handleStepRelay(DeviceCommandEvent event) {
-        final var messages = new ArrayList<Message<String>>();
-
-        final var state = (StepRelayState) event.value();
+    /**
+     * Handles FAN device commands for AC dimmer fan control.
+     * <p>
+     * Sends a single message to the fan topic with the speed value (0-255).
+     * The firmware's FanHandler automatically manages:
+     * - Relay control (0 = OFF, 1-255 = ON)
+     * - TRIAC dimmer level (mapped from minPwm to 100%)
+     * </p>
+     *
+     * @param event the device command event containing fan speed (0-255)
+     * @return list containing a single MQTT message to the fan topic
+     */
+    private List<Message<String>> handleFan(DeviceCommandEvent event) {
+        final var speed = (Integer) event.value();
         final var controllerId = event.deviceId().controllerId();
         final var componentId = event.deviceId().componentId();
 
-        // 1. Messaggio A: Digital Output (Enable/Disable)
-        // Topic: /{controllerId}/digital_output/{componentId}/set
-        final var digitalRoutingKey = ".%s.digital_output.%s.set".formatted(controllerId, componentId);
-        final var relayMessage = createMessage(state.getDigitalValue(), digitalRoutingKey);
-        messages.add(relayMessage);
+        // Topic: /{controllerId}/fan/{componentId}/set
+        // AMQP: .controllerId.fan.componentId.set
+        final var routingKey = ".%s.fan.%s.set".formatted(controllerId, componentId);
+        final var payload = String.valueOf(speed);
 
-        // 2. Messaggio B: PWM Output (Power Level)
-        // Topic: /{controllerId}/pwm/{componentId}/set
-        final var pwmRoutingKey = ".%s.pwm.%s.set".formatted(controllerId, componentId);
-        final var powerMessage = createMessage(state.getPwmValue(), pwmRoutingKey);
-        messages.add(powerMessage);
-
-        return messages;
+        return Collections.singletonList(createMessage(payload, routingKey));
     }
 
     private Message<String> createMessage(String payload, String routingKey) {

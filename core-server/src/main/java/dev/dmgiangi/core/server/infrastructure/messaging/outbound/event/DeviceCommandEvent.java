@@ -2,9 +2,15 @@ package dev.dmgiangi.core.server.infrastructure.messaging.outbound.event;
 
 import dev.dmgiangi.core.server.domain.model.DeviceId;
 import dev.dmgiangi.core.server.domain.model.DeviceType;
-import dev.dmgiangi.core.server.domain.model.StepRelayState;
 
 
+/**
+ * Event representing a command to be sent to a device via MQTT.
+ *
+ * @param deviceId the target device identifier
+ * @param type the device type (RELAY or FAN)
+ * @param value the command value: Boolean for RELAY, Integer (0-255) for FAN
+ */
 public record DeviceCommandEvent(
     DeviceId deviceId,
     DeviceType type,
@@ -15,9 +21,12 @@ public record DeviceCommandEvent(
             if (!(value instanceof Boolean)) {
                 throw new IllegalArgumentException("Value must be Boolean for RELAY type");
             }
-        } else if (type == DeviceType.STEP_RELAY) {
-            if (!(value instanceof StepRelayState)) {
-                throw new IllegalArgumentException("Value must be StepRelayState for STEP_RELAY type");
+        } else if (type == DeviceType.FAN) {
+            if (!(value instanceof Integer speed)) {
+                throw new IllegalArgumentException("Value must be Integer for FAN type");
+            }
+            if (speed < 0 || speed > 255) {
+                throw new IllegalArgumentException("FAN speed must be between 0 and 255");
             }
         } else {
             throw new IllegalArgumentException("Unsupported device type: " + type);

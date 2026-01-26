@@ -39,8 +39,8 @@ class DeviceTwinSnapshotTest {
         @Test
         @DisplayName("Should throw IllegalArgumentException when intent type mismatches")
         void shouldThrowWhenIntentTypeMismatches() {
-            final var intent = new UserIntent(DEVICE_ID, DeviceType.STEP_RELAY, StepRelayState.LEVEL_1, NOW);
-            
+            final var intent = new UserIntent(DEVICE_ID, DeviceType.FAN, new FanValue(128), NOW);
+
             final var exception = assertThrows(IllegalArgumentException.class, () ->
                 new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, intent, null, null)
             );
@@ -50,8 +50,8 @@ class DeviceTwinSnapshotTest {
         @Test
         @DisplayName("Should throw IllegalArgumentException when reported type mismatches")
         void shouldThrowWhenReportedTypeMismatches() {
-            final var reported = new ReportedDeviceState(DEVICE_ID, DeviceType.STEP_RELAY, StepRelayState.OFF, NOW, true);
-            
+            final var reported = new ReportedDeviceState(DEVICE_ID, DeviceType.FAN, new FanValue(0), NOW, true);
+
             final var exception = assertThrows(IllegalArgumentException.class, () ->
                 new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, null, reported, null)
             );
@@ -61,8 +61,8 @@ class DeviceTwinSnapshotTest {
         @Test
         @DisplayName("Should throw IllegalArgumentException when desired type mismatches")
         void shouldThrowWhenDesiredTypeMismatches() {
-            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.STEP_RELAY, StepRelayState.FULL_POWER);
-            
+            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.FAN, new FanValue(255));
+
             final var exception = assertThrows(IllegalArgumentException.class, () ->
                 new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, null, null, desired)
             );
@@ -91,7 +91,7 @@ class DeviceTwinSnapshotTest {
         @Test
         @DisplayName("Should create snapshot with only intent")
         void shouldCreateSnapshotWithOnlyIntent() {
-            final var intent = UserIntent.now(DEVICE_ID, DeviceType.RELAY, true);
+            final var intent = UserIntent.now(DEVICE_ID, DeviceType.RELAY, new RelayValue(true));
             final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, intent, null, null);
 
             assertAll(
@@ -104,9 +104,9 @@ class DeviceTwinSnapshotTest {
         @Test
         @DisplayName("Should create complete snapshot with all states")
         void shouldCreateCompleteSnapshot() {
-            final var intent = UserIntent.now(DEVICE_ID, DeviceType.RELAY, true);
-            final var reported = ReportedDeviceState.known(DEVICE_ID, DeviceType.RELAY, true);
-            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.RELAY, true);
+            final var intent = UserIntent.now(DEVICE_ID, DeviceType.RELAY, new RelayValue(true));
+            final var reported = ReportedDeviceState.known(DEVICE_ID, DeviceType.RELAY, new RelayValue(true));
+            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.RELAY, new RelayValue(true));
 
             final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, intent, reported, desired);
 
@@ -125,7 +125,7 @@ class DeviceTwinSnapshotTest {
         @Test
         @DisplayName("Should return false when reported is null")
         void shouldReturnFalseWhenReportedIsNull() {
-            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.RELAY, true);
+            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.RELAY, new RelayValue(true));
             final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, null, null, desired);
 
             assertFalse(snapshot.isConverged());
@@ -134,7 +134,7 @@ class DeviceTwinSnapshotTest {
         @Test
         @DisplayName("Should return false when desired is null")
         void shouldReturnFalseWhenDesiredIsNull() {
-            final var reported = ReportedDeviceState.known(DEVICE_ID, DeviceType.RELAY, true);
+            final var reported = ReportedDeviceState.known(DEVICE_ID, DeviceType.RELAY, new RelayValue(true));
             final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, null, reported, null);
 
             assertFalse(snapshot.isConverged());
@@ -144,7 +144,7 @@ class DeviceTwinSnapshotTest {
         @DisplayName("Should return false when reported state is unknown")
         void shouldReturnFalseWhenReportedIsUnknown() {
             final var reported = ReportedDeviceState.unknown(DEVICE_ID, DeviceType.RELAY);
-            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.RELAY, true);
+            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.RELAY, new RelayValue(true));
             final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, null, reported, desired);
 
             assertFalse(snapshot.isConverged());
@@ -153,8 +153,8 @@ class DeviceTwinSnapshotTest {
         @Test
         @DisplayName("Should return false when values do not match")
         void shouldReturnFalseWhenValuesDoNotMatch() {
-            final var reported = ReportedDeviceState.known(DEVICE_ID, DeviceType.RELAY, false);
-            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.RELAY, true);
+            final var reported = ReportedDeviceState.known(DEVICE_ID, DeviceType.RELAY, new RelayValue(false));
+            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.RELAY, new RelayValue(true));
             final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, null, reported, desired);
 
             assertFalse(snapshot.isConverged());
@@ -163,19 +163,19 @@ class DeviceTwinSnapshotTest {
         @Test
         @DisplayName("Should return true when values match")
         void shouldReturnTrueWhenValuesMatch() {
-            final var reported = ReportedDeviceState.known(DEVICE_ID, DeviceType.RELAY, true);
-            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.RELAY, true);
+            final var reported = ReportedDeviceState.known(DEVICE_ID, DeviceType.RELAY, new RelayValue(true));
+            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.RELAY, new RelayValue(true));
             final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, null, reported, desired);
 
             assertTrue(snapshot.isConverged());
         }
 
         @Test
-        @DisplayName("Should return true when StepRelayState values match")
-        void shouldReturnTrueWhenStepRelayValuesMatch() {
-            final var reported = ReportedDeviceState.known(DEVICE_ID, DeviceType.STEP_RELAY, StepRelayState.LEVEL_2);
-            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.STEP_RELAY, StepRelayState.LEVEL_2);
-            final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.STEP_RELAY, null, reported, desired);
+        @DisplayName("Should return true when FanValue values match")
+        void shouldReturnTrueWhenFanValuesMatch() {
+            final var reported = ReportedDeviceState.known(DEVICE_ID, DeviceType.FAN, new FanValue(128));
+            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.FAN, new FanValue(128));
+            final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.FAN, null, reported, desired);
 
             assertTrue(snapshot.isConverged());
         }
