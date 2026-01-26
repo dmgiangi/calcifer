@@ -17,11 +17,11 @@ Each device in the system is uniquely identified by a composite key that reflect
 ### Classification and Capability (`DeviceType` & `DeviceCapability`)
 Devices are classified by type, and each type possesses an intrinsic "capability" that dictates how the system interacts with it.
 
-| Device Type | Capability | Description | Management Flow |
-| :--- | :--- | :--- | :--- |
-| `TEMPERATURE_SENSOR` | **INPUT** | Produces data (readings). | Event-Driven (Reactive) |
-| `RELAY` | **OUTPUT** | Performs actions (ON/OFF). | State Reconciliation |
-| `STEP_RELAY` | **OUTPUT** | Performs complex actions (Levels). | State Reconciliation |
+| Device Type          | Capability | Description                                 | Management Flow         |
+|:---------------------|:-----------|:--------------------------------------------|:------------------------|
+| `TEMPERATURE_SENSOR` | **INPUT**  | Produces data (readings).                   | Event-Driven (Reactive) |
+| `RELAY`              | **OUTPUT** | Performs actions (ON/OFF).                  | State Reconciliation    |
+| `FAN`                | **OUTPUT** | Performs actions with variable speed (PWM). | State Reconciliation    |
 
 ---
 
@@ -57,19 +57,7 @@ Represents the target configuration for an actuator.
 
 * **Value Polymorphism:** The `value` field is generic (`Object`) but strictly validated in the constructor based on `DeviceType`:
     * If `RELAY` -> Requires `Boolean` (True=ON, False=OFF).
-    * If `STEP_RELAY` -> Requires `StepRelayState` (Enum).
-
-### Value Object: `StepRelayState`
-Models the business logic for multi-state relays (e.g., fans or dimmable lights with steps).
-Encapsulates the mapping between the "logical level" and the physical signals sent to the microcontroller.
-
-| Logical State | Level | PWM Value (0-255) | Digital Value (0/1) |
-| :--- | :--- | :--- | :--- |
-| `OFF` | 0 | 0 | 0 |
-| `LEVEL_1` | 1 | 64 | 1 |
-| `LEVEL_2` | 2 | 128 | 1 |
-| `LEVEL_3` | 3 | 192 | 1 |
-| `FULL_POWER` | 4 | 255 | 1 |
+  * If `FAN` -> Requires `FanValue` (Integer 0-255 for PWM duty cycle).
 
 ---
 
