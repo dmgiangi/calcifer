@@ -118,10 +118,14 @@ bool MqttManager::reconnect()
     {
         LOG_INFO(TAG, "Connected!");
         LOG_DEBUG(TAG, "Subscribing to %d topics...", instance.consumers.size());
+        unsigned long now = millis();
         for (auto &c : instance.consumers)
         {
             if (instance.mqttClient->subscribe(c.topic.c_str()))
             {
+                // Reset watchdog timer on (re)connection to prevent
+                // immediate timeout after reconnection
+                c.lastUpdate = now;
                 LOG_DEBUG(TAG, "Subscribed to: %s", c.topic.c_str());
             }
             else
