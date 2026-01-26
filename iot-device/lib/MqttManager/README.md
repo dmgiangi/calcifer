@@ -40,6 +40,7 @@ The MqttManager uses a **Singleton pattern** with a **Strategy-based handler arc
 - `Yl69Handler` (Sensor → Producer)
 - `Ds18b20Handler` (Sensor → Producer)
 - `ThermocoupleHandler` (Sensor → Producer)
+- `FanHandler` (Actuator → Consumer + Producer) - AC dimmer with relay coordination
 
 ## MQTT Configuration
 
@@ -110,6 +111,7 @@ Actuators subscribe to `/set` topics for commands AND publish their current stat
 | `OUTPUT_DIGITAL` | `.../digital_output/{name}/set` | `.../digital_output/{name}/state` | `0`/`1` or `LOW`/`HIGH` |
 | `PWM` | `.../pwm/{name}/set` | `.../pwm/{name}/state` | Duty cycle `0-255` |
 | `OUTPUT_ANALOG` | `.../analog_output/{name}/set` | `.../analog_output/{name}/state` | DAC value `0-255` |
+| `FAN` | `.../fan/{name}/set` | `.../fan/{name}/state` | Speed `0-255` (0=OFF, 1-255=ON with dimming) |
 
 **State Publishing Behavior:**
 - State is published every `pollingInterval` milliseconds
@@ -241,7 +243,8 @@ lib/MqttManager/
     ├── Dht22Handler.h/.cpp
     ├── Yl69Handler.h/.cpp
     ├── Ds18b20Handler.h/.cpp
-    └── ThermocoupleHandler.h/.cpp
+    ├── ThermocoupleHandler.h/.cpp
+    └── FanHandler.h/.cpp    # AC dimmer fan control
 ```
 
 ## See Also

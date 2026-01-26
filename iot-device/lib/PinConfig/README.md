@@ -27,6 +27,7 @@ Defines all supported device modes:
 | `YL_69_SENSOR` | Soil moisture sensor | ADC-capable GPIO |
 | `DS18B20` | OneWire temperature sensor | GPIO with OneWire support |
 | `THERMOCOUPLE` | MAX6675 SPI thermocouple | 3 GPIOs: CS (out), SCK (out), SO (in) |
+| `FAN` | AC dimmer fan control (relay + TRIAC) | 3 GPIOs: relay (out), dimmer (PWM), zero-cross (interrupt) |
 | `INVALID` | Parse error or unknown mode | - |
 
 ### PinConfig (Struct)
@@ -38,9 +39,13 @@ struct PinConfig {
     int pin;              // Primary GPIO number
     int pinClock;         // SPI Clock pin (THERMOCOUPLE only)
     int pinData;          // SPI Data pin (THERMOCOUPLE only)
+    int pinDimmer;        // TRIAC dimmer pin (FAN only)
+    int pinZeroCross;     // Zero-crossing detection pin (FAN only)
+    int minPwm;           // Minimum PWM percentage (FAN only, default: 0)
+    String curveType;     // Dimming curve type (FAN only: LINEAR, RMS, LOGARITHMIC)
     PinModeType mode;     // Operation mode
     String name;          // Human-readable identifier (used in MQTT topics)
-    int defaultState;     // Initial state (0/1 for digital, 0-255 for PWM/DAC)
+    int defaultState;     // Initial state (0/1 for digital, 0-255 for PWM/DAC/FAN)
     int pollingInterval;  // Interval in ms (sensors: publish rate, actuators: watchdog)
     bool inverted;        // Logic inversion (Active Low)
 };
@@ -118,6 +123,18 @@ The `pin_config.json` file is a JSON array of device configurations:
     "sck": 18,
     "so": 19,
     "pollingInterval": 2000
+  },
+  {
+    "pin": 26,
+    "pinDimmer": 25,
+    "pinZeroCross": 13,
+    "mode": "FAN",
+    "name": "ceiling-fan",
+    "defaultState": 0,
+    "pollingInterval": 30000,
+    "inverted": true,
+    "minPwm": 25,
+    "curveType": "RMS"
   }
 ]
 ```
@@ -126,14 +143,18 @@ The `pin_config.json` file is a JSON array of device configurations:
 
 | Field | Type | Required | Default | Description |
 |:------|:-----|:--------:|:-------:|:------------|
-| `pin` | int | ✓ | - | Primary GPIO number |
+| `pin` | int | ✓ | - | Primary GPIO number (relay pin for FAN) |
 | `mode` | string | ✓ | - | One of the `PinModeType` values |
 | `name` | string | ✓ | - | Identifier used in MQTT topics |
 | `defaultState` | int | - | `0` | Initial state (actuators only) |
 | `pollingInterval` | int | - | `1000` | Interval in milliseconds |
-| `inverted` | bool | - | `false` | Invert logic (Active Low) |
+| `inverted` | bool | - | `false` | Invert logic (Active Low relay) |
 | `sck` | int | THERMOCOUPLE | - | SPI Clock GPIO |
 | `so` / `miso` | int | THERMOCOUPLE | - | SPI Data In GPIO |
+| `pinDimmer` | int | FAN | - | TRIAC dimmer control GPIO (PWM capable) |
+| `pinZeroCross` | int | FAN | - | Zero-crossing detection GPIO (interrupt capable) |
+| `minPwm` | int | - | `0` | Minimum dimmer level % (FAN only, 0-100) |
+| `curveType` | string | - | `"RMS"` | Dimming curve: `LINEAR`, `RMS`, or `LOGARITHMIC` |
 
 ## API Reference
 

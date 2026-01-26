@@ -14,6 +14,8 @@ Complete reference for all device handlers in the MqttManager library. Each hand
 | `AnalogInputHandler` | Sensor | Producer | `/<clientId>/analog_input/<name>/value` | `0` - `4095` |
 | `AnalogOutputHandler` | Actuator | Consumer + Producer | `/<clientId>/analog_output/<name>/set` (cmd) | `0` - `255` |
 | | | | `/<clientId>/analog_output/<name>/state` (feedback) | `0` - `255` |
+| `FanHandler` | Actuator | Consumer + Producer | `/<clientId>/fan/<name>/set` (cmd) | `0` - `255` |
+| | | | `/<clientId>/fan/<name>/state` (feedback) | `0` - `255` |
 | `Dht22Handler` | Sensor | Producer | `/<clientId>/dht22/<name>/temperature` | Float (°C) |
 | | | | `/<clientId>/dht22/<name>/humidity` | Float (%) |
 | `Yl69Handler` | Sensor | Producer | `/<clientId>/yl69/<name>/value` | `0` - `100` (%) |
@@ -230,3 +232,93 @@ Payload: 128
 - ⚠️ **Requires 3 pins**: CS (`pin`), SCK (`pinClock`), and SO (`pinData`)
 - Uses MAX6675 chip with K-type thermocouple
 - Resolution: 0.25°C
+
+---
+
+### FanHandler
+
+**File**: `handlers/FanHandler.cpp`
+
+| Property | Value |
+|:---------|:------|
+| **Device Type** | Actuator (AC Dimmer Fan with Relay) |
+| **MQTT Role** | Consumer + Producer |
+| **Command Topic** | `/<clientId>/fan/<name>/set` |
+| **State Topic** | `/<clientId>/fan/<name>/state` |
+| **Payload Format** | Integer `0` - `255` |
+| **Hardware** | Relay + TRIAC Dimmer + Zero-Cross Detector |
+
+#### Pin Configuration
+
+| JSON Field | Description | Requirements |
+|:-----------|:------------|:-------------|
+| `pin` | Relay control GPIO | Digital output capable |
+| `pinDimmer` | TRIAC dimmer GPIO | PWM capable |
+| `pinZeroCross` | Zero-crossing detection GPIO | Interrupt capable |
+
+#### MQTT Examples
+
+**Command (MQTT → Device):**
+```
+Topic:   /ESP32_Room1/fan/ceiling-fan/set
+Payload: 128
+```
+
+**State Feedback (Device → MQTT):**
+```
+Topic:   /ESP32_Room1/fan/ceiling-fan/state
+Payload: 128
+```
+
+#### Behavior
+
+| MQTT Value | Relay State | Dimmer Level |
+|:-----------|:------------|:-------------|
+| `0` | OFF | 0% |
+| `1` - `255` | ON | Mapped from `minPwm` to 100% |
+
+#### Value Mapping
+
+The MQTT value (1-255) is linearly mapped to the dimmer range:
+
+```
+dimmer_level = minPwm + (mqtt_value - 1) * (100 - minPwm) / 254
+```
+
+Example with `minPwm: 25`:
+- MQTT `1` → Dimmer 25%
+- MQTT `128` → Dimmer ~62%
+- MQTT `255` → Dimmer 100%
+
+#### Dimming Curves
+
+| `curveType` | Description | Best For |
+|:------------|:------------|:---------|
+| `LINEAR` | Linear power curve | Resistive loads |
+| `RMS` | RMS-corrected curve | Motors, fans (recommended) |
+| `LOGARITHMIC` | Logarithmic curve | Incandescent lights |
+
+#### JSON Configuration Example
+
+```json
+{
+  "pin": 26,
+  "pinDimmer": 25,
+  "pinZeroCross": 13,
+  "mode": "FAN",
+  "name": "ceiling-fan",
+  "defaultState": 0,
+  "pollingInterval": 30000,
+  "inverted": true,
+  "minPwm": 25,
+  "curveType": "RMS"
+}
+```
+
+#### Notes
+- ⚠️ **Requires 3 pins**: Relay (`pin`), Dimmer (`pinDimmer`), Zero-Cross (`pinZeroCross`)
+- Uses **rbdimmerESP32** library for phase-angle control
+- `inverted: true` means relay is Active Low (common for relay modules)
+- **Watchdog**: Resets to `defaultState` if no message received within `pollingInterval`
+- **State Publishing**: Current speed value is published to `/state` topic every `pollingInterval` ms
+- Zero-crossing detection is shared across multiple FAN instances on the same phase
