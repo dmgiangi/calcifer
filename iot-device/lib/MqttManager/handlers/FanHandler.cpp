@@ -191,3 +191,56 @@ void FanHandler::init(const PinConfig& cfg,
     LOG_INFO(TAG, "  -> cmd: %s, state: %s", cmdTopic.c_str(), stateTopic.c_str());
 }
 
+// ============================================================================
+// Dimmer Diagnostics (only compiled when DIMMER_DEBUG is defined)
+// ============================================================================
+
+#ifdef DIMMER_DEBUG
+void FanHandler::printDiagnostics() {
+    static unsigned long lastPrint = 0;
+    const unsigned long printInterval = 2000; // Print every 2 seconds
+
+    unsigned long now = millis();
+    if (now - lastPrint < printInterval) {
+        return;
+    }
+    lastPrint = now;
+
+    LOG_INFO(TAG, "========== DIMMER DIAGNOSTICS ==========");
+
+    // Check frequency measurement status for phase 0
+    uint16_t frequency = rbdimmer_get_frequency(0);
+    if (frequency > 0) {
+        LOG_INFO(TAG, "Frequency: %d Hz (measured OK)", frequency);
+    } else {
+        LOG_WARN(TAG, "Frequency: NOT MEASURED (still detecting...)");
+    }
+
+    // Print status for each registered dimmer channel
+    for (const auto& pair : dimmerChannels) {
+        int relayPin = pair.first;
+        rbdimmer_channel_t* channel = pair.second;
+
+        if (channel != nullptr) {
+            uint8_t level = rbdimmer_get_level(channel);
+            uint32_t delay_us = rbdimmer_get_delay(channel);
+            bool active = rbdimmer_is_active(channel);
+            rbdimmer_curve_t curve = rbdimmer_get_curve(channel);
+
+            const char* curveStr = "UNKNOWN";
+            switch (curve) {
+                case RBDIMMER_CURVE_LINEAR: curveStr = "LINEAR"; break;
+                case RBDIMMER_CURVE_RMS: curveStr = "RMS"; break;
+                case RBDIMMER_CURVE_LOGARITHMIC: curveStr = "LOG"; break;
+                default: break;
+            }
+
+            LOG_INFO(TAG, "Channel [relay=GPIO%d]: level=%d%%, delay=%luus, active=%s, curve=%s",
+                     relayPin, level, delay_us, active ? "YES" : "NO", curveStr);
+        }
+    }
+
+    LOG_INFO(TAG, "=========================================");
+}
+#endif
+

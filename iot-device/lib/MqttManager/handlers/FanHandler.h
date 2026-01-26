@@ -43,6 +43,17 @@ public:
      */
     static uint8_t mapToDimmerLevel(int mqttValue, int minPwm);
 
+#ifdef DIMMER_DEBUG
+    /**
+     * @brief Prints dimmer diagnostic information to serial.
+     *
+     * Outputs frequency measurement status, current dimmer level, and delay.
+     * Only available when DIMMER_DEBUG is defined (dimmer_debug environment).
+     * Should be called periodically from main loop (not in ISR context).
+     */
+    static void printDiagnostics();
+#endif
+
 private:
     // Static flag to track if rbdimmer library has been initialized
     static bool rbdimmerInitialized;
