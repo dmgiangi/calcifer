@@ -80,6 +80,50 @@ class DefaultDeviceLogicServiceTest {
             assertNotNull(result);
             assertEquals(new FanValue(128), result.value());
         }
+
+        @Test
+        @DisplayName("should return DesiredDeviceState when reported is null (cold start)")
+        void shouldReturnDesiredWhenReportedIsNull() {
+            final var intent = new UserIntent(DEVICE_ID, DeviceType.RELAY, new RelayValue(true), TIMESTAMP);
+            final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, intent, null, null);
+
+            final var result = service.calculateDesired(snapshot);
+
+            assertNotNull(result);
+            assertEquals(DEVICE_ID, result.id());
+            assertEquals(DeviceType.RELAY, result.type());
+            assertEquals(new RelayValue(true), result.value());
+        }
+
+        @Test
+        @DisplayName("should return DesiredDeviceState when reported is unknown (cold start)")
+        void shouldReturnDesiredWhenReportedIsUnknown() {
+            final var intent = new UserIntent(DEVICE_ID, DeviceType.RELAY, new RelayValue(true), TIMESTAMP);
+            final var unknownReported = ReportedDeviceState.unknown(DEVICE_ID, DeviceType.RELAY);
+            final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, intent, unknownReported, null);
+
+            final var result = service.calculateDesired(snapshot);
+
+            assertNotNull(result);
+            assertEquals(DEVICE_ID, result.id());
+            assertEquals(DeviceType.RELAY, result.type());
+            assertEquals(new RelayValue(true), result.value());
+        }
+
+        @Test
+        @DisplayName("should return DesiredDeviceState when reported is known (normal operation)")
+        void shouldReturnDesiredWhenReportedIsKnown() {
+            final var intent = new UserIntent(DEVICE_ID, DeviceType.RELAY, new RelayValue(true), TIMESTAMP);
+            final var knownReported = ReportedDeviceState.known(DEVICE_ID, DeviceType.RELAY, new RelayValue(false));
+            final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, intent, knownReported, null);
+
+            final var result = service.calculateDesired(snapshot);
+
+            assertNotNull(result);
+            assertEquals(DEVICE_ID, result.id());
+            assertEquals(DeviceType.RELAY, result.type());
+            assertEquals(new RelayValue(true), result.value());
+        }
     }
 
     @Nested

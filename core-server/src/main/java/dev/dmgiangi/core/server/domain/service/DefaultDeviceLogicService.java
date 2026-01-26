@@ -85,12 +85,20 @@ public class DefaultDeviceLogicService implements DeviceLogicService {
     }
 
     /**
-     * Phase 1 implementation: Passthrough logic.
-     * Simply converts the user intent to a desired state.
+     * Calculates the desired state based on user intent and reported state.
+     *
+     * <p>Phase 1 implementation uses passthrough logic: Desired = Intent.
+     * Cold start detection is performed to log when the device has no known reported state.
+     *
+     * <p>Cold start scenarios:
+     * <ul>
+     *   <li>Device never reported its state (reported is null)</li>
+     *   <li>Device state is unknown (e.g., just booted, offline)</li>
+     * </ul>
      *
      * <p>Future phases will incorporate:
      * <ul>
-     *   <li>Reported state comparison</li>
+     *   <li>Reported state comparison for smart transitions</li>
      *   <li>Business rules (e.g., safety limits, schedules)</li>
      *   <li>Conflict resolution strategies</li>
      * </ul>
@@ -102,6 +110,12 @@ public class DefaultDeviceLogicService implements DeviceLogicService {
         if (intent == null) {
             log.trace("No intent for device {}, cannot calculate desired state", snapshot.id());
             return null;
+        }
+
+        // Cold start detection: no reported state or unknown state
+        final var reported = snapshot.reported();
+        if (reported == null || !reported.isKnown()) {
+            log.debug("Cold start detected for device {}, using intent as desired state", snapshot.id());
         }
 
         // Phase 1: Passthrough - Desired = Intent

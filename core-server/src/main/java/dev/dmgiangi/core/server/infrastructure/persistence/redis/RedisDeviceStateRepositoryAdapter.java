@@ -1,20 +1,21 @@
 package dev.dmgiangi.core.server.infrastructure.persistence.redis;
 
-import dev.dmgiangi.core.server.domain.model.DesiredDeviceState;
-import dev.dmgiangi.core.server.domain.model.DeviceCapability;
-import dev.dmgiangi.core.server.domain.model.DeviceId;
-import dev.dmgiangi.core.server.domain.model.DeviceTwinSnapshot;
-import dev.dmgiangi.core.server.domain.model.ReportedDeviceState;
-import dev.dmgiangi.core.server.domain.model.UserIntent;
+import dev.dmgiangi.core.server.domain.model.*;
 import dev.dmgiangi.core.server.domain.port.DeviceStateRepository;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.stereotype.Repository;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Consumer;
 
 
 @Slf4j
@@ -33,21 +34,27 @@ public class RedisDeviceStateRepositoryAdapter implements DeviceStateRepository 
     private static final String HASH_FIELD_REPORTED = "reported";
     private static final String HASH_FIELD_DESIRED = "desired";
 
+    // Optimistic locking retry configuration
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_BASE_DELAY_MS = 10;
+
     // ========== Desired State Methods ==========
 
     @Override
     public void saveDesiredState(DesiredDeviceState state) {
         final var key = generateKey(state.id());
 
-        // 1. Save state to Hash field
-        redisTemplate.opsForHash().put(key, HASH_FIELD_DESIRED, state);
+        executeWithOptimisticLock(key, operations -> {
+            // 1. Save state to Hash field
+            operations.opsForHash().put(key, HASH_FIELD_DESIRED, state);
 
-        // 2. Manage index for Reconciler
-        if (state.type().capability == DeviceCapability.OUTPUT) {
-            redisTemplate.opsForSet().add(INDEX_OUTPUTS, key);
-        } else {
-            redisTemplate.opsForSet().remove(INDEX_OUTPUTS, key);
-        }
+            // 2. Manage index for Reconciler
+            if (state.type().capability == DeviceCapability.OUTPUT) {
+                operations.opsForSet().add(INDEX_OUTPUTS, key);
+            } else {
+                operations.opsForSet().remove(INDEX_OUTPUTS, key);
+            }
+        });
 
         log.debug("Saved desired state for device {} to Redis Hash", key);
     }
@@ -82,7 +89,11 @@ public class RedisDeviceStateRepositoryAdapter implements DeviceStateRepository 
     @Override
     public void saveUserIntent(UserIntent intent) {
         final var key = generateKey(intent.id());
-        redisTemplate.opsForHash().put(key, HASH_FIELD_INTENT, intent);
+
+        executeWithOptimisticLock(key, operations -> {
+            operations.opsForHash().put(key, HASH_FIELD_INTENT, intent);
+        });
+
         log.debug("Saved user intent for device {} to Redis Hash", key);
     }
 
@@ -100,7 +111,11 @@ public class RedisDeviceStateRepositoryAdapter implements DeviceStateRepository 
     @Override
     public void saveReportedState(ReportedDeviceState state) {
         final var key = generateKey(state.id());
-        redisTemplate.opsForHash().put(key, HASH_FIELD_REPORTED, state);
+
+        executeWithOptimisticLock(key, operations -> {
+            operations.opsForHash().put(key, HASH_FIELD_REPORTED, state);
+        });
+
         log.debug("Saved reported state for device {} to Redis Hash", key);
     }
 
@@ -146,10 +161,65 @@ public class RedisDeviceStateRepositoryAdapter implements DeviceStateRepository 
     }
 
     private <T> T extractValue(Object value, Class<T> type) {
-        if (value != null && type.isInstance(value)) {
+        if (type.isInstance(value)) {
             return type.cast(value);
         }
         return null;
+    }
+
+    // ========== Optimistic Locking Helper ==========
+
+    /**
+     * Executes Redis operations with optimistic locking using WATCH/MULTI/EXEC.
+     * <p>
+     * If the watched key is modified by another client during the transaction,
+     * the operation is retried up to {@link #MAX_RETRIES} times with exponential backoff.
+     *
+     * @param key      the Redis key to watch for concurrent modifications
+     * @param commands the Redis commands to execute within the transaction
+     * @throws OptimisticLockingFailureException if all retries are exhausted
+     */
+    @SuppressWarnings("unchecked")
+    private void executeWithOptimisticLock(String key, Consumer<RedisOperations<String, Object>> commands) {
+        int attempts = 0; // mutable - tracks retry attempts for optimistic locking
+
+        while (attempts < MAX_RETRIES) {
+            final var result = redisTemplate.execute(new SessionCallback<List<Object>>() {
+                @Override
+                public List<Object> execute(@Nonnull RedisOperations redisOps) throws DataAccessException {
+                    redisOps.watch(key);
+                    redisOps.multi();
+                    commands.accept(redisOps);
+                    return redisOps.exec();
+                }
+            });
+
+            // EXEC returns non-null list if transaction succeeded
+            if (result != null) {
+                if (attempts > 0) {
+                    log.debug("Optimistic lock succeeded after {} retries for key {}", attempts, key);
+                }
+                return;
+            }
+
+            // Transaction aborted due to concurrent modification
+            attempts++;
+            log.warn("Optimistic lock conflict detected for key {}, attempt {}/{}", key, attempts, MAX_RETRIES);
+
+            if (attempts < MAX_RETRIES) {
+                try {
+                    // Exponential backoff: 10ms, 20ms, 40ms...
+                    Thread.sleep(RETRY_BASE_DELAY_MS * (1L << (attempts - 1)));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new OptimisticLockingFailureException(
+                            "Interrupted while retrying optimistic lock for key: " + key, e);
+                }
+            }
+        }
+
+        throw new OptimisticLockingFailureException(
+                "Failed to acquire optimistic lock for key " + key + " after " + MAX_RETRIES + " attempts");
     }
 
 }

@@ -20,7 +20,7 @@ import java.util.Optional;
  * </ul>
  *
  * @param id       the device identifier
- * @param type     the device type (RELAY or STEP_RELAY)
+ * @param type     the device type (RELAY or FAN)
  * @param intent   the user's intent (nullable)
  * @param reported the device's reported state (nullable)
  * @param desired  the calculated desired state (nullable)

@@ -9,13 +9,16 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
-import org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration;
 import org.springframework.boot.data.redis.test.autoconfigure.DataRedisTest;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.core.RedisTemplate;
-import tools.jackson.databind.ObjectMapper;
+
+import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -301,6 +304,146 @@ class RedisDeviceStateRepositoryAdapterIntegrationTest implements RedisTestConta
             assertThat(result).hasSize(2);
             assertThat(result).extracting(DesiredDeviceState::type)
                     .containsExactlyInAnyOrder(DeviceType.RELAY, DeviceType.FAN);
+        }
+    }
+
+    @Nested
+    @DisplayName("Optimistic Locking Operations")
+    class OptimisticLockingOperations {
+
+        @Test
+        @DisplayName("Should handle concurrent intent updates with optimistic locking")
+        void shouldHandleConcurrentIntentUpdates() throws InterruptedException {
+            final var deviceId = new DeviceId("concurrent-ctrl", "relay-1");
+            final var threadCount = 5;
+            final var latch = new CountDownLatch(1);
+            final var completionLatch = new CountDownLatch(threadCount);
+            final var successCount = new AtomicInteger(0);
+            final var errors = new ArrayList<Throwable>();
+
+            try (final var executor = Executors.newFixedThreadPool(threadCount)) {
+                for (int i = 0; i < threadCount; i++) {
+                    final var value = i % 2 == 0; // Alternate between true and false
+                    executor.submit(() -> {
+                        try {
+                            latch.await(); // Wait for all threads to be ready
+                            final var intent = UserIntent.now(deviceId, DeviceType.RELAY, new RelayValue(value));
+                            repository.saveUserIntent(intent);
+                            successCount.incrementAndGet();
+                        } catch (Exception e) {
+                            synchronized (errors) {
+                                errors.add(e);
+                            }
+                        } finally {
+                            completionLatch.countDown();
+                        }
+                    });
+                }
+
+                latch.countDown(); // Release all threads simultaneously
+                final var completed = completionLatch.await(10, TimeUnit.SECONDS);
+
+                assertThat(completed).isTrue();
+                assertThat(successCount.get()).isEqualTo(threadCount);
+                assertThat(errors).isEmpty();
+            }
+
+            // Verify final state exists
+            final var finalIntent = repository.findUserIntent(deviceId);
+            assertThat(finalIntent).isPresent();
+        }
+
+        @Test
+        @DisplayName("Should handle concurrent desired state updates with optimistic locking")
+        void shouldHandleConcurrentDesiredStateUpdates() throws InterruptedException {
+            final var deviceId = new DeviceId("concurrent-ctrl", "fan-1");
+            final var threadCount = 5;
+            final var latch = new CountDownLatch(1);
+            final var completionLatch = new CountDownLatch(threadCount);
+            final var successCount = new AtomicInteger(0);
+            final var errors = new ArrayList<Throwable>();
+
+            try (final var executor = Executors.newFixedThreadPool(threadCount)) {
+                for (int i = 0; i < threadCount; i++) {
+                    final var fanSpeed = (i + 1) * 50; // Different speeds: 50, 100, 150, 200, 250
+                    executor.submit(() -> {
+                        try {
+                            latch.await();
+                            final var desired = new DesiredDeviceState(deviceId, DeviceType.FAN, new FanValue(fanSpeed));
+                            repository.saveDesiredState(desired);
+                            successCount.incrementAndGet();
+                        } catch (Exception e) {
+                            synchronized (errors) {
+                                errors.add(e);
+                            }
+                        } finally {
+                            completionLatch.countDown();
+                        }
+                    });
+                }
+
+                latch.countDown();
+                final var completed = completionLatch.await(10, TimeUnit.SECONDS);
+
+                assertThat(completed).isTrue();
+                assertThat(successCount.get()).isEqualTo(threadCount);
+                assertThat(errors).isEmpty();
+            }
+
+            // Verify final state exists and is valid
+            final var finalDesired = repository.findDesiredState(deviceId);
+            assertThat(finalDesired).isPresent();
+            assertThat(finalDesired.get().type()).isEqualTo(DeviceType.FAN);
+        }
+
+        @Test
+        @DisplayName("Should handle concurrent mixed operations on same device")
+        void shouldHandleConcurrentMixedOperations() throws InterruptedException {
+            final var deviceId = new DeviceId("mixed-ctrl", "relay-1");
+            final var threadCount = 6;
+            final var latch = new CountDownLatch(1);
+            final var completionLatch = new CountDownLatch(threadCount);
+            final var successCount = new AtomicInteger(0);
+            final var errors = new ArrayList<Throwable>();
+
+            try (final var executor = Executors.newFixedThreadPool(threadCount)) {
+                // 2 threads for intent, 2 for desired, 2 for reported
+                for (int i = 0; i < threadCount; i++) {
+                    final var operation = i % 3;
+                    final var value = i % 2 == 0;
+                    executor.submit(() -> {
+                        try {
+                            latch.await();
+                            switch (operation) {
+                                case 0 -> repository.saveUserIntent(
+                                        UserIntent.now(deviceId, DeviceType.RELAY, new RelayValue(value)));
+                                case 1 -> repository.saveDesiredState(
+                                        new DesiredDeviceState(deviceId, DeviceType.RELAY, new RelayValue(value)));
+                                case 2 -> repository.saveReportedState(
+                                        ReportedDeviceState.known(deviceId, DeviceType.RELAY, new RelayValue(value)));
+                            }
+                            successCount.incrementAndGet();
+                        } catch (Exception e) {
+                            synchronized (errors) {
+                                errors.add(e);
+                            }
+                        } finally {
+                            completionLatch.countDown();
+                        }
+                    });
+                }
+
+                latch.countDown();
+                final var completed = completionLatch.await(10, TimeUnit.SECONDS);
+
+                assertThat(completed).isTrue();
+                assertThat(successCount.get()).isEqualTo(threadCount);
+                assertThat(errors).isEmpty();
+            }
+
+            // Verify device twin has data
+            final var snapshot = repository.findTwinSnapshot(deviceId);
+            assertThat(snapshot).isPresent();
         }
     }
 }

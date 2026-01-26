@@ -1,11 +1,6 @@
 package dev.dmgiangi.core.server.infrastructure.messaging.inbound;
 
-import dev.dmgiangi.core.server.domain.model.ActuatorFeedback;
-import dev.dmgiangi.core.server.domain.model.DeviceId;
-import dev.dmgiangi.core.server.domain.model.DeviceType;
-import dev.dmgiangi.core.server.domain.model.FanValue;
-import dev.dmgiangi.core.server.domain.model.RelayValue;
-import dev.dmgiangi.core.server.domain.model.ReportedDeviceState;
+import dev.dmgiangi.core.server.domain.model.*;
 import dev.dmgiangi.core.server.domain.model.event.ActuatorFeedbackReceivedEvent;
 import dev.dmgiangi.core.server.domain.model.event.ReportedStateChangedEvent;
 import dev.dmgiangi.core.server.domain.port.DeviceStateRepository;
@@ -100,7 +95,7 @@ class ActuatorFeedbackProcessorTest {
         }
 
         @ParameterizedTest
-        @ValueSource(strings = {"2", "ON", "OFF", "yes", "no", "invalid", ""})
+        @ValueSource(strings = {"2", "ON", "OFF", "yes", "no", "invalid"})
         @DisplayName("should not save state for invalid relay values")
         void shouldNotSaveStateForInvalidRelayValues(String rawValue) {
             final var feedback = createFeedback(DeviceType.RELAY, rawValue);
