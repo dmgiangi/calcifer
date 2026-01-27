@@ -9,7 +9,7 @@ import dev.dmgiangi.core.server.domain.model.DeviceType;
  *
  * @param deviceId the target device identifier
  * @param type the device type (RELAY or FAN)
- * @param value the command value: Boolean for RELAY, Integer (0-255) for FAN
+ * @param value the command value: Boolean for RELAY, Integer (0-100) for FAN
  */
 public record DeviceCommandEvent(
     DeviceId deviceId,
@@ -25,8 +25,8 @@ public record DeviceCommandEvent(
             if (!(value instanceof Integer speed)) {
                 throw new IllegalArgumentException("Value must be Integer for FAN type");
             }
-            if (speed < 0 || speed > 255) {
-                throw new IllegalArgumentException("FAN speed must be between 0 and 255");
+            if (speed < 0 || speed > 100) {
+                throw new IllegalArgumentException("FAN speed must be between 0 and 100");
             }
         } else {
             throw new IllegalArgumentException("Unsupported device type: " + type);

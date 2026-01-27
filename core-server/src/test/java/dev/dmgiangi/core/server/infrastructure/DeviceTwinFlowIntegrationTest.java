@@ -1,10 +1,6 @@
 package dev.dmgiangi.core.server.infrastructure;
 
-import dev.dmgiangi.core.server.domain.model.DeviceId;
-import dev.dmgiangi.core.server.domain.model.DeviceType;
-import dev.dmgiangi.core.server.domain.model.FanValue;
-import dev.dmgiangi.core.server.domain.model.RelayValue;
-import dev.dmgiangi.core.server.domain.model.UserIntent;
+import dev.dmgiangi.core.server.domain.model.*;
 import dev.dmgiangi.core.server.domain.model.event.DesiredStateCalculatedEvent;
 import dev.dmgiangi.core.server.domain.model.event.UserIntentChangedEvent;
 import dev.dmgiangi.core.server.domain.port.DeviceStateRepository;
@@ -93,8 +89,8 @@ class DeviceTwinFlowIntegrationTest {
         @Test
         @DisplayName("should calculate and save desired state for FAN device")
         void shouldCalculateAndSaveDesiredStateForFan() {
-            // Given: A user intent to set fan speed to 128
-            final var intent = UserIntent.now(FAN_DEVICE_ID, DeviceType.FAN, new FanValue(128));
+            // Given: A user intent to set fan speed to 50
+            final var intent = UserIntent.now(FAN_DEVICE_ID, DeviceType.FAN, new FanValue(50));
             final var event = new UserIntentChangedEvent(this, intent);
 
             when(repository.findTwinSnapshot(FAN_DEVICE_ID))
@@ -112,7 +108,7 @@ class DeviceTwinFlowIntegrationTest {
             final var savedDesired = desiredCaptor.getValue();
             assertThat(savedDesired.id()).isEqualTo(FAN_DEVICE_ID);
             assertThat(savedDesired.type()).isEqualTo(DeviceType.FAN);
-            assertThat(savedDesired.value()).isEqualTo(new FanValue(128));
+            assertThat(savedDesired.value()).isEqualTo(new FanValue(50));
 
             // And: An event should be published
             verify(eventPublisher).publishEvent(any(DesiredStateCalculatedEvent.class));
@@ -137,9 +133,9 @@ class DeviceTwinFlowIntegrationTest {
         }
 
         @Test
-        @DisplayName("should handle FAN speed 255 (max)")
+        @DisplayName("should handle FAN speed 100 (max)")
         void shouldHandleFanSpeedMax() {
-            final var intent = UserIntent.now(FAN_DEVICE_ID, DeviceType.FAN, new FanValue(255));
+            final var intent = UserIntent.now(FAN_DEVICE_ID, DeviceType.FAN, new FanValue(100));
             final var event = new UserIntentChangedEvent(this, intent);
 
             when(repository.findTwinSnapshot(FAN_DEVICE_ID))
@@ -151,7 +147,7 @@ class DeviceTwinFlowIntegrationTest {
             final var desiredCaptor = ArgumentCaptor.forClass(
                     dev.dmgiangi.core.server.domain.model.DesiredDeviceState.class);
             verify(repository).saveDesiredState(desiredCaptor.capture());
-            assertThat(desiredCaptor.getValue().value()).isEqualTo(new FanValue(255));
+            assertThat(desiredCaptor.getValue().value()).isEqualTo(new FanValue(100));
         }
     }
 }
