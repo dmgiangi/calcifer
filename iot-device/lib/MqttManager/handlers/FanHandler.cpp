@@ -1,24 +1,28 @@
 //
-// FanHandler.cpp - AC dimmer fan control (relay + TRIAC dimmer)
+// FanHandler.cpp - 3-relay fan control with 5 discrete speed states
 //
 
 #include "FanHandler.h"
-#include "rbdimmerESP32.h"
+#include <Arduino.h>
 #include <Logger.h>
 
 static const char* TAG = "FAN";
 
-// MQTT value range constant (0-100 percentage)
-namespace {
-    constexpr int MQTT_VALUE_MAX = 100;
-    constexpr int MQTT_VALUE_RANGE = MQTT_VALUE_MAX - 1;  // 99 for linear interpolation (1-100)
-}
+// Relay state lookup table for each speed state (0-4)
+// Each row: {Relay1, Relay2, Relay3} where 1=ON, 0=OFF
+static const uint8_t RELAY_STATES[5][3] = {
+    {0, 0, 0},  // State 0: OFF
+    {1, 0, 0},  // State 1: R1 only (lowest speed)
+    {0, 1, 0},  // State 2: R2 only (medium-low speed)
+    {1, 1, 0},  // State 3: R1 + R2 (medium-high speed)
+    {0, 0, 1}   // State 4: R3 only (highest speed)
+};
+
+// MQTT feedback values for each state
+static const int MQTT_FEEDBACK[5] = {0, 25, 50, 75, 100};
 
 // Static member initialization
-bool FanHandler::rbdimmerInitialized = false;
-std::set<int> FanHandler::registeredZeroCrossPins;
 std::map<int, String> FanHandler::currentState;
-std::map<int, rbdimmer_channel_t*> FanHandler::dimmerChannels;
 
 // ============================================================================
 // Static Helper Methods
@@ -33,62 +37,32 @@ void FanHandler::setState(int pin, const String& value) {
     currentState[pin] = value;
 }
 
-bool FanHandler::ensureRbdimmerInit() {
-    if (rbdimmerInitialized) {
-        return true;
-    }
-    
-    if (rbdimmer_init() != RBDIMMER_OK) {
-        LOG_ERROR(TAG, "Failed to initialize rbdimmer library");
-        return false;
-    }
-    
-    rbdimmerInitialized = true;
-    LOG_INFO(TAG, "rbdimmer library initialized");
-    return true;
+uint8_t FanHandler::mqttToState(int mqttValue) {
+    if (mqttValue <= 0) return 0;
+    if (mqttValue <= 25) return 1;
+    if (mqttValue <= 50) return 2;
+    if (mqttValue <= 75) return 3;
+    return 4;
 }
 
-bool FanHandler::registerZeroCrossIfNeeded(int pin, uint8_t phase) {
-    if (registeredZeroCrossPins.count(pin) > 0) {
-        LOG_DEBUG(TAG, "Zero-cross pin %d already registered", pin);
-        return true;
-    }
-    
-    if (rbdimmer_register_zero_cross(pin, phase, 0) != RBDIMMER_OK) {
-        LOG_ERROR(TAG, "Failed to register zero-cross on GPIO%d", pin);
-        return false;
-    }
-    
-    registeredZeroCrossPins.insert(pin);
-    LOG_INFO(TAG, "Zero-cross registered on GPIO%d for phase %d", pin, phase);
-    return true;
+int FanHandler::stateToMqtt(uint8_t state) {
+    return (state <= 4) ? MQTT_FEEDBACK[state] : 0;
 }
 
-uint8_t FanHandler::mapToDimmerLevel(int mqttValue, int minPwm) {
-    if (mqttValue <= 0) {
-        return 0;
-    }
-    if (mqttValue >= MQTT_VALUE_MAX) {
-        return 100;  // Maximum dimmer level
-    }
-    // Map MQTT 1-100 to minPwm-100 range with proper rounding
-    // Linear interpolation: output = minPwm + round((mqttValue - 1) * (100 - minPwm) / MQTT_VALUE_RANGE)
-    int range = 100 - minPwm;
-    int mapped = minPwm + ((mqttValue - 1) * range + MQTT_VALUE_RANGE / 2) / MQTT_VALUE_RANGE;
-    return static_cast<uint8_t>(constrain(mapped, minPwm, 100));
-}
+void FanHandler::applyRelayState(uint8_t state, int relay1, int relay2, int relay3, bool inverted) {
+    // Safety: Turn all relays OFF first
+    uint8_t offLevel = inverted ? HIGH : LOW;
+    digitalWrite(relay1, offLevel);
+    digitalWrite(relay2, offLevel);
+    digitalWrite(relay3, offLevel);
 
-int FanHandler::parseCurveType(const String& curveType) {
-    String ct = curveType;
-    ct.toUpperCase();
-    
-    if (ct == "LINEAR") {
-        return RBDIMMER_CURVE_LINEAR;
-    } else if (ct == "LOGARITHMIC" || ct == "LOG") {
-        return RBDIMMER_CURVE_LOGARITHMIC;
+    // Apply new state (if valid)
+    if (state <= 4) {
+        uint8_t onLevel = inverted ? LOW : HIGH;
+        digitalWrite(relay1, RELAY_STATES[state][0] ? onLevel : offLevel);
+        digitalWrite(relay2, RELAY_STATES[state][1] ? onLevel : offLevel);
+        digitalWrite(relay3, RELAY_STATES[state][2] ? onLevel : offLevel);
     }
-    // Default to RMS (best for motors/fans)
-    return RBDIMMER_CURVE_RMS;
 }
 
 // ============================================================================
@@ -99,85 +73,54 @@ void FanHandler::init(const PinConfig& cfg,
                       std::vector<MqttProducer>& producers,
                       std::vector<MqttConsumer>& consumers,
                       const String& clientId) {
-    
-    // 1. Initialize rbdimmer library (only once)
-    if (!ensureRbdimmerInit()) {
-        LOG_ERROR(TAG, "Skipping FAN %s - rbdimmer init failed", cfg.name.c_str());
-        return;
-    }
-    
-    // 2. Register zero-cross detector (only once per pin)
-    if (!registerZeroCrossIfNeeded(cfg.pinZeroCross, 0)) {
-        LOG_ERROR(TAG, "Skipping FAN %s - zero-cross registration failed", cfg.name.c_str());
-        return;
-    }
-    
-    // 3. Setup relay pin
+
+    // 1. Setup all 3 relay pins as outputs
     pinMode(cfg.pin, OUTPUT);
-    bool relayOff = cfg.inverted ? HIGH : LOW;
-    digitalWrite(cfg.pin, relayOff);
-    
-    // 4. Create dimmer channel
-    rbdimmer_config_t dimmerConfig = {
-        .gpio_pin = static_cast<uint8_t>(cfg.pinDimmer),
-        .phase = 0,
-        .initial_level = 0,
-        .curve_type = static_cast<rbdimmer_curve_t>(parseCurveType(cfg.curveType))
-    };
-    
-    rbdimmer_channel_t* channel = nullptr;
-    if (rbdimmer_create_channel(&dimmerConfig, &channel) != RBDIMMER_OK) {
-        LOG_ERROR(TAG, "Failed to create dimmer channel for %s", cfg.name.c_str());
-        return;
-    }
-    
-    // Store channel reference
-    dimmerChannels[cfg.pin] = channel;
-    
-    // 5. Initialize state
-    currentState[cfg.pin] = String(cfg.defaultState);
-    
-    // 6. Apply default state
-    int defaultVal = cfg.defaultState;
-    if (defaultVal > 0) {
-        uint8_t level = mapToDimmerLevel(defaultVal, cfg.minPwm);
-        rbdimmer_set_level(channel, level);
-        digitalWrite(cfg.pin, cfg.inverted ? LOW : HIGH);
-    }
-    
-    // 7. Setup MQTT topics
+    pinMode(cfg.pinRelay2, OUTPUT);
+    pinMode(cfg.pinRelay3, OUTPUT);
+
+    // 2. Initialize all relays to OFF
+    uint8_t offLevel = cfg.inverted ? HIGH : LOW;
+    digitalWrite(cfg.pin, offLevel);
+    digitalWrite(cfg.pinRelay2, offLevel);
+    digitalWrite(cfg.pinRelay3, offLevel);
+
+    // 3. Apply default state
+    uint8_t defaultState = mqttToState(cfg.defaultState);
+    applyRelayState(defaultState, cfg.pin, cfg.pinRelay2, cfg.pinRelay3, cfg.inverted);
+
+    // 4. Initialize state storage with MQTT feedback value
+    currentState[cfg.pin] = String(stateToMqtt(defaultState));
+
+    // 5. Setup MQTT topics
     String cmdTopic = "/" + clientId + "/fan/" + cfg.name + "/set";
     String stateTopic = "/" + clientId + "/fan/" + cfg.name + "/state";
 
-    // 8. Create consumer for command topic
-    // Capture needed values for lambda
-    int relayPin = cfg.pin;
-    int minPwm = cfg.minPwm;
+    // 6. Capture values for lambda
+    int r1 = cfg.pin;
+    int r2 = cfg.pinRelay2;
+    int r3 = cfg.pinRelay3;
     bool inverted = cfg.inverted;
 
+    // 7. Create consumer for command topic
     auto c = MqttConsumer::createForActuator(cfg, cmdTopic,
-        [relayPin, minPwm, inverted, channel](int p, const String& msg) {
+        [r1, r2, r3, inverted](int p, const String& msg) {
             int mqttValue = constrain(msg.toInt(), 0, 100);
+            uint8_t state = FanHandler::mqttToState(mqttValue);
 
-            if (mqttValue == 0) {
-                // Turn OFF: Relay OFF, Dimmer 0%
-                rbdimmer_set_level(channel, 0);
-                digitalWrite(relayPin, inverted ? HIGH : LOW);
-                FanHandler::setState(relayPin, "0");
-                LOG_DEBUG(TAG, "FAN GPIO%d OFF", relayPin);
-            } else {
-                // Turn ON: Relay ON, Dimmer mapped level
-                uint8_t level = FanHandler::mapToDimmerLevel(mqttValue, minPwm);
-                digitalWrite(relayPin, inverted ? LOW : HIGH);
-                rbdimmer_set_level(channel, level);
-                FanHandler::setState(relayPin, String(mqttValue));
-                LOG_DEBUG(TAG, "FAN GPIO%d <- %d (dimmer: %d%%)", relayPin, mqttValue, level);
-            }
+            FanHandler::applyRelayState(state, r1, r2, r3, inverted);
+            FanHandler::setState(r1, String(FanHandler::stateToMqtt(state)));
+
+            LOG_DEBUG(TAG, "FAN [R1=%d,R2=%d,R3=%d] <- MQTT:%d -> State:%d -> R1:%s R2:%s R3:%s",
+                      r1, r2, r3, mqttValue, state,
+                      RELAY_STATES[state][0] ? "ON" : "OFF",
+                      RELAY_STATES[state][1] ? "ON" : "OFF",
+                      RELAY_STATES[state][2] ? "ON" : "OFF");
         });
 
     consumers.push_back(std::move(c));
 
-    // 9. Add producer for state publishing
+    // 8. Add producer for state publishing
     if (cfg.pollingInterval > 0) {
         producers.emplace_back(cfg.pin, stateTopic, cfg.pollingInterval, 0,
             [](int pin) {
@@ -185,62 +128,8 @@ void FanHandler::init(const PinConfig& cfg,
             });
     }
 
-    LOG_INFO(TAG, "FAN %s initialized: relay=GPIO%d, dimmer=GPIO%d, zc=GPIO%d, minPwm=%d, curve=%s",
-             cfg.name.c_str(), cfg.pin, cfg.pinDimmer, cfg.pinZeroCross,
-             cfg.minPwm, cfg.curveType.c_str());
+    LOG_INFO(TAG, "FAN %s initialized: R1=GPIO%d, R2=GPIO%d, R3=GPIO%d, inverted=%s",
+             cfg.name.c_str(), cfg.pin, cfg.pinRelay2, cfg.pinRelay3,
+             cfg.inverted ? "true" : "false");
     LOG_INFO(TAG, "  -> cmd: %s, state: %s", cmdTopic.c_str(), stateTopic.c_str());
 }
-
-// ============================================================================
-// Dimmer Diagnostics (only compiled when DIMMER_DEBUG is defined)
-// ============================================================================
-
-#ifdef DIMMER_DEBUG
-void FanHandler::printDiagnostics() {
-    static unsigned long lastPrint = 0;
-    const unsigned long printInterval = 2000; // Print every 2 seconds
-
-    unsigned long now = millis();
-    if (now - lastPrint < printInterval) {
-        return;
-    }
-    lastPrint = now;
-
-    LOG_INFO(TAG, "========== DIMMER DIAGNOSTICS ==========");
-
-    // Check frequency measurement status for phase 0
-    uint16_t frequency = rbdimmer_get_frequency(0);
-    if (frequency > 0) {
-        LOG_INFO(TAG, "Frequency: %d Hz (measured OK)", frequency);
-    } else {
-        LOG_WARN(TAG, "Frequency: NOT MEASURED (still detecting...)");
-    }
-
-    // Print status for each registered dimmer channel
-    for (const auto& pair : dimmerChannels) {
-        int relayPin = pair.first;
-        rbdimmer_channel_t* channel = pair.second;
-
-        if (channel != nullptr) {
-            uint8_t level = rbdimmer_get_level(channel);
-            uint32_t delay_us = rbdimmer_get_delay(channel);
-            bool active = rbdimmer_is_active(channel);
-            rbdimmer_curve_t curve = rbdimmer_get_curve(channel);
-
-            const char* curveStr = "UNKNOWN";
-            switch (curve) {
-                case RBDIMMER_CURVE_LINEAR: curveStr = "LINEAR"; break;
-                case RBDIMMER_CURVE_RMS: curveStr = "RMS"; break;
-                case RBDIMMER_CURVE_LOGARITHMIC: curveStr = "LOG"; break;
-                default: break;
-            }
-
-            LOG_INFO(TAG, "Channel [relay=GPIO%d]: level=%d%%, delay=%luus, active=%s, curve=%s",
-                     relayPin, level, delay_us, active ? "YES" : "NO", curveStr);
-        }
-    }
-
-    LOG_INFO(TAG, "=========================================");
-}
-#endif
-

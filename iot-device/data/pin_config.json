@@ -21,15 +21,13 @@
   },
   {
     "pin": 26,
-    "pinDimmer": 25,
-    "pinZeroCross": 13,
+    "pinRelay2": 25,
+    "pinRelay3": 14,
     "mode": "FAN",
     "name": "fan-power",
     "defaultState": 0,
     "pollingInterval": 30000,
-    "inverted": true,
-    "minPwm": 40,
-    "curveType": "RMS"
+    "inverted": true
   },
   {
     "pin": 27,

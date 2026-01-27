@@ -9,6 +9,7 @@ A flexible, configuration-driven firmware for ESP32 designed to control actuator
     *   **Digital Input/Output** (with Active Low/Inverted logic support).
     *   **PWM Output** (LED dimming, motor speed).
     *   **Analog Input/Output** (ADC/DAC).
+    * **FAN Control** (3-relay discrete speed control with 5 speed states).
     *   **Sensors**: DHT22 (Temp/Hum), DS18B20 (OneWire Temp), MAX6675 (Thermocouple), YL-69 (Soil Moisture).
 *   **Robust Connectivity**:
     *   Automatic WiFi reconnection.
@@ -156,14 +157,16 @@ Sensors periodically publish their readings to MQTT topics.
 
 Actuators subscribe to command topics (`/set`) AND publish their current state to feedback topics (`/state`).
 
-| Mode | Topic Pattern | Payload | Direction |
-| :--- | :--- | :--- | :--- |
-| **OUTPUT_DIGITAL** | `/<clientId>/digital_output/<name>/set` | `0`, `1`, `HIGH`, `LOW` | MQTT → Device |
-| **OUTPUT_DIGITAL** | `/<clientId>/digital_output/<name>/state` | `0`, `1`, `HIGH`, `LOW` | Device → MQTT |
-| **PWM** | `/<clientId>/pwm/<name>/set` | `0` to `255` | MQTT → Device |
-| **PWM** | `/<clientId>/pwm/<name>/state` | `0` to `255` | Device → MQTT |
-| **OUTPUT_ANALOG** | `/<clientId>/analog_output/<name>/set` | `0` to `255` (DAC) | MQTT → Device |
-| **OUTPUT_ANALOG** | `/<clientId>/analog_output/<name>/state` | `0` to `255` (DAC) | Device → MQTT |
+| Mode               | Topic Pattern                             | Payload                          | Direction     |
+|:-------------------|:------------------------------------------|:---------------------------------|:--------------|
+| **OUTPUT_DIGITAL** | `/<clientId>/digital_output/<name>/set`   | `0`, `1`, `HIGH`, `LOW`          | MQTT → Device |
+| **OUTPUT_DIGITAL** | `/<clientId>/digital_output/<name>/state` | `0`, `1`, `HIGH`, `LOW`          | Device → MQTT |
+| **PWM**            | `/<clientId>/pwm/<name>/set`              | `0` to `255`                     | MQTT → Device |
+| **PWM**            | `/<clientId>/pwm/<name>/state`            | `0` to `255`                     | Device → MQTT |
+| **OUTPUT_ANALOG**  | `/<clientId>/analog_output/<name>/set`    | `0` to `255` (DAC)               | MQTT → Device |
+| **OUTPUT_ANALOG**  | `/<clientId>/analog_output/<name>/state`  | `0` to `255` (DAC)               | Device → MQTT |
+| **FAN**            | `/<clientId>/fan/<name>/set`              | `0` to `100` (5 discrete states) | MQTT → Device |
+| **FAN**            | `/<clientId>/fan/<name>/state`            | `0`, `25`, `50`, `75`, `100`     | Device → MQTT |
 
 ### Actuator State Publishing Behavior
 
@@ -185,17 +188,18 @@ Actuators publish their current state to `/state` topics under the following con
 
 ## ⚙️ Supported Pin Modes
 
-| Mode Name | Description | Additional Config Fields |
-| :--- | :--- | :--- |
-| `INPUT_DIGITAL` | Reads digital state (0/1). | `inverted`, `pollingInterval` |
-| `OUTPUT_DIGITAL` | Controls a relay or LED. Publishes state feedback. | `inverted`, `defaultState`, `pollingInterval`* |
-| `PWM` | Pulse Width Modulation output. Publishes state feedback. | `defaultState`, `pollingInterval`* |
-| `INPUT_ANALOG` | Reads ADC value. | `pollingInterval` |
-| `OUTPUT_ANALOG` | Writes DAC value (Pins 25, 26 only). Publishes state feedback. | `defaultState`, `pollingInterval`* |
-| `DHT22_SENSOR` | Reads Temp/Humidity. | `pollingInterval` |
-| `DS18B20` | OneWire Temperature Sensor. | `pollingInterval` |
-| `YL_69_SENSOR` | Soil Moisture Sensor. | `pollingInterval` |
-| `THERMOCOUPLE` | MAX6675 SPI Sensor. | `sck`, `so`, `pollingInterval` |
+| Mode Name        | Description                                                    | Additional Config Fields                                                 |
+|:-----------------|:---------------------------------------------------------------|:-------------------------------------------------------------------------|
+| `INPUT_DIGITAL`  | Reads digital state (0/1).                                     | `inverted`, `pollingInterval`                                            |
+| `OUTPUT_DIGITAL` | Controls a relay or LED. Publishes state feedback.             | `inverted`, `defaultState`, `pollingInterval`*                           |
+| `PWM`            | Pulse Width Modulation output. Publishes state feedback.       | `defaultState`, `pollingInterval`*                                       |
+| `INPUT_ANALOG`   | Reads ADC value.                                               | `pollingInterval`                                                        |
+| `OUTPUT_ANALOG`  | Writes DAC value (Pins 25, 26 only). Publishes state feedback. | `defaultState`, `pollingInterval`*                                       |
+| `DHT22_SENSOR`   | Reads Temp/Humidity.                                           | `pollingInterval`                                                        |
+| `DS18B20`        | OneWire Temperature Sensor.                                    | `pollingInterval`                                                        |
+| `YL_69_SENSOR`   | Soil Moisture Sensor.                                          | `pollingInterval`                                                        |
+| `THERMOCOUPLE`   | MAX6675 SPI Sensor.                                            | `sck`, `so`, `pollingInterval`                                           |
+| `FAN`            | 3-relay discrete fan speed control (5 states).                 | `pinRelay2`, `pinRelay3`, `inverted`, `defaultState`, `pollingInterval`* |
 
 > *For actuators, `pollingInterval` controls both the **state publishing interval** and the **watchdog timeout**.
 

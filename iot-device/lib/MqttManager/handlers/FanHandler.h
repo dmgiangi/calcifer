@@ -1,22 +1,28 @@
 //
-// FanHandler.h - Handler for AC dimmer fan control (relay + TRIAC dimmer)
+// FanHandler.h - Handler for 3-relay fan control with 5 discrete speed states
 //
 
 #pragma once
 
 #include "IDeviceHandler.h"
-#include "rbdimmerESP32.h"
 #include <map>
-#include <set>
 
 /**
- * @brief Handler for FAN mode (AC dimmer control).
+ * @brief Handler for FAN mode (3-relay discrete speed control).
  *
- * Coordinates a relay (on/off) with a TRIAC AC dimmer for fan speed control.
- * - Value 0: Relay OFF, Dimmer 0%
- * - Value 1-100: Relay ON, Dimmer mapped from minPwm to 100%
+ * Controls fan speed using 3 relays that provide 5 discrete speed states:
+ * - State 0: All relays OFF (fan stopped)
+ * - State 1: Only relay 1 ON (lowest speed)
+ * - State 2: Only relay 2 ON (medium-low speed)
+ * - State 3: Relays 1 AND 2 ON (medium-high speed)
+ * - State 4: Only relay 3 ON (highest speed)
  *
- * Subscribes to MQTT command topic and publishes state to state topic.
+ * MQTT API accepts 0-100 percentage values for backward compatibility:
+ * - 0 -> State 0, feedback "0"
+ * - 1-25 -> State 1, feedback "25"
+ * - 26-50 -> State 2, feedback "50"
+ * - 51-75 -> State 3, feedback "75"
+ * - 76-100 -> State 4, feedback "100"
  */
 class FanHandler : public IDeviceHandler {
 public:
@@ -32,60 +38,35 @@ public:
     static void setState(int pin, const String& value);
 
     /**
-     * @brief Maps MQTT value (0-100) to dimmer level (0-100) with minPwm threshold.
-     *
-     * Uses linear interpolation with proper rounding to map the MQTT percentage
-     * input to the effective dimmer range (minPwm to 100%).
+     * @brief Converts MQTT value (0-100) to internal state (0-4).
      *
      * @param mqttValue Value from MQTT (0-100 percentage)
-     * @param minPwm Minimum PWM threshold (0-100)
-     * @return Dimmer level: 0 if mqttValue <= 0, otherwise minPwm to 100
+     * @return Internal state: 0-4
      */
-    static uint8_t mapToDimmerLevel(int mqttValue, int minPwm);
+    static uint8_t mqttToState(int mqttValue);
 
-#ifdef DIMMER_DEBUG
     /**
-     * @brief Prints dimmer diagnostic information to serial.
+     * @brief Converts internal state (0-4) to MQTT feedback value.
      *
-     * Outputs frequency measurement status, current dimmer level, and delay.
-     * Only available when DIMMER_DEBUG is defined (dimmer_debug environment).
-     * Should be called periodically from main loop (not in ISR context).
+     * @param state Internal state (0-4)
+     * @return MQTT value: 0, 25, 50, 75, or 100
      */
-    static void printDiagnostics();
-#endif
+    static int stateToMqtt(uint8_t state);
 
 private:
-    // Static flag to track if rbdimmer library has been initialized
-    static bool rbdimmerInitialized;
-    
-    // Static set to track which zero-cross pins are already registered
-    static std::set<int> registeredZeroCrossPins;
-    
     // Static map to store current state per pin (for state publishing)
     static std::map<int, String> currentState;
-    
-    // Static map to store dimmer channel per relay pin
-    static std::map<int, rbdimmer_channel_t*> dimmerChannels;
-    
-    /**
-     * @brief Ensures rbdimmer library is initialized.
-     * @return true if initialization succeeded or was already done.
-     */
-    static bool ensureRbdimmerInit();
-    
-    /**
-     * @brief Registers a zero-cross pin if not already registered.
-     * @param pin Zero-cross GPIO pin
-     * @param phase Phase number (0 for single phase)
-     * @return true if registration succeeded or was already done.
-     */
-    static bool registerZeroCrossIfNeeded(int pin, uint8_t phase);
 
     /**
-     * @brief Parses curve type string to rbdimmer curve enum.
-     * @param curveType Curve type string ("LINEAR", "RMS", "LOGARITHMIC")
-     * @return rbdimmer_curve_t enum value
+     * @brief Applies relay states based on internal state (0-4).
+     *
+     * Turns all relays OFF first (safety), then turns ON the required ones.
+     *
+     * @param state Internal state (0-4)
+     * @param relay1 GPIO pin for relay 1
+     * @param relay2 GPIO pin for relay 2
+     * @param relay3 GPIO pin for relay 3
+     * @param inverted If true, relay logic is inverted (HIGH=OFF, LOW=ON)
      */
-    static int parseCurveType(const String& curveType);
+    static void applyRelayState(uint8_t state, int relay1, int relay2, int relay3, bool inverted);
 };
-

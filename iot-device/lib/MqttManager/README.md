@@ -40,7 +40,7 @@ The MqttManager uses a **Singleton pattern** with a **Strategy-based handler arc
 - `Yl69Handler` (Sensor → Producer)
 - `Ds18b20Handler` (Sensor → Producer)
 - `ThermocoupleHandler` (Sensor → Producer)
-- `FanHandler` (Actuator → Consumer + Producer) - AC dimmer with relay coordination
+- `FanHandler` (Actuator → Consumer + Producer) - 3-relay discrete speed control
 
 ## MQTT Configuration
 
@@ -106,12 +106,12 @@ The manager automatically generates topics based on the `clientId` and `PinConfi
 
 Actuators subscribe to `/set` topics for commands AND publish their current state to `/state` topics.
 
-| Mode | Command Topic | State Topic | Payload |
-| :--- | :--- | :--- | :--- |
-| `OUTPUT_DIGITAL` | `.../digital_output/{name}/set` | `.../digital_output/{name}/state` | `0`/`1` or `LOW`/`HIGH` |
-| `PWM` | `.../pwm/{name}/set` | `.../pwm/{name}/state` | Duty cycle `0-255` |
-| `OUTPUT_ANALOG` | `.../analog_output/{name}/set` | `.../analog_output/{name}/state` | DAC value `0-255` |
-| `FAN` | `.../fan/{name}/set` | `.../fan/{name}/state` | Speed `0-255` (0=OFF, 1-255=ON with dimming) |
+| Mode             | Command Topic                   | State Topic                       | Payload                                               |
+|:-----------------|:--------------------------------|:----------------------------------|:------------------------------------------------------|
+| `OUTPUT_DIGITAL` | `.../digital_output/{name}/set` | `.../digital_output/{name}/state` | `0`/`1` or `LOW`/`HIGH`                               |
+| `PWM`            | `.../pwm/{name}/set`            | `.../pwm/{name}/state`            | Duty cycle `0-255`                                    |
+| `OUTPUT_ANALOG`  | `.../analog_output/{name}/set`  | `.../analog_output/{name}/state`  | DAC value `0-255`                                     |
+| `FAN`            | `.../fan/{name}/set`            | `.../fan/{name}/state`            | Speed `0-100` (5 discrete states: 0, 25, 50, 75, 100) |
 
 **State Publishing Behavior:**
 - State is published every `pollingInterval` milliseconds
@@ -244,7 +244,7 @@ lib/MqttManager/
     ├── Yl69Handler.h/.cpp
     ├── Ds18b20Handler.h/.cpp
     ├── ThermocoupleHandler.h/.cpp
-    └── FanHandler.h/.cpp    # AC dimmer fan control
+    └── FanHandler.h/.cpp    # 3-relay fan speed control
 ```
 
 ## See Also

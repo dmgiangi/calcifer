@@ -12,10 +12,6 @@
 #include <WiFi.h>
 #include <Logger.h>
 
-#ifdef DIMMER_DEBUG
-#include <handlers/FanHandler.h>
-#endif
-
 static const char* TAG = "Setup";
 
 WiFiClient wifiClient;               // deve vivere per tutta la durata
@@ -104,8 +100,4 @@ void loop()
     MqttManager::getInstance().loop();            // mantiene viva la connessione
     MqttManager::handleProducers(); // pubblica periodicamente i valori
     MqttManager::handleConsumers(); // watchdog per i consumer
-
-#ifdef DIMMER_DEBUG
-    FanHandler::printDiagnostics(); // Print dimmer diagnostics every 2 seconds
-#endif
 }

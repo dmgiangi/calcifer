@@ -239,22 +239,22 @@ Payload: 128
 
 **File**: `handlers/FanHandler.cpp`
 
-| Property | Value |
-|:---------|:------|
-| **Device Type** | Actuator (AC Dimmer Fan with Relay) |
-| **MQTT Role** | Consumer + Producer |
-| **Command Topic** | `/<clientId>/fan/<name>/set` |
-| **State Topic** | `/<clientId>/fan/<name>/state` |
-| **Payload Format** | Integer `0` - `100` (percentage) |
-| **Hardware** | Relay + TRIAC Dimmer + Zero-Cross Detector |
+| Property           | Value                                           |
+|:-------------------|:------------------------------------------------|
+| **Device Type**    | Actuator (3-Relay Fan Speed Controller)         |
+| **MQTT Role**      | Consumer + Producer                             |
+| **Command Topic**  | `/<clientId>/fan/<name>/set`                    |
+| **State Topic**    | `/<clientId>/fan/<name>/state`                  |
+| **Payload Format** | Integer `0` - `100` (maps to 5 discrete states) |
+| **Hardware**       | 3 Relays for discrete speed control             |
 
 #### Pin Configuration
 
-| JSON Field | Description | Requirements |
-|:-----------|:------------|:-------------|
-| `pin` | Relay control GPIO | Digital output capable |
-| `pinDimmer` | TRIAC dimmer GPIO | PWM capable |
-| `pinZeroCross` | Zero-crossing detection GPIO | Interrupt capable |
+| JSON Field  | Description          | Requirements           |
+|:------------|:---------------------|:-----------------------|
+| `pin`       | Relay 1 control GPIO | Digital output capable |
+| `pinRelay2` | Relay 2 control GPIO | Digital output capable |
+| `pinRelay3` | Relay 3 control GPIO | Digital output capable |
 
 #### MQTT Examples
 
@@ -272,53 +272,46 @@ Payload: 75
 
 #### Behavior
 
-| MQTT Value | Relay State | Dimmer Level |
-|:-----------|:------------|:-------------|
-| `0` | OFF | 0% |
-| `1` - `100` | ON | Mapped from `minPwm` to 100% |
+The fan uses 3 relays to provide 5 discrete speed states:
 
-#### Value Mapping
+| State | Relay 1 | Relay 2 | Relay 3 | Description       |
+|:-----:|:-------:|:-------:|:-------:|:------------------|
+|   0   |   OFF   |   OFF   |   OFF   | Fan stopped       |
+|   1   |   ON    |   OFF   |   OFF   | Lowest speed      |
+|   2   |   OFF   |   ON    |   OFF   | Medium-low speed  |
+|   3   |   ON    |   ON    |   OFF   | Medium-high speed |
+|   4   |   OFF   |   OFF   |   ON    | Highest speed     |
 
-The MQTT value (1-100) is linearly mapped to the dimmer range with proper rounding:
+#### MQTT to State Mapping
 
-```
-dimmer_level = minPwm + round((mqtt_value - 1) * (100 - minPwm) / 99)
-```
-
-Example with `minPwm: 40`:
-- MQTT `1` → Dimmer 40% (minimum)
-- MQTT `50` → Dimmer 70% (midpoint)
-- MQTT `100` → Dimmer 100% (maximum)
-
-#### Dimming Curves
-
-| `curveType` | Description | Best For |
-|:------------|:------------|:---------|
-| `LINEAR` | Linear power curve | Resistive loads |
-| `RMS` | RMS-corrected curve | Motors, fans (recommended) |
-| `LOGARITHMIC` | Logarithmic curve | Incandescent lights |
+| MQTT Value   | Internal State | State Feedback |
+|:-------------|:--------------:|:--------------:|
+| `0`          |       0        |      `0`       |
+| `1` - `25`   |       1        |      `25`      |
+| `26` - `50`  |       2        |      `50`      |
+| `51` - `75`  |       3        |      `75`      |
+| `76` - `100` |       4        |     `100`      |
 
 #### JSON Configuration Example
 
 ```json
 {
   "pin": 26,
-  "pinDimmer": 25,
-  "pinZeroCross": 13,
+  "pinRelay2": 25,
+  "pinRelay3": 14,
   "mode": "FAN",
   "name": "ceiling-fan",
   "defaultState": 0,
   "pollingInterval": 30000,
-  "inverted": true,
-  "minPwm": 25,
-  "curveType": "RMS"
+  "inverted": true
 }
 ```
 
 #### Notes
-- ⚠️ **Requires 3 pins**: Relay (`pin`), Dimmer (`pinDimmer`), Zero-Cross (`pinZeroCross`)
-- Uses **rbdimmerESP32** library for phase-angle control
-- `inverted: true` means relay is Active Low (common for relay modules)
+
+- ⚠️ **Requires 3 pins**: Relay 1 (`pin`), Relay 2 (`pinRelay2`), Relay 3 (`pinRelay3`)
+- `inverted: true` means relays are Active Low (common for relay modules)
+- **Safety**: All relays are turned OFF before applying new state to prevent transient states
 - **Watchdog**: Resets to `defaultState` if no message received within `pollingInterval`
-- **State Publishing**: Current speed value is published to `/state` topic every `pollingInterval` ms
-- Zero-crossing detection is shared across multiple FAN instances on the same phase
+- **State Publishing**: Current speed value (0, 25, 50, 75, or 100) is published to `/state` topic every
+  `pollingInterval` ms

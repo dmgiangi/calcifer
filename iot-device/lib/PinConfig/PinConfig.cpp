@@ -143,24 +143,17 @@ bool isValidConfig(const PinConfig& config)
 
         return true;
 
-    // AC Dimmer Fan Control (Relay + TRIAC Dimmer + Zero-Cross Detection)
+    // 3-Relay Fan Control (5 discrete speed states)
     case FAN:
     {
-        // 1. Validate Relay pin (Primary Pin) -> Must be Output
+        // 1. Validate Relay 1 pin (Primary Pin) -> Must be Output
         if (!primaryPinCfg->isOutput) return false;
 
-        // 2. Validate TRIAC dimmer pin (pinDimmer) -> Must be Output
-        if (!isPinCapabilityValid(config.pinDimmer, true, false)) return false;
+        // 2. Validate Relay 2 pin (pinRelay2) -> Must be Output
+        if (!isPinCapabilityValid(config.pinRelay2, true, false)) return false;
 
-        // 3. Validate Zero-Cross pin (pinZeroCross) -> Must support Interrupts
-        bool zcPinValid = false;
-        for (size_t i = 0; i < allowedCount; i++) {
-            if (allowedPins[i].gpio == config.pinZeroCross && allowedPins[i].isInterrupt) {
-                zcPinValid = true;
-                break;
-            }
-        }
-        if (!zcPinValid) return false;
+        // 3. Validate Relay 3 pin (pinRelay3) -> Must be Output
+        if (!isPinCapabilityValid(config.pinRelay3, true, false)) return false;
 
         return true;
     }
@@ -234,11 +227,9 @@ std::vector<PinConfig> loadConfiguration(const char *filename)
         int pinData = obj["so"] | -1;
         if (pinData == -1) pinData = obj["miso"] | -1;
 
-        // FAN-specific fields
-        int pinDimmer = obj["pinDimmer"] | -1;
-        int pinZeroCross = obj["pinZeroCross"] | -1;
-        int minPwm = obj["minPwm"] | 0;
-        String curveType = obj["curveType"] | "RMS";
+        // FAN-specific fields (3-relay control)
+        int pinRelay2 = obj["pinRelay2"] | -1;
+        int pinRelay3 = obj["pinRelay3"] | -1;
 
         if (pin == -1 || modeStr.isEmpty())
         {
@@ -257,10 +248,8 @@ std::vector<PinConfig> loadConfiguration(const char *filename)
         cfg.pin = pin;
         cfg.pinClock = pinClock;
         cfg.pinData = pinData;
-        cfg.pinDimmer = pinDimmer;
-        cfg.pinZeroCross = pinZeroCross;
-        cfg.minPwm = minPwm;
-        cfg.curveType = curveType;
+        cfg.pinRelay2 = pinRelay2;
+        cfg.pinRelay3 = pinRelay3;
         cfg.mode = mode;
         cfg.name = nameStr;
         cfg.defaultState = defaultState;
@@ -280,9 +269,8 @@ std::vector<PinConfig> loadConfiguration(const char *filename)
             LOG_INFO(TAG, "Loaded: %s (CS:%d, SCK:%d, SO:%d)",
                      modeStr.c_str(), cfg.pin, cfg.pinClock, cfg.pinData);
         } else if (mode == FAN) {
-            LOG_INFO(TAG, "Loaded: %s (Relay:%d, Dimmer:%d, ZC:%d, minPwm:%d, curve:%s)",
-                     cfg.name.c_str(), cfg.pin, cfg.pinDimmer, cfg.pinZeroCross,
-                     cfg.minPwm, cfg.curveType.c_str());
+            LOG_INFO(TAG, "Loaded: %s (R1:%d, R2:%d, R3:%d)",
+                     cfg.name.c_str(), cfg.pin, cfg.pinRelay2, cfg.pinRelay3);
         } else {
             LOG_INFO(TAG, "Loaded: GPIO%d as %s (%s)",
                      cfg.pin, modeStr.c_str(), cfg.name.c_str());
