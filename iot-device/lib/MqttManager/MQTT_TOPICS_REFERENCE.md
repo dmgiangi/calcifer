@@ -239,14 +239,14 @@ Payload: 128
 
 **File**: `handlers/FanHandler.cpp`
 
-| Property           | Value                                           |
-|:-------------------|:------------------------------------------------|
-| **Device Type**    | Actuator (3-Relay Fan Speed Controller)         |
-| **MQTT Role**      | Consumer + Producer                             |
-| **Command Topic**  | `/<clientId>/fan/<name>/set`                    |
-| **State Topic**    | `/<clientId>/fan/<name>/state`                  |
-| **Payload Format** | Integer `0` - `100` (maps to 5 discrete states) |
-| **Hardware**       | 3 Relays for discrete speed control             |
+| Property           | Value                                   |
+|:-------------------|:----------------------------------------|
+| **Device Type**    | Actuator (3-Relay Fan Speed Controller) |
+| **MQTT Role**      | Consumer + Producer                     |
+| **Command Topic**  | `/<clientId>/fan/<name>/set`            |
+| **State Topic**    | `/<clientId>/fan/<name>/state`          |
+| **Payload Format** | Integer `0` - `4` (5 discrete states)   |
+| **Hardware**       | 3 Relays for discrete speed control     |
 
 #### Pin Configuration
 
@@ -261,13 +261,13 @@ Payload: 128
 **Command (MQTT → Device):**
 ```
 Topic:   /ESP32_Room1/fan/ceiling-fan/set
-Payload: 75
+Payload: 3
 ```
 
 **State Feedback (Device → MQTT):**
 ```
 Topic:   /ESP32_Room1/fan/ceiling-fan/state
-Payload: 75
+Payload: 3
 ```
 
 #### Behavior
@@ -282,15 +282,17 @@ The fan uses 3 relays to provide 5 discrete speed states:
 |   3   |   ON    |   ON    |   OFF   | Medium-high speed |
 |   4   |   OFF   |   OFF   |   ON    | Highest speed     |
 
-#### MQTT to State Mapping
+#### MQTT API
 
-| MQTT Value   | Internal State | State Feedback |
-|:-------------|:--------------:|:--------------:|
-| `0`          |       0        |      `0`       |
-| `1` - `25`   |       1        |      `25`      |
-| `26` - `50`  |       2        |      `50`      |
-| `51` - `75`  |       3        |      `75`      |
-| `76` - `100` |       4        |     `100`      |
+| MQTT Value | State | State Feedback |
+|:----------:|:-----:|:--------------:|
+|    `0`     |   0   |      `0`       |
+|    `1`     |   1   |      `1`       |
+|    `2`     |   2   |      `2`       |
+|    `3`     |   3   |      `3`       |
+|    `4`     |   4   |      `4`       |
+
+Values outside 0-4 are constrained (negative → 0, >4 → 4).
 
 #### Kickstart Feature
 
@@ -333,6 +335,5 @@ target speed.
 - `inverted: true` means relays are Active Low (common for relay modules)
 - **Safety**: All relays are turned OFF before applying new state to prevent transient states
 - **Watchdog**: Resets to `defaultState` if no message received within `pollingInterval`
-- **State Publishing**: Current speed value (0, 25, 50, 75, or 100) is published to `/state` topic every
-  `pollingInterval` ms
+- **State Publishing**: Current speed value (0-4) is published to `/state` topic every `pollingInterval` ms
 - **Kickstart**: When enabled, state feedback shows the target speed immediately (not the temporary full power state)

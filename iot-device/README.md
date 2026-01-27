@@ -157,16 +157,16 @@ Sensors periodically publish their readings to MQTT topics.
 
 Actuators subscribe to command topics (`/set`) AND publish their current state to feedback topics (`/state`).
 
-| Mode               | Topic Pattern                             | Payload                          | Direction     |
-|:-------------------|:------------------------------------------|:---------------------------------|:--------------|
-| **OUTPUT_DIGITAL** | `/<clientId>/digital_output/<name>/set`   | `0`, `1`, `HIGH`, `LOW`          | MQTT → Device |
-| **OUTPUT_DIGITAL** | `/<clientId>/digital_output/<name>/state` | `0`, `1`, `HIGH`, `LOW`          | Device → MQTT |
-| **PWM**            | `/<clientId>/pwm/<name>/set`              | `0` to `255`                     | MQTT → Device |
-| **PWM**            | `/<clientId>/pwm/<name>/state`            | `0` to `255`                     | Device → MQTT |
-| **OUTPUT_ANALOG**  | `/<clientId>/analog_output/<name>/set`    | `0` to `255` (DAC)               | MQTT → Device |
-| **OUTPUT_ANALOG**  | `/<clientId>/analog_output/<name>/state`  | `0` to `255` (DAC)               | Device → MQTT |
-| **FAN**            | `/<clientId>/fan/<name>/set`              | `0` to `100` (5 discrete states) | MQTT → Device |
-| **FAN**            | `/<clientId>/fan/<name>/state`            | `0`, `25`, `50`, `75`, `100`     | Device → MQTT |
+| Mode               | Topic Pattern                             | Payload                        | Direction     |
+|:-------------------|:------------------------------------------|:-------------------------------|:--------------|
+| **OUTPUT_DIGITAL** | `/<clientId>/digital_output/<name>/set`   | `0`, `1`, `HIGH`, `LOW`        | MQTT → Device |
+| **OUTPUT_DIGITAL** | `/<clientId>/digital_output/<name>/state` | `0`, `1`, `HIGH`, `LOW`        | Device → MQTT |
+| **PWM**            | `/<clientId>/pwm/<name>/set`              | `0` to `255`                   | MQTT → Device |
+| **PWM**            | `/<clientId>/pwm/<name>/state`            | `0` to `255`                   | Device → MQTT |
+| **OUTPUT_ANALOG**  | `/<clientId>/analog_output/<name>/set`    | `0` to `255` (DAC)             | MQTT → Device |
+| **OUTPUT_ANALOG**  | `/<clientId>/analog_output/<name>/state`  | `0` to `255` (DAC)             | Device → MQTT |
+| **FAN**            | `/<clientId>/fan/<name>/set`              | `0` to `4` (5 discrete states) | MQTT → Device |
+| **FAN**            | `/<clientId>/fan/<name>/state`            | `0`, `1`, `2`, `3`, `4`        | Device → MQTT |
 
 ### Actuator State Publishing Behavior
 

@@ -106,12 +106,12 @@ The manager automatically generates topics based on the `clientId` and `PinConfi
 
 Actuators subscribe to `/set` topics for commands AND publish their current state to `/state` topics.
 
-| Mode             | Command Topic                   | State Topic                       | Payload                                               |
-|:-----------------|:--------------------------------|:----------------------------------|:------------------------------------------------------|
-| `OUTPUT_DIGITAL` | `.../digital_output/{name}/set` | `.../digital_output/{name}/state` | `0`/`1` or `LOW`/`HIGH`                               |
-| `PWM`            | `.../pwm/{name}/set`            | `.../pwm/{name}/state`            | Duty cycle `0-255`                                    |
-| `OUTPUT_ANALOG`  | `.../analog_output/{name}/set`  | `.../analog_output/{name}/state`  | DAC value `0-255`                                     |
-| `FAN`            | `.../fan/{name}/set`            | `.../fan/{name}/state`            | Speed `0-100` (5 discrete states: 0, 25, 50, 75, 100) |
+| Mode             | Command Topic                   | State Topic                       | Payload                         |
+|:-----------------|:--------------------------------|:----------------------------------|:--------------------------------|
+| `OUTPUT_DIGITAL` | `.../digital_output/{name}/set` | `.../digital_output/{name}/state` | `0`/`1` or `LOW`/`HIGH`         |
+| `PWM`            | `.../pwm/{name}/set`            | `.../pwm/{name}/state`            | Duty cycle `0-255`              |
+| `OUTPUT_ANALOG`  | `.../analog_output/{name}/set`  | `.../analog_output/{name}/state`  | DAC value `0-255`               |
+| `FAN`            | `.../fan/{name}/set`            | `.../fan/{name}/state`            | Speed `0-4` (5 discrete states) |
 
 **State Publishing Behavior:**
 - State is published every `pollingInterval` milliseconds

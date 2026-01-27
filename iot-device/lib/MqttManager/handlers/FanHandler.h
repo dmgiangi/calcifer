@@ -30,12 +30,9 @@ struct KickstartState {
  * - State 3: Relays 1 AND 2 ON (medium-high speed)
  * - State 4: Only relay 3 ON (highest speed)
  *
- * MQTT API accepts 0-100 percentage values for backward compatibility:
- * - 0 -> State 0, feedback "0"
- * - 1-25 -> State 1, feedback "25"
- * - 26-50 -> State 2, feedback "50"
- * - 51-75 -> State 3, feedback "75"
- * - 76-100 -> State 4, feedback "100"
+ * MQTT API accepts integer values 0-4 directly:
+ * - Command: Send 0, 1, 2, 3, or 4
+ * - Feedback: Returns the same value (0, 1, 2, 3, or 4)
  *
  * Kickstart Feature:
  * When enabled, transitioning from OFF to states 1-3 will first apply
@@ -62,18 +59,18 @@ public:
     static void setState(int pin, const String& value);
 
     /**
-     * @brief Converts MQTT value (0-100) to internal state (0-4).
+     * @brief Validates and constrains MQTT value to valid state (0-4).
      *
-     * @param mqttValue Value from MQTT (0-100 percentage)
-     * @return Internal state: 0-4
+     * @param mqttValue Value from MQTT (should be 0-4)
+     * @return Valid state: 0-4 (constrained)
      */
     static uint8_t mqttToState(int mqttValue);
 
     /**
-     * @brief Converts internal state (0-4) to MQTT feedback value.
+     * @brief Returns the state value for MQTT feedback.
      *
      * @param state Internal state (0-4)
-     * @return MQTT value: 0, 25, 50, 75, or 100
+     * @return MQTT value: 0, 1, 2, 3, or 4
      */
     static int stateToMqtt(uint8_t state);
 

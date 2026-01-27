@@ -20,17 +20,19 @@
     "pollingInterval": 10000
   },
   {
-    "pin": 26,
-    "pinRelay2": 25,
-    "pinRelay3": 14,
+    "pin": 25,
+    "pinRelay2": 26,
+    "pinRelay3": 27,
     "mode": "FAN",
     "name": "fan-power",
     "defaultState": 0,
     "pollingInterval": 30000,
-    "inverted": true
+    "inverted": true,
+    "kickstartEnabled": true,
+    "kickstartDuration": 500
   },
   {
-    "pin": 27,
+    "pin": 14,
     "mode": "OUTPUT_DIGITAL",
     "name": "pump-power",
     "defaultState": 1,

@@ -18,9 +18,6 @@ static const uint8_t RELAY_STATES[5][3] = {
     {0, 0, 1}   // State 4: R3 only (highest speed)
 };
 
-// MQTT feedback values for each state
-static const int MQTT_FEEDBACK[5] = {0, 25, 50, 75, 100};
-
 // Static member initialization
 std::map<int, String> FanHandler::currentState;
 std::map<int, uint8_t> FanHandler::currentInternalState;
@@ -41,15 +38,15 @@ void FanHandler::setState(int pin, const String& value) {
 }
 
 uint8_t FanHandler::mqttToState(int mqttValue) {
-    if (mqttValue <= 0) return 0;
-    if (mqttValue <= 25) return 1;
-    if (mqttValue <= 50) return 2;
-    if (mqttValue <= 75) return 3;
-    return 4;
+    // Constrain to valid range 0-4
+    if (mqttValue < 0) return 0;
+    if (mqttValue > 4) return 4;
+    return (uint8_t)mqttValue;
 }
 
 int FanHandler::stateToMqtt(uint8_t state) {
-    return (state <= 4) ? MQTT_FEEDBACK[state] : 0;
+    // Return state directly (0-4), constrain invalid values
+    return (state <= 4) ? state : 0;
 }
 
 void FanHandler::applyRelayState(uint8_t state, int relay1, int relay2, int relay3, bool inverted) {
@@ -157,7 +154,7 @@ void FanHandler::init(const PinConfig& cfg,
     // 9. Create consumer for command topic
     auto c = MqttConsumer::createForActuator(cfg, cmdTopic,
         [r1, r2, r3, inverted, kickstartEnabled, kickstartDuration](int p, const String& msg) {
-            int mqttValue = constrain(msg.toInt(), 0, 100);
+            int mqttValue = constrain(msg.toInt(), 0, 4);
             uint8_t targetState = FanHandler::mqttToState(mqttValue);
 
             // Get current internal state
