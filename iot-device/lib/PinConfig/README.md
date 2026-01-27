@@ -36,16 +36,18 @@ Configuration for a single device:
 
 ```cpp
 struct PinConfig {
-    int pin;              // Primary GPIO number (Relay 1 for FAN)
-    int pinClock;         // SPI Clock pin (THERMOCOUPLE only)
-    int pinData;          // SPI Data pin (THERMOCOUPLE only)
-    int pinRelay2;        // Second relay GPIO (FAN only)
-    int pinRelay3;        // Third relay GPIO (FAN only)
-    PinModeType mode;     // Operation mode
-    String name;          // Human-readable identifier (used in MQTT topics)
-    int defaultState;     // Initial state (0/1 for digital, 0-100 for FAN)
-    int pollingInterval;  // Interval in ms (sensors: publish rate, actuators: watchdog)
-    bool inverted;        // Logic inversion (Active Low)
+    int pin;               // Primary GPIO number (Relay 1 for FAN)
+    int pinClock;          // SPI Clock pin (THERMOCOUPLE only)
+    int pinData;           // SPI Data pin (THERMOCOUPLE only)
+    int pinRelay2;         // Second relay GPIO (FAN only)
+    int pinRelay3;         // Third relay GPIO (FAN only)
+    PinModeType mode;      // Operation mode
+    String name;           // Human-readable identifier (used in MQTT topics)
+    int defaultState;      // Initial state (0/1 for digital, 0-100 for FAN)
+    int pollingInterval;   // Interval in ms (sensors: publish rate, actuators: watchdog)
+    bool inverted;         // Logic inversion (Active Low)
+    bool kickstartEnabled; // Enable kickstart for FAN mode (default: false)
+    int kickstartDuration; // Kickstart duration in ms for FAN mode (default: 0)
 };
 ```
 
@@ -130,25 +132,29 @@ The `pin_config.json` file is a JSON array of device configurations:
     "name": "ceiling-fan",
     "defaultState": 0,
     "pollingInterval": 30000,
-    "inverted": true
+    "inverted": true,
+    "kickstartEnabled": true,
+    "kickstartDuration": 500
   }
 ]
 ```
 
 ### Field Reference
 
-| Field             | Type   |   Required   | Default | Description                             |
-|:------------------|:-------|:------------:|:-------:|:----------------------------------------|
-| `pin`             | int    |      ✓       |    -    | Primary GPIO number (relay pin for FAN) |
-| `mode`            | string |      ✓       |    -    | One of the `PinModeType` values         |
-| `name`            | string |      ✓       |    -    | Identifier used in MQTT topics          |
-| `defaultState`    | int    |      -       |   `0`   | Initial state (actuators only)          |
-| `pollingInterval` | int    |      -       | `1000`  | Interval in milliseconds                |
-| `inverted`        | bool   |      -       | `false` | Invert logic (Active Low relay)         |
-| `sck`             | int    | THERMOCOUPLE |    -    | SPI Clock GPIO                          |
-| `so` / `miso`     | int    | THERMOCOUPLE |    -    | SPI Data In GPIO                        |
-| `pinRelay2`       | int    |     FAN      |    -    | Second relay GPIO (output capable)      |
-| `pinRelay3`       | int    |     FAN      |    -    | Third relay GPIO (output capable)       |
+| Field               | Type   |   Required   | Default | Description                                       |
+|:--------------------|:-------|:------------:|:-------:|:--------------------------------------------------|
+| `pin`               | int    |      ✓       |    -    | Primary GPIO number (relay pin for FAN)           |
+| `mode`              | string |      ✓       |    -    | One of the `PinModeType` values                   |
+| `name`              | string |      ✓       |    -    | Identifier used in MQTT topics                    |
+| `defaultState`      | int    |      -       |   `0`   | Initial state (actuators only)                    |
+| `pollingInterval`   | int    |      -       | `1000`  | Interval in milliseconds                          |
+| `inverted`          | bool   |      -       | `false` | Invert logic (Active Low relay)                   |
+| `sck`               | int    | THERMOCOUPLE |    -    | SPI Clock GPIO                                    |
+| `so` / `miso`       | int    | THERMOCOUPLE |    -    | SPI Data In GPIO                                  |
+| `pinRelay2`         | int    |     FAN      |    -    | Second relay GPIO (output capable)                |
+| `pinRelay3`         | int    |     FAN      |    -    | Third relay GPIO (output capable)                 |
+| `kickstartEnabled`  | bool   |      -       | `false` | Enable kickstart for FAN mode                     |
+| `kickstartDuration` | int    |      -       |   `0`   | Kickstart duration in ms (FAN mode, requires > 0) |
 
 ## API Reference
 

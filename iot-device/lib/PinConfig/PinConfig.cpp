@@ -230,6 +230,8 @@ std::vector<PinConfig> loadConfiguration(const char *filename)
         // FAN-specific fields (3-relay control)
         int pinRelay2 = obj["pinRelay2"] | -1;
         int pinRelay3 = obj["pinRelay3"] | -1;
+        bool kickstartEnabled = obj["kickstartEnabled"] | false;
+        int kickstartDuration = obj["kickstartDuration"] | 0;
 
         if (pin == -1 || modeStr.isEmpty())
         {
@@ -255,6 +257,8 @@ std::vector<PinConfig> loadConfiguration(const char *filename)
         cfg.defaultState = defaultState;
         cfg.pollingInterval = pollingInterval;
         cfg.inverted = inverted;
+        cfg.kickstartEnabled = kickstartEnabled;
+        cfg.kickstartDuration = kickstartDuration;
 
         if (!isValidConfig(cfg))
         {
@@ -269,8 +273,9 @@ std::vector<PinConfig> loadConfiguration(const char *filename)
             LOG_INFO(TAG, "Loaded: %s (CS:%d, SCK:%d, SO:%d)",
                      modeStr.c_str(), cfg.pin, cfg.pinClock, cfg.pinData);
         } else if (mode == FAN) {
-            LOG_INFO(TAG, "Loaded: %s (R1:%d, R2:%d, R3:%d)",
-                     cfg.name.c_str(), cfg.pin, cfg.pinRelay2, cfg.pinRelay3);
+            LOG_INFO(TAG, "Loaded: %s (R1:%d, R2:%d, R3:%d, kickstart:%s/%dms)",
+                     cfg.name.c_str(), cfg.pin, cfg.pinRelay2, cfg.pinRelay3,
+                     cfg.kickstartEnabled ? "on" : "off", cfg.kickstartDuration);
         } else {
             LOG_INFO(TAG, "Loaded: GPIO%d as %s (%s)",
                      cfg.pin, modeStr.c_str(), cfg.name.c_str());

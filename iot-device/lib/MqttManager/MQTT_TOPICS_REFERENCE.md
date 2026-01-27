@@ -292,6 +292,24 @@ The fan uses 3 relays to provide 5 discrete speed states:
 | `51` - `75`  |       3        |      `75`      |
 | `76` - `100` |       4        |     `100`      |
 
+#### Kickstart Feature
+
+The kickstart feature helps motors start reliably at lower speeds by applying full power briefly before switching to the
+target speed.
+
+| Field               | Type | Default | Description                                   |
+|:--------------------|:-----|:-------:|:----------------------------------------------|
+| `kickstartEnabled`  | bool | `false` | Enable/disable the kickstart feature          |
+| `kickstartDuration` | int  |   `0`   | Duration in ms to apply full power at startup |
+
+**Kickstart Behavior:**
+
+- When transitioning from **OFF (state 0)** to **states 1, 2, or 3**: Apply full power (state 4) for `kickstartDuration`
+  ms, then switch to the requested speed
+- When transitioning from **OFF to state 4**: No kickstart needed (already at full power)
+- When transitioning **between non-zero states** (e.g., 2→3): No kickstart (motor already running)
+- If `kickstartEnabled` is `false` or `kickstartDuration` is `0`: Normal behavior (no kickstart)
+
 #### JSON Configuration Example
 
 ```json
@@ -303,7 +321,9 @@ The fan uses 3 relays to provide 5 discrete speed states:
   "name": "ceiling-fan",
   "defaultState": 0,
   "pollingInterval": 30000,
-  "inverted": true
+  "inverted": true,
+  "kickstartEnabled": true,
+  "kickstartDuration": 500
 }
 ```
 
@@ -315,3 +335,4 @@ The fan uses 3 relays to provide 5 discrete speed states:
 - **Watchdog**: Resets to `defaultState` if no message received within `pollingInterval`
 - **State Publishing**: Current speed value (0, 25, 50, 75, or 100) is published to `/state` topic every
   `pollingInterval` ms
+- **Kickstart**: When enabled, state feedback shows the target speed immediately (not the temporary full power state)

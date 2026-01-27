@@ -8,6 +8,19 @@
 #include <map>
 
 /**
+ * @brief Kickstart state tracking for a single FAN instance.
+ *
+ * When transitioning from OFF (state 0) to a lower speed state (1-3),
+ * the kickstart feature applies full power (state 4) for a configurable
+ * duration before switching to the target speed.
+ */
+struct KickstartState {
+    bool active;              // Is kickstart currently in progress?
+    unsigned long startTime;  // When kickstart started (millis)
+    uint8_t targetState;      // The state to apply after kickstart completes
+};
+
+/**
  * @brief Handler for FAN mode (3-relay discrete speed control).
  *
  * Controls fan speed using 3 relays that provide 5 discrete speed states:
@@ -23,6 +36,10 @@
  * - 26-50 -> State 2, feedback "50"
  * - 51-75 -> State 3, feedback "75"
  * - 76-100 -> State 4, feedback "100"
+ *
+ * Kickstart Feature:
+ * When enabled, transitioning from OFF to states 1-3 will first apply
+ * full power (state 4) for kickstartDuration ms to ensure motor starts.
  */
 class FanHandler : public IDeviceHandler {
 public:
@@ -32,6 +49,13 @@ public:
               std::vector<MqttProducer>& producers,
               std::vector<MqttConsumer>& consumers,
               const String& clientId) override;
+
+    /**
+     * @brief Process pending kickstart transitions (call from main loop).
+     *
+     * Checks all active kickstarts and applies target state when duration expires.
+     */
+    static void processKickstarts();
 
     // Static methods for state management (used by producer lambda)
     static String getState(int pin);
@@ -56,6 +80,22 @@ public:
 private:
     // Static map to store current state per pin (for state publishing)
     static std::map<int, String> currentState;
+
+    // Static map to store current internal state per pin (0-4)
+    static std::map<int, uint8_t> currentInternalState;
+
+    // Static map to track kickstart state per fan instance
+    static std::map<int, KickstartState> kickstartStates;
+
+    // Static map to store fan configuration for kickstart processing
+    struct FanConfig {
+        int relay1;
+        int relay2;
+        int relay3;
+        bool inverted;
+        int kickstartDuration;
+    };
+    static std::map<int, FanConfig> fanConfigs;
 
     /**
      * @brief Applies relay states based on internal state (0-4).

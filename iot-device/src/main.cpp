@@ -11,6 +11,7 @@
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <Logger.h>
+#include "handlers/FanHandler.h"
 
 static const char* TAG = "Setup";
 
@@ -100,4 +101,5 @@ void loop()
     MqttManager::getInstance().loop();            // mantiene viva la connessione
     MqttManager::handleProducers(); // pubblica periodicamente i valori
     MqttManager::handleConsumers(); // watchdog per i consumer
+    FanHandler::processKickstarts(); // process pending fan kickstart transitions
 }

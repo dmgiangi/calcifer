@@ -55,6 +55,8 @@ struct PinConfig
     int defaultState;       // Initial state (0-100 for FAN mode)
     int pollingInterval;    // Interval in ms for sensors
     bool inverted;          // Logic inversion (Active Low)
+    bool kickstartEnabled;  // Optional: Enable kickstart for FAN mode (default: false)
+    int kickstartDuration;  // Optional: Kickstart duration in ms for FAN mode (default: 0)
 };
 
 /**
