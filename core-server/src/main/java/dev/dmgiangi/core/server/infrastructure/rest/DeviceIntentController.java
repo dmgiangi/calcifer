@@ -11,6 +11,13 @@ import dev.dmgiangi.core.server.infrastructure.rest.dto.IntentRequest;
 import dev.dmgiangi.core.server.infrastructure.rest.dto.IntentResponse;
 import dev.dmgiangi.core.server.infrastructure.rest.dto.OverrideRequestDto;
 import dev.dmgiangi.core.server.infrastructure.rest.dto.OverrideResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -34,6 +41,7 @@ import java.security.Principal;
 @RequestMapping("/api/devices")
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Device Intent", description = "Operations for managing device user intents and twin snapshots")
 public class DeviceIntentController {
 
     private static final String DEVICE_ID_PATTERN = "^[a-zA-Z0-9_-]+$";
@@ -57,6 +65,17 @@ public class DeviceIntentController {
      * @param request      the intent request containing type and value
      * @return 200 OK with intent response containing system context
      */
+    @Operation(
+            summary = "Submit a user intent for a device",
+            description = "Sets the desired state for a device. If the device belongs to a FunctionalSystem, " +
+                    "the intent will be processed through safety rules before calculating the desired state."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Intent submitted successfully",
+                    content = @Content(schema = @Schema(implementation = IntentResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request (validation error)"),
+            @ApiResponse(responseCode = "422", description = "Intent rejected by safety rules")
+    })
     @PostMapping("/{controllerId}/{componentId}/intent")
     public ResponseEntity<IntentResponse> submitIntent(
             @PathVariable @NotBlank(message = "Controller ID is required")
@@ -92,10 +111,22 @@ public class DeviceIntentController {
      * @param componentId  the component identifier
      * @return the device twin snapshot, or 404 if not found
      */
+    @Operation(
+            summary = "Get device twin snapshot",
+            description = "Retrieves the complete three-state digital twin for a device: " +
+                    "User Intent, Reported State, and Desired State."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Twin snapshot retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = DeviceTwinSnapshot.class))),
+            @ApiResponse(responseCode = "404", description = "Device not found")
+    })
     @GetMapping("/{controllerId}/{componentId}/twin")
     public ResponseEntity<DeviceTwinSnapshot> getTwinSnapshot(
+            @Parameter(description = "Controller identifier (e.g., esp32-kitchen)", example = "esp32-kitchen")
             @PathVariable @NotBlank(message = "Controller ID is required")
             @Pattern(regexp = DEVICE_ID_PATTERN, message = DEVICE_ID_MESSAGE) final String controllerId,
+            @Parameter(description = "Component identifier (e.g., main-light)", example = "main-light")
             @PathVariable @NotBlank(message = "Component ID is required")
             @Pattern(regexp = DEVICE_ID_PATTERN, message = DEVICE_ID_MESSAGE) final String componentId
     ) {
@@ -154,6 +185,18 @@ public class DeviceIntentController {
      * @param principal    the authenticated user
      * @return the override response
      */
+    @Operation(
+            summary = "Apply a device override",
+            description = "Applies an override to a specific device. Overrides take precedence over user intents " +
+                    "based on category: EMERGENCY > MAINTENANCE > SCHEDULED > MANUAL."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Override applied successfully",
+                    content = @Content(schema = @Schema(implementation = OverrideResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request"),
+            @ApiResponse(responseCode = "422", description = "Override blocked by safety rules")
+    })
+    @Tag(name = "Device Override")
     @PutMapping("/{controllerId}/{componentId}/override/{category}")
     public ResponseEntity<OverrideResponse> applyDeviceOverride(
             @PathVariable @NotBlank(message = "Controller ID is required")
@@ -192,12 +235,24 @@ public class DeviceIntentController {
      * @param category     the override category to cancel
      * @return the override response
      */
+    @Operation(
+            summary = "Cancel a device override",
+            description = "Cancels an active override for a specific device and category."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Override cancelled or not found",
+                    content = @Content(schema = @Schema(implementation = OverrideResponse.class)))
+    })
+    @Tag(name = "Device Override")
     @DeleteMapping("/{controllerId}/{componentId}/override/{category}")
     public ResponseEntity<OverrideResponse> cancelDeviceOverride(
+            @Parameter(description = "Controller identifier", example = "esp32-kitchen")
             @PathVariable @NotBlank(message = "Controller ID is required")
             @Pattern(regexp = DEVICE_ID_PATTERN, message = DEVICE_ID_MESSAGE) final String controllerId,
+            @Parameter(description = "Component identifier", example = "main-light")
             @PathVariable @NotBlank(message = "Component ID is required")
             @Pattern(regexp = DEVICE_ID_PATTERN, message = DEVICE_ID_MESSAGE) final String componentId,
+            @Parameter(description = "Override category to cancel", example = "MANUAL")
             @PathVariable final OverrideCategory category
     ) {
         final var deviceIdStr = controllerId + ":" + componentId;
@@ -219,10 +274,20 @@ public class DeviceIntentController {
      * @param componentId  the component identifier
      * @return list of active overrides
      */
+    @Operation(
+            summary = "List device overrides",
+            description = "Lists all active overrides for a specific device."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "List of active overrides")
+    })
+    @Tag(name = "Device Override")
     @GetMapping("/{controllerId}/{componentId}/overrides")
     public ResponseEntity<?> listDeviceOverrides(
+            @Parameter(description = "Controller identifier", example = "esp32-kitchen")
             @PathVariable @NotBlank(message = "Controller ID is required")
             @Pattern(regexp = DEVICE_ID_PATTERN, message = DEVICE_ID_MESSAGE) final String controllerId,
+            @Parameter(description = "Component identifier", example = "main-light")
             @PathVariable @NotBlank(message = "Component ID is required")
             @Pattern(regexp = DEVICE_ID_PATTERN, message = DEVICE_ID_MESSAGE) final String componentId
     ) {

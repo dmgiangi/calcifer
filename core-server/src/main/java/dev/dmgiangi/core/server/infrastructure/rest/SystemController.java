@@ -15,6 +15,13 @@ import dev.dmgiangi.core.server.infrastructure.rest.dto.SystemConfigurationReque
 import dev.dmgiangi.core.server.infrastructure.rest.dto.SystemResponse;
 import dev.dmgiangi.core.server.infrastructure.rest.dto.SystemResponse.DeviceStateInfo;
 import dev.dmgiangi.core.server.infrastructure.rest.dto.SystemResponse.OverrideInfo;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +45,7 @@ import java.util.Map;
 @RequestMapping("/api/v1/systems")
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "FunctionalSystem", description = "Operations for managing FunctionalSystem aggregates")
 public class SystemController {
 
     private static final String ANONYMOUS_USER = "anonymous";
@@ -55,6 +63,13 @@ public class SystemController {
      *
      * @return list of all systems
      */
+    @Operation(
+            summary = "List all FunctionalSystems",
+            description = "Retrieves a list of all configured FunctionalSystems (e.g., TERMOCAMINO, HVAC, IRRIGATION)."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "List of systems retrieved successfully")
+    })
     @GetMapping
     public ResponseEntity<List<SystemResponse>> listSystems() {
         log.debug("Listing all systems");
@@ -71,8 +86,18 @@ public class SystemController {
      * @param id the system ID
      * @return the system with device states
      */
+    @Operation(
+            summary = "Get FunctionalSystem by ID",
+            description = "Retrieves a FunctionalSystem with its configuration, device states, and active overrides."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "System retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = SystemResponse.class))),
+            @ApiResponse(responseCode = "404", description = "System not found")
+    })
     @GetMapping("/{id}")
     public ResponseEntity<SystemResponse> getSystem(
+            @Parameter(description = "System identifier", example = "termocamino-living")
             @PathVariable @NotBlank final String id
     ) {
         log.debug("Getting system: {}", id);
@@ -90,8 +115,19 @@ public class SystemController {
      * @param request the configuration update request
      * @return the updated system
      */
+    @Operation(
+            summary = "Update system configuration",
+            description = "Partially updates the configuration of a FunctionalSystem (mode, target temperature, schedules, etc.)."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Configuration updated successfully",
+                    content = @Content(schema = @Schema(implementation = SystemResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request or no updates provided"),
+            @ApiResponse(responseCode = "404", description = "System not found")
+    })
     @PatchMapping("/{id}/configuration")
     public ResponseEntity<SystemResponse> updateConfiguration(
+            @Parameter(description = "System identifier", example = "termocamino-living")
             @PathVariable @NotBlank final String id,
             @RequestBody @Valid final SystemConfigurationRequest request
     ) {
@@ -136,9 +172,24 @@ public class SystemController {
      * @param principal the authenticated user
      * @return the override response
      */
+    @Operation(
+            summary = "Apply a system override",
+            description = "Applies an override to all devices in a FunctionalSystem. System overrides affect " +
+                    "all devices in the system but have lower precedence than device-level overrides."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Override applied successfully",
+                    content = @Content(schema = @Schema(implementation = OverrideResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request"),
+            @ApiResponse(responseCode = "404", description = "System not found"),
+            @ApiResponse(responseCode = "422", description = "Override blocked by safety rules")
+    })
+    @Tag(name = "System Override")
     @PutMapping("/{id}/override/{category}")
     public ResponseEntity<OverrideResponse> applySystemOverride(
+            @Parameter(description = "System identifier", example = "termocamino-living")
             @PathVariable @NotBlank final String id,
+            @Parameter(description = "Override category", example = "MAINTENANCE")
             @PathVariable final OverrideCategory category,
             @RequestBody @Valid final OverrideRequestDto request,
             final Principal principal
@@ -174,9 +225,21 @@ public class SystemController {
      * @param category the override category to cancel
      * @return the override response
      */
+    @Operation(
+            summary = "Cancel a system override",
+            description = "Cancels an active override for a specific system and category."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Override cancelled or not found",
+                    content = @Content(schema = @Schema(implementation = OverrideResponse.class))),
+            @ApiResponse(responseCode = "404", description = "System not found")
+    })
+    @Tag(name = "System Override")
     @DeleteMapping("/{id}/override/{category}")
     public ResponseEntity<OverrideResponse> cancelSystemOverride(
+            @Parameter(description = "System identifier", example = "termocamino-living")
             @PathVariable @NotBlank final String id,
+            @Parameter(description = "Override category to cancel", example = "MAINTENANCE")
             @PathVariable final OverrideCategory category
     ) {
         log.info("Cancelling system override for {} category {}", id, category);
@@ -201,6 +264,15 @@ public class SystemController {
      * @param id the system ID
      * @return list of active overrides
      */
+    @Operation(
+            summary = "List system overrides",
+            description = "Lists all active overrides for a specific FunctionalSystem."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "List of active overrides"),
+            @ApiResponse(responseCode = "404", description = "System not found")
+    })
+    @Tag(name = "System Override")
     @GetMapping("/{id}/overrides")
     public ResponseEntity<List<OverrideInfo>> listSystemOverrides(
             @PathVariable @NotBlank final String id

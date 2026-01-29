@@ -6,6 +6,25 @@ spring:
       database: calcifer
       auto-index-creation: true
 
+# OpenAPI / Swagger UI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+  info:
+    title: Calcifer Core Server API
+    description: IoT Digital Twin management system with safety rules and override management
+    version: 1.0.0
+    contact:
+      name: Calcifer Team
+    license:
+      name: MIT
+
 # Actuator & Observability
 management:
   endpoints:

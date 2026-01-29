@@ -5,6 +5,7 @@ import dev.dmgiangi.core.server.domain.model.DeviceType;
 import dev.dmgiangi.core.server.domain.model.DeviceValue;
 import dev.dmgiangi.core.server.domain.model.FanValue;
 import dev.dmgiangi.core.server.domain.model.RelayValue;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -20,16 +21,24 @@ import java.time.Duration;
  * @param ttlSeconds optional time-to-live in seconds (null = permanent)
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@Schema(description = "Request to apply an override to a device or system")
 public record OverrideRequestDto(
+        @Schema(description = "Device type", example = "RELAY", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotNull(message = "Device type is required")
         DeviceType type,
 
+        @Schema(description = "Override value. Boolean for RELAY, Integer 0-4 for FAN",
+                example = "true", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotNull(message = "Value is required")
         Object value,
 
+        @Schema(description = "Reason for the override", example = "Scheduled maintenance",
+                requiredMode = Schema.RequiredMode.REQUIRED)
         @NotBlank(message = "Reason is required")
         String reason,
 
+        @Schema(description = "Time-to-live in seconds. Null means permanent override",
+                example = "3600", nullable = true)
         Long ttlSeconds
 ) {
     /**
