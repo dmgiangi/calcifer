@@ -1,3 +1,6 @@
+# Development profile configuration
+# Uses Spring Micrometer with OTLP HTTP push to Tempo
+
 spring:
   rabbitmq:
     host: localhost
@@ -11,12 +14,28 @@ spring:
       username: machine_user
       password: machine_user_password
       database: 0
-    mongodb:
-      host: localhost
-      port: 27017
-      username: calcifer_user
-      password: calcifer_password
-      authentication-database: admin
+  mongodb:
+    host: localhost
+    port: 27017
+    username: calcifer_user
+    password: calcifer_password
+    authentication-database: admin
+
+# OTLP Tracing - HTTP push to Tempo (dev)
+management:
+  tracing:
+    sampling:
+      probability: 1.0  # 100% sampling for dev
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:4318/v1/traces
+
+# Development logging - verbose for debugging
 logging:
   level:
+    root: INFO
+    dev.dmgiangi: DEBUG
     org.springframework.integration.mqtt: DEBUG
+    io.micrometer.tracing: DEBUG

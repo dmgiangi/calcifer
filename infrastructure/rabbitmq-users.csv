@@ -1,0 +1,30 @@
+# RabbitMQ Users Configuration
+# =============================================================================
+# Format: username,password_env_var,tags,vhost,configure,write,read,topic_exchange,topic_write,topic_read
+#
+# Fields:
+#   - username:         Username for RabbitMQ
+#   - password_env_var: Environment variable name containing the password
+#   - tags:             User tags (admin, monitoring, management, or empty)
+#   - vhost:            Virtual host (use / for default)
+#   - configure:        Configure permission regex
+#   - write:            Write permission regex
+#   - read:             Read permission regex
+#   - topic_exchange:   Exchange for topic permissions (optional, leave empty to skip)
+#   - topic_write:      Topic write permission regex (optional)
+#   - topic_read:       Topic read permission regex (optional)
+#
+# Notes:
+#   - Lines starting with # are comments
+#   - Empty lines are ignored
+#   - Use .* for "all" permissions
+#   - Use ^$ for "none" permissions
+# =============================================================================
+
+# IoT User - for MQTT device connections
+iot_user,RABBITMQ_IOT_PASSWORD,,/,^mqtt-subscription-.*,.*,.*,amq.topic,^\..*\..*\..*\..*$,.*
+
+# Example: Add more users below
+# app_user,RABBITMQ_APP_PASSWORD,,/,.*,.*,.*,,,
+# readonly_user,RABBITMQ_READONLY_PASSWORD,monitoring,/,^$,^$,.*,,,
+

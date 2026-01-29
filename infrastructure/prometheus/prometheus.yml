@@ -1,0 +1,69 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: calcifer
+    env: dev
+
+# Alertmanager configuration (disabled for dev)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Rule files (disabled for dev)
+# rule_files:
+#   - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: [ 'localhost:9090' ]
+
+  # Spring Boot applications
+  - job_name: 'spring-boot'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 15s
+    static_configs:
+      - targets: [ 'host.docker.internal:8080' ]
+        labels:
+          application: 'core-server'
+          env: 'dev'
+    # Docker service discovery alternative (when app runs in container)
+    # docker_sd_configs:
+    #   - host: unix:///var/run/docker.sock
+    #     filters:
+    #       - name: label
+    #         values: ["prometheus.scrape=true"]
+
+  # Redis metrics (via redis_exporter if deployed)
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis-exporter:9121']
+
+  # RabbitMQ metrics
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: [ 'calcifer_rabbitmq:15692' ]
+        labels:
+          application: 'rabbitmq'
+
+  # Tempo metrics
+  - job_name: 'tempo'
+    static_configs:
+      - targets: [ 'tempo:3200' ]
+
+  # Loki metrics
+  - job_name: 'loki'
+    static_configs:
+      - targets: [ 'loki:3100' ]
+
+  # Promtail metrics
+  - job_name: 'promtail'
+    static_configs:
+      - targets: [ 'promtail:9080' ]
+
+# Remote write for receiving metrics from Tempo
+remote_write: [ ]

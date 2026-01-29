@@ -1,29 +1,184 @@
 services:
+  # ==================== APPLICATION DEPENDENCIES ====================
   redis:
     image: 'redis:latest'
+    container_name: calcifer_redis
     ports:
       - '6379:6379'
+    labels:
+      logging: "promtail"
     command:
       - redis-server
       # Machine User
       - "--user"
-      - "machine_user"
+      - "${REDIS_USERNAME:-machine_user}"
       - "on"
-      - ">machine_user_password"
+      - ">${REDIS_PASSWORD:-machine_user_password}"
       - "~*"
       - "+@all"
       # Disable default user
       - "--user"
       - "default"
       - "off"
+
   rabbitmq:
     image: rabbitmq:4.0-management
-    container_name: iot_rabbitmq
+    container_name: calcifer_rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
       - "1883:1883"
+    labels:
+      logging: "promtail"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_ADMIN_USERNAME:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_ADMIN_PASSWORD:-password_admin}
     volumes:
       - ./rabbitmq_enabled_plugins:/etc/rabbitmq/enabled_plugins
       - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
-      - ./rabbitmq_definitions.json:/etc/rabbitmq/definitions.json
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "check_running" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ user initialization (runs once after RabbitMQ is ready)
+  # Users are defined in rabbitmq-users.csv, passwords in .env
+  rabbitmq-init:
+    image: curlimages/curl:latest
+    container_name: calcifer_rabbitmq_init
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_ADMIN_USER: ${RABBITMQ_ADMIN_USERNAME:-admin}
+      RABBITMQ_ADMIN_PASS: ${RABBITMQ_ADMIN_PASSWORD:-password_admin}
+      USERS_CSV: /rabbitmq-users.csv
+    volumes:
+      - ./rabbitmq-init.sh:/rabbitmq-init.sh:ro
+      - ./rabbitmq-users.csv:/rabbitmq-users.csv:ro
+    entrypoint: [ "/bin/sh", "/rabbitmq-init.sh" ]
+    restart: "no"
+
+  mongodb:
+    image: mongo:7
+    container_name: calcifer_mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-calcifer_user}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-calcifer_password}
+    volumes:
+      - mongodb_data:/data/db
+    labels:
+      logging: "promtail"
+
+  # ==================== OBSERVABILITY STACK ====================
+
+  # Loki - Log Aggregation
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: calcifer_loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:3100/ready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Promtail - Log Collection
+  promtail:
+    image: grafana/promtail:2.9.3
+    container_name: calcifer_promtail
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./promtail/promtail-config.yaml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      loki:
+        condition: service_healthy
+
+  # Tempo - Distributed Tracing
+  tempo:
+    image: grafana/tempo:2.3.1
+    container_name: calcifer_tempo
+    ports:
+      - "3200:3200"   # Tempo query
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    volumes:
+      - ./tempo/tempo-config.yaml:/etc/tempo/config.yaml
+      - tempo_data:/tmp/tempo
+    command: [ "-config.file=/etc/tempo/config.yaml" ]
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:3200/ready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Prometheus - Metrics
+  prometheus:
+    image: prom/prometheus:v2.48.1
+    container_name: calcifer_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'
+      - '--enable-feature=exemplar-storage'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:9090/-/healthy" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Grafana - Visualization
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: calcifer_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:3000/api/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  loki_data:
+  tempo_data:
+  prometheus_data:
+  grafana_data:
+  mongodb_data:
+  rabbitmq_data:

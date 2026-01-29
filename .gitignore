@@ -27,3 +27,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Environment files ###
+.env
+infrastructure/.env
+!.env.example
+!infrastructure/.env.example

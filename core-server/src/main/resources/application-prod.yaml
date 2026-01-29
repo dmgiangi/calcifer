@@ -1,0 +1,43 @@
+# Production profile configuration
+# Tracing is handled by OpenTelemetry Java Agent (bytecode instrumentation)
+# This profile disables Spring Micrometer tracing to avoid duplicate spans
+
+spring:
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:rabbitmq}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:admin}
+    password: ${SPRING_RABBITMQ_PASSWORD:password_admin}
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:redis}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      username: ${SPRING_DATA_REDIS_USERNAME:machine_user}
+      password: ${SPRING_DATA_REDIS_PASSWORD:machine_user_password}
+      database: 0
+  mongodb:
+    host: ${SPRING_DATA_MONGODB_HOST:mongodb}
+    port: ${SPRING_DATA_MONGODB_PORT:27017}
+    username: ${SPRING_DATA_MONGODB_USERNAME:calcifer_user}
+    password: ${SPRING_DATA_MONGODB_PASSWORD:calcifer_password}
+    authentication-database: ${SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE:admin}
+
+# Disable Spring Micrometer tracing - OTel Agent handles it
+management:
+  tracing:
+    export:
+      enabled: false
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: none
+
+# Production logging - INFO level, no debug noise
+logging:
+  level:
+    root: INFO
+    dev.dmgiangi: INFO
+    org.springframework: WARN
+    org.mongodb: WARN
+

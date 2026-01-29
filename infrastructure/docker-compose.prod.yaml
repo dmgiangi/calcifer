@@ -1,0 +1,91 @@
+# Production override for Calcifer infrastructure
+# Usage: docker compose -f docker-compose.yaml -f docker-compose.prod.yaml up -d
+#
+# This override:
+# - Adds the core-server application with OTel Java Agent
+# - Configures production-grade sampling (10%)
+# - Uses gRPC for trace export (more efficient)
+#
+# Image build:
+#   mvn compile jib:build -Ddocker.username=YOUR_DOCKERHUB_USERNAME
+#   mvn compile jib:dockerBuild -Ddocker.username=YOUR_DOCKERHUB_USERNAME (local only)
+
+services:
+  # Core Server with OpenTelemetry Java Agent
+  # Image built via Jib Maven Plugin (see core-server/pom.xml)
+  core-server:
+    image: ${DOCKER_REGISTRY:-docker.io}/${DOCKER_USERNAME:-calcifer}/calcifer-core-server:${IMAGE_TAG:-latest}
+    container_name: calcifer_core_server
+    ports:
+      - "8080:8080"
+    environment:
+      # Spring profile
+      SPRING_PROFILES_ACTIVE: prod
+      # OpenTelemetry Java Agent configuration
+      JAVA_TOOL_OPTIONS: >-
+        -javaagent:/otel/opentelemetry-javaagent.jar
+      OTEL_SERVICE_NAME: calcifer-core-server
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "0.1"
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      OTEL_RESOURCE_ATTRIBUTES: >-
+        service.name=calcifer-core-server,
+        service.version=0.0.1-SNAPSHOT,
+        deployment.environment=prod
+      # Application configuration
+      SPRING_DATA_MONGODB_HOST: mongodb
+      SPRING_DATA_MONGODB_PORT: 27017
+      SPRING_DATA_MONGODB_USERNAME: ${MONGO_USERNAME:-calcifer_user}
+      SPRING_DATA_MONGODB_PASSWORD: ${MONGO_PASSWORD:-calcifer_password}
+      SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE: admin
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_USERNAME: ${REDIS_USERNAME:-machine_user}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-machine_user_password}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_ADMIN_USERNAME:-admin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_ADMIN_PASSWORD:-password_admin}
+    volumes:
+      - ./otel/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar:ro
+    labels:
+      logging: "promtail"
+      prometheus.scrape: "true"
+    depends_on:
+      - mongodb
+      - redis
+      - rabbitmq
+      - tempo
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:8080/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Production overrides for observability stack
+  prometheus:
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'
+      - '--enable-feature=exemplar-storage'
+
+  grafana:
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-changeme}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
+
+  loki:
+    command: -config.file=/etc/loki/local-config.yaml -config.expand-env=true
+    environment:
+      - LOKI_RETENTION_PERIOD=720h
+

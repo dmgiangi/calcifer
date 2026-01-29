@@ -30,13 +30,15 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus,metrics
+        include: health,info,prometheus,metrics,loggers
   endpoint:
     health:
       show-details: when_authorized
       show-components: when_authorized
       probes:
         enabled: true
+    loggers:
+      enabled: true
   health:
     redis:
       enabled: true
@@ -47,16 +49,30 @@ management:
       export:
         enabled: true
   tracing:
-    sampling:
-      probability: 1.0  # 100% sampling for dev, reduce in production
+    enabled: true
+    propagation:
+      type: w3c
+    baggage:
+      enabled: true
+      correlation:
+        enabled: true
   observations:
     key-values:
       application: ${spring.application.name}
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 50ms, 100ms, 200ms, 500ms, 1s
 
-# Logging with correlation ID
+# Logging with correlation ID (traceId/spanId)
 logging:
   pattern:
     correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-}] "
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n"
 
 # Application-specific configuration
 app:
