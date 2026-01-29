@@ -2,6 +2,9 @@ package dev.dmgiangi.core.server.infrastructure.persistence.mongodb;
 
 import dev.dmgiangi.core.server.config.MongoTestContainerConfiguration;
 import dev.dmgiangi.core.server.config.RedisTestContainerConfiguration;
+import dev.dmgiangi.core.server.domain.model.DeviceValue;
+import dev.dmgiangi.core.server.domain.model.FanValue;
+import dev.dmgiangi.core.server.domain.model.RelayValue;
 import dev.dmgiangi.core.server.domain.port.OverrideRepository;
 import dev.dmgiangi.core.server.domain.port.OverrideRepository.OverrideCategory;
 import dev.dmgiangi.core.server.domain.port.OverrideRepository.OverrideData;
@@ -22,7 +25,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -58,15 +60,17 @@ class MongoOverrideRepositoryAdapterIntegrationTest
     private static final String DEVICE_ID = "controller1:relay1";
     private static final String SYSTEM_ID = "termocamino-system";
 
+    // Use DeviceValue types instead of primitives for proper Jackson serialization
+    private static final RelayValue RELAY_ON = new RelayValue(true);
+    private static final RelayValue RELAY_OFF = new RelayValue(false);
+    private static final FanValue FAN_SPEED_2 = new FanValue(2);
+
     @BeforeEach
     void setUp() {
         // Clean up MongoDB
         springDataRepository.deleteAll();
-        // Clean up Redis
-        final var keys = redisTemplate.keys("override:*");
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
-        }
+        // Clean up Redis completely (flush all keys)
+        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
     }
 
     @Nested
@@ -76,7 +80,7 @@ class MongoOverrideRepositoryAdapterIntegrationTest
         @Test
         @DisplayName("should save and retrieve override by target and category")
         void shouldSaveAndRetrieveOverride() {
-            final var override = createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, true);
+            final var override = createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, RELAY_ON);
 
             final var saved = overrideRepository.save(override);
 
@@ -86,14 +90,14 @@ class MongoOverrideRepositoryAdapterIntegrationTest
             final var found = overrideRepository.findByTargetAndCategory(DEVICE_ID, OverrideCategory.MANUAL);
             assertThat(found).isPresent();
             assertThat(found.get().targetId()).isEqualTo(DEVICE_ID);
-            assertThat(found.get().value()).isEqualTo(true);
+            assertThat(found.get().value()).isEqualTo(RELAY_ON);
         }
 
         @Test
         @DisplayName("should find all active overrides for target")
         void shouldFindAllActiveOverrides() {
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, false));
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MAINTENANCE, true));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, RELAY_OFF));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MAINTENANCE, RELAY_ON));
 
             final var active = overrideRepository.findActiveByTarget(DEVICE_ID);
 
@@ -106,20 +110,20 @@ class MongoOverrideRepositoryAdapterIntegrationTest
         @Test
         @DisplayName("should find effective override (highest priority)")
         void shouldFindEffectiveOverride() {
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, false));
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.EMERGENCY, true));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, RELAY_OFF));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.EMERGENCY, RELAY_ON));
 
             final var effective = overrideRepository.findEffectiveByTarget(DEVICE_ID);
 
             assertThat(effective).isPresent();
             assertThat(effective.get().category()).isEqualTo(OverrideCategory.EMERGENCY);
-            assertThat(effective.get().value()).isEqualTo(true);
+            assertThat(effective.get().value()).isEqualTo(RELAY_ON);
         }
 
         @Test
         @DisplayName("should delete override by target and category")
         void shouldDeleteOverride() {
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, true));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, RELAY_ON));
 
             overrideRepository.deleteByTargetAndCategory(DEVICE_ID, OverrideCategory.MANUAL);
 
@@ -130,8 +134,8 @@ class MongoOverrideRepositoryAdapterIntegrationTest
         @Test
         @DisplayName("should delete all overrides for target")
         void shouldDeleteAllOverrides() {
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, false));
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MAINTENANCE, true));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, RELAY_OFF));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MAINTENANCE, RELAY_ON));
 
             overrideRepository.deleteAllByTarget(DEVICE_ID);
 
@@ -147,20 +151,20 @@ class MongoOverrideRepositoryAdapterIntegrationTest
         @Test
         @DisplayName("should cache override in Redis after save")
         void shouldCacheOverrideAfterSave() {
-            final var override = createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, true);
+            final var override = createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, RELAY_ON);
 
             overrideRepository.save(override);
 
             // Verify Redis cache has the override
             final var cached = redisCache.findByTargetAndCategory(DEVICE_ID, OverrideCategory.MANUAL);
             assertThat(cached).isPresent();
-            assertThat(cached.get().value()).isEqualTo(true);
+            assertThat(cached.get().value()).isEqualTo(RELAY_ON);
         }
 
         @Test
         @DisplayName("should evict from Redis cache after delete")
         void shouldEvictFromCacheAfterDelete() {
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, true));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, RELAY_ON));
 
             overrideRepository.deleteByTargetAndCategory(DEVICE_ID, OverrideCategory.MANUAL);
 
@@ -172,7 +176,7 @@ class MongoOverrideRepositoryAdapterIntegrationTest
         @Test
         @DisplayName("should read from cache when available")
         void shouldReadFromCacheWhenAvailable() {
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, true));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, RELAY_ON));
 
             // First read populates cache, second read should use cache
             final var first = overrideRepository.findByTargetAndCategory(DEVICE_ID, OverrideCategory.MANUAL);
@@ -195,7 +199,7 @@ class MongoOverrideRepositoryAdapterIntegrationTest
             final var expiredAt = Instant.now().minusSeconds(60);
             final var expired = new OverrideData(
                     DEVICE_ID + ":MANUAL", DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL,
-                    true, "Test", expiredAt, Instant.now().minusSeconds(120), "test-user", null
+                    RELAY_ON, "Test", expiredAt, Instant.now().minusSeconds(120), "test-user", null
             );
             overrideRepository.save(expired);
 
@@ -212,12 +216,12 @@ class MongoOverrideRepositoryAdapterIntegrationTest
             final var expiredAt = Instant.now().minusSeconds(60);
             final var expired = new OverrideData(
                     DEVICE_ID + ":MANUAL", DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL,
-                    true, "Test", expiredAt, Instant.now().minusSeconds(120), "test-user", null
+                    RELAY_ON, "Test", expiredAt, Instant.now().minusSeconds(120), "test-user", null
             );
             overrideRepository.save(expired);
 
             // Create a valid override
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MAINTENANCE, false));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MAINTENANCE, RELAY_OFF));
 
             final var active = overrideRepository.findActiveByTarget(DEVICE_ID);
 
@@ -233,22 +237,22 @@ class MongoOverrideRepositoryAdapterIntegrationTest
         @Test
         @DisplayName("should replace override at same target and category")
         void shouldReplaceAtSameTargetAndCategory() {
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, false));
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, true));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, RELAY_OFF));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, RELAY_ON));
 
             final var active = overrideRepository.findActiveByTarget(DEVICE_ID);
 
             assertThat(active).hasSize(1);
-            assertThat(active.get(0).value()).isEqualTo(true);
+            assertThat(active.get(0).value()).isEqualTo(RELAY_ON);
         }
 
         @Test
         @DisplayName("should maintain multiple categories for same target")
         void shouldMaintainMultipleCategories() {
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, false));
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.SCHEDULED, Map.of("speed", 2)));
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MAINTENANCE, true));
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.EMERGENCY, false));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, RELAY_OFF));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.SCHEDULED, FAN_SPEED_2));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MAINTENANCE, RELAY_ON));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.EMERGENCY, RELAY_OFF));
 
             final var active = overrideRepository.findActiveByTarget(DEVICE_ID);
 
@@ -263,8 +267,8 @@ class MongoOverrideRepositoryAdapterIntegrationTest
         @Test
         @DisplayName("should support both device and system overrides")
         void shouldSupportDeviceAndSystemOverrides() {
-            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, true));
-            overrideRepository.save(createOverride(SYSTEM_ID, OverrideScope.SYSTEM, OverrideCategory.MAINTENANCE, false));
+            overrideRepository.save(createOverride(DEVICE_ID, OverrideScope.DEVICE, OverrideCategory.MANUAL, RELAY_ON));
+            overrideRepository.save(createOverride(SYSTEM_ID, OverrideScope.SYSTEM, OverrideCategory.MAINTENANCE, RELAY_OFF));
 
             final var deviceOverrides = overrideRepository.findActiveByTarget(DEVICE_ID);
             final var systemOverrides = overrideRepository.findActiveByTarget(SYSTEM_ID);
@@ -277,12 +281,12 @@ class MongoOverrideRepositoryAdapterIntegrationTest
         }
     }
 
-    private OverrideData createOverride(String targetId, OverrideScope scope, OverrideCategory category, Object value) {
+    private OverrideData createOverride(String targetId, OverrideScope scope, OverrideCategory category, DeviceValue value) {
         return OverrideData.create(targetId, scope, category, value, "Test reason", null, "test-user");
     }
 
     private OverrideData createOverrideWithTtl(String targetId, OverrideScope scope, OverrideCategory category,
-                                               Object value, Duration ttl) {
+                                               DeviceValue value, Duration ttl) {
         final var expiresAt = Instant.now().plus(ttl);
         return OverrideData.create(targetId, scope, category, value, "Test reason", expiresAt, "test-user");
     }

@@ -5,6 +5,10 @@ import dev.dmgiangi.core.server.infrastructure.persistence.mongodb.document.Devi
 import dev.dmgiangi.core.server.infrastructure.persistence.redis.RedisOverrideCacheAdapter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -23,12 +27,31 @@ public class MongoOverrideRepositoryAdapter implements OverrideRepository {
 
     private final SpringDataOverrideRepository springDataRepository;
     private final RedisOverrideCacheAdapter redisCache;
+    private final MongoTemplate mongoTemplate;
 
     @Override
     public OverrideData save(final OverrideData override) {
         // Write-through: save to MongoDB first (source of truth)
+        // Use upsert to handle both insert and update cases
+        // This avoids DuplicateKeyException when replacing an existing override
         final var document = toDocument(override);
-        final var saved = springDataRepository.save(document);
+
+        final var query = Query.query(Criteria.where("_id").is(document.id()));
+        final var update = new Update()
+                .set("targetId", document.targetId())
+                .set("scope", document.scope())
+                .set("category", document.category())
+                .set("value", document.value())
+                .set("reason", document.reason())
+                .set("expiresAt", document.expiresAt())
+                .set("createdAt", document.createdAt())
+                .set("createdBy", document.createdBy());
+
+        mongoTemplate.upsert(query, update, DeviceOverrideDocument.class);
+
+        // Fetch the saved document to get the updated version
+        final var saved = springDataRepository.findById(document.id())
+                .orElseThrow(() -> new IllegalStateException("Override not found after upsert: " + document.id()));
         final var result = toData(saved);
 
         // Then cache in Redis

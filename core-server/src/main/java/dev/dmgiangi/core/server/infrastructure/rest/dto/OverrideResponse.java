@@ -76,7 +76,7 @@ public record OverrideResponse(
                     applied.override().scope(),
                     applied.override().category(),
                     Outcome.APPLIED,
-                    extractRawValueFromObject(applied.override().value()),
+                    extractRawValueFromDeviceValue(applied.override().value()),
                     null,
                     applied.override().reason(),
                     applied.warnings(),
@@ -162,18 +162,6 @@ public record OverrideResponse(
             case dev.dmgiangi.core.server.domain.model.RelayValue r -> r.state();
             case dev.dmgiangi.core.server.domain.model.FanValue f -> f.speed();
         };
-    }
-
-    /**
-     * Extracts the raw value from an Object (which may be DeviceValue or primitive).
-     */
-    private static Object extractRawValueFromObject(final Object value) {
-        if (value == null) return null;
-        if (value instanceof DeviceValue dv) {
-            return extractRawValueFromDeviceValue(dv);
-        }
-        // Already a primitive or simple type
-        return value;
     }
 }
 

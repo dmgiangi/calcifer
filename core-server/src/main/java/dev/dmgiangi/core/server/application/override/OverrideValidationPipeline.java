@@ -1,5 +1,6 @@
 package dev.dmgiangi.core.server.application.override;
 
+import dev.dmgiangi.core.server.domain.model.DeviceValue;
 import dev.dmgiangi.core.server.domain.port.OverrideRepository.OverrideCategory;
 
 import java.util.List;
@@ -103,7 +104,7 @@ public interface OverrideValidationPipeline {
      * @param targetId       the target this override applies to
      * @param sourceTargetId the original target of the override (may differ for system-level)
      * @param category       the override category
-     * @param value          the override value
+     * @param value          the override value (typed as DeviceValue for type safety)
      * @param reason         the reason for the override
      * @param isFromSystem   true if this override comes from a system-level override
      * @param shadowedBy     list of higher-priority overrides that shadow this one (for debugging)
@@ -112,7 +113,7 @@ public interface OverrideValidationPipeline {
             String targetId,
             String sourceTargetId,
             OverrideCategory category,
-            Object value,
+            DeviceValue value,
             String reason,
             boolean isFromSystem,
             List<String> shadowedBy

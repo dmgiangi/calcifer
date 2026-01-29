@@ -1,5 +1,7 @@
 package dev.dmgiangi.core.server.domain.port;
 
+import dev.dmgiangi.core.server.domain.model.DeviceValue;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -92,13 +94,15 @@ public interface OverrideRepository {
 
     /**
      * Data transfer object for Override.
+     * The value field is typed as DeviceValue to ensure proper Jackson serialization
+     * with type information for Redis caching.
      */
     record OverrideData(
             String id,
             String targetId,
             OverrideScope scope,
             OverrideCategory category,
-            Object value,
+            DeviceValue value,
             String reason,
             Instant expiresAt,
             Instant createdAt,
@@ -117,7 +121,7 @@ public interface OverrideRepository {
                 final String targetId,
                 final OverrideScope scope,
                 final OverrideCategory category,
-                final Object value,
+                final DeviceValue value,
                 final String reason,
                 final Instant expiresAt,
                 final String createdBy

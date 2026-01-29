@@ -1,5 +1,6 @@
 package dev.dmgiangi.core.server.infrastructure.persistence.mongodb.document;
 
+import dev.dmgiangi.core.server.domain.model.DeviceValue;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
@@ -42,9 +43,9 @@ public record DeviceOverrideDocument(
         OverrideCategory category,
 
         /**
-         * Override value (type depends on device type)
+         * Override value (typed as DeviceValue for proper serialization)
          */
-        Object value,
+        DeviceValue value,
 
         /**
          * Human-readable reason for the override
@@ -80,7 +81,7 @@ public record DeviceOverrideDocument(
             final String targetId,
             final OverrideScope scope,
             final OverrideCategory category,
-            final Object value,
+            final DeviceValue value,
             final String reason,
             final Instant expiresAt,
             final String createdBy
@@ -125,7 +126,7 @@ public record DeviceOverrideDocument(
     /**
      * Returns a copy with updated value and reason.
      */
-    public DeviceOverrideDocument withValue(final Object newValue, final String newReason) {
+    public DeviceOverrideDocument withValue(final DeviceValue newValue, final String newReason) {
         return new DeviceOverrideDocument(
                 id, targetId, scope, category, newValue, newReason,
                 expiresAt, createdAt, createdBy, version
