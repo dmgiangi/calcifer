@@ -70,7 +70,7 @@ class UserIntentTest {
         @DisplayName("RELAY should reject non-RelayValue")
         void relayShouldRejectNonRelayValue() {
             final var exception = assertThrows(IllegalArgumentException.class, () ->
-                    new UserIntent(DEVICE_ID, DeviceType.RELAY, new FanValue(50), TIMESTAMP)
+                    new UserIntent(DEVICE_ID, DeviceType.RELAY, new FanValue(2), TIMESTAMP)
             );
             assertEquals("Relay value must be RelayValue", exception.getMessage());
         }
@@ -78,8 +78,8 @@ class UserIntentTest {
         @Test
         @DisplayName("FAN should accept FanValue")
         void fanShouldAcceptFanValue() {
-            final var intent = new UserIntent(DEVICE_ID, DeviceType.FAN, new FanValue(50), TIMESTAMP);
-            assertEquals(new FanValue(50), intent.value());
+            final var intent = new UserIntent(DEVICE_ID, DeviceType.FAN, new FanValue(2), TIMESTAMP);
+            assertEquals(new FanValue(2), intent.value());
         }
 
         @Test
@@ -111,11 +111,11 @@ class UserIntentTest {
         @Test
         @DisplayName("should preserve all other fields")
         void shouldPreserveAllFields() {
-            final var intent = UserIntent.now(DEVICE_ID, DeviceType.FAN, new FanValue(100));
+            final var intent = UserIntent.now(DEVICE_ID, DeviceType.FAN, new FanValue(4));
 
             assertEquals(DEVICE_ID, intent.id());
             assertEquals(DeviceType.FAN, intent.type());
-            assertEquals(new FanValue(100), intent.value());
+            assertEquals(new FanValue(4), intent.value());
         }
     }
 

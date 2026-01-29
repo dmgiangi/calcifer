@@ -89,8 +89,8 @@ class DeviceTwinFlowIntegrationTest {
         @Test
         @DisplayName("should calculate and save desired state for FAN device")
         void shouldCalculateAndSaveDesiredStateForFan() {
-            // Given: A user intent to set fan speed to 50
-            final var intent = UserIntent.now(FAN_DEVICE_ID, DeviceType.FAN, new FanValue(50));
+            // Given: A user intent to set fan speed to 2
+            final var intent = UserIntent.now(FAN_DEVICE_ID, DeviceType.FAN, new FanValue(2));
             final var event = new UserIntentChangedEvent(this, intent);
 
             when(repository.findTwinSnapshot(FAN_DEVICE_ID))
@@ -108,7 +108,7 @@ class DeviceTwinFlowIntegrationTest {
             final var savedDesired = desiredCaptor.getValue();
             assertThat(savedDesired.id()).isEqualTo(FAN_DEVICE_ID);
             assertThat(savedDesired.type()).isEqualTo(DeviceType.FAN);
-            assertThat(savedDesired.value()).isEqualTo(new FanValue(50));
+            assertThat(savedDesired.value()).isEqualTo(new FanValue(2));
 
             // And: An event should be published
             verify(eventPublisher).publishEvent(any(DesiredStateCalculatedEvent.class));
@@ -133,9 +133,9 @@ class DeviceTwinFlowIntegrationTest {
         }
 
         @Test
-        @DisplayName("should handle FAN speed 100 (max)")
+        @DisplayName("should handle FAN speed 4 (max)")
         void shouldHandleFanSpeedMax() {
-            final var intent = UserIntent.now(FAN_DEVICE_ID, DeviceType.FAN, new FanValue(100));
+            final var intent = UserIntent.now(FAN_DEVICE_ID, DeviceType.FAN, new FanValue(4));
             final var event = new UserIntentChangedEvent(this, intent);
 
             when(repository.findTwinSnapshot(FAN_DEVICE_ID))
@@ -147,7 +147,7 @@ class DeviceTwinFlowIntegrationTest {
             final var desiredCaptor = ArgumentCaptor.forClass(
                     dev.dmgiangi.core.server.domain.model.DesiredDeviceState.class);
             verify(repository).saveDesiredState(desiredCaptor.capture());
-            assertThat(desiredCaptor.getValue().value()).isEqualTo(new FanValue(100));
+            assertThat(desiredCaptor.getValue().value()).isEqualTo(new FanValue(4));
         }
     }
 }

@@ -291,8 +291,8 @@ public class SmartDeviceLogicService implements DeviceLogicService {
             final var targetSpeed = ((FanValue) intent.value()).speed();
             final var currentSpeed = ((FanValue) reported.value()).speed();
 
-            // Limit speed change to 50 units per cycle for smooth transitions
-            final var maxDelta = 50;
+            // Limit speed change to 1 unit per cycle for smooth transitions (range 0-4)
+            final var maxDelta = 1;
             final var newSpeed = calculateGradualSpeed(currentSpeed, targetSpeed, maxDelta);
 
             return new DesiredDeviceState(
@@ -327,7 +327,7 @@ public DesiredDeviceState calculateDesired(DeviceTwinSnapshot snapshot) {
     // Example: Enforce maximum fan speed limit
     if (snapshot.type() == DeviceType.FAN) {
         final var requestedSpeed = ((FanValue) intent.value()).speed();
-        final var maxAllowedSpeed = 200; // Safety limit
+        final var maxAllowedSpeed = 4; // Safety limit (max speed is 4)
 
         final var safeSpeed = Math.min(requestedSpeed, maxAllowedSpeed);
         return new DesiredDeviceState(

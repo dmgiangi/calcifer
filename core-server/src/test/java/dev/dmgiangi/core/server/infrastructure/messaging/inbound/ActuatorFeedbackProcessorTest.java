@@ -113,7 +113,7 @@ class ActuatorFeedbackProcessorTest {
     class FanParsingTests {
 
         @ParameterizedTest(name = "rawValue ''{0}'' should parse to speed={0}")
-        @ValueSource(ints = {0, 1, 128, 255})
+        @ValueSource(ints = {0, 1, 2, 3, 4})
         @DisplayName("should parse valid fan values")
         void shouldParseValidFanValues(int speed) {
             final var feedback = createFeedback(DeviceType.FAN, String.valueOf(speed));

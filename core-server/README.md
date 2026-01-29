@@ -46,10 +46,10 @@ target state, the system automatically brings it back to the desired configurati
 
 ### Output Devices (Actuators)
 
-| Device Type | Description                              | Control Values                     |
-|-------------|------------------------------------------|------------------------------------|
-| **Relay**   | On/Off switching for lights, pumps, etc. | `true` (ON) or `false` (OFF)       |
-| **Fan**     | Variable speed control via PWM           | `0` (OFF) to `100` (maximum speed) |
+| Device Type | Description                              | Control Values                   |
+|-------------|------------------------------------------|----------------------------------|
+| **Relay**   | On/Off switching for lights, pumps, etc. | `true` (ON) or `false` (OFF)     |
+| **Fan**     | Variable speed control via PWM           | `0` (OFF) to `4` (maximum speed) |
 
 ## Device Identification
 
@@ -164,10 +164,10 @@ curl -X POST http://localhost:8080/devices/esp32-kitchen/main-light/intent \
   -H "Content-Type: application/json" \
   -d '{"type": "RELAY", "value": true}'
 
-# Set fan speed to 50 (50%)
+# Set fan speed to 2 (medium, 5 discrete states: 0-4)
 curl -X POST http://localhost:8080/devices/esp32-garage/exhaust-fan/intent \
   -H "Content-Type: application/json" \
-  -d '{"type": "FAN", "value": 50}'
+  -d '{"type": "FAN", "value": 2}'
 ```
 
 ### Check Device Twin Status

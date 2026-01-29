@@ -17,8 +17,8 @@ class DesiredDeviceStateTest {
     private static final RelayValue RELAY_VALUE_ON = new RelayValue(true);
     private static final RelayValue RELAY_VALUE_OFF = new RelayValue(false);
     private static final FanValue FAN_VALUE_ZERO = new FanValue(0);
-    private static final FanValue FAN_VALUE_MAX = new FanValue(255);
-    private static final FanValue FAN_VALUE_MID = new FanValue(128);
+    private static final FanValue FAN_VALUE_MAX = new FanValue(4);
+    private static final FanValue FAN_VALUE_MID = new FanValue(2);
 
     @Nested
     @DisplayName("Type-Value Consistency Validation")

@@ -23,22 +23,22 @@ class FanValueTest {
         }
 
         @Test
-        @DisplayName("should accept maximum speed (100)")
-        void shouldAcceptMaximumSpeed_100() {
-            final var fanValue = new FanValue(100);
-            assertEquals(100, fanValue.speed());
+        @DisplayName("should accept maximum speed (4)")
+        void shouldAcceptMaximumSpeed_4() {
+            final var fanValue = new FanValue(4);
+            assertEquals(4, fanValue.speed());
         }
 
         @Test
-        @DisplayName("should accept mid-range speed (50)")
-        void shouldAcceptMidRangeSpeed_50() {
-            final var fanValue = new FanValue(50);
-            assertEquals(50, fanValue.speed());
+        @DisplayName("should accept mid-range speed (2)")
+        void shouldAcceptMidRangeSpeed_2() {
+            final var fanValue = new FanValue(2);
+            assertEquals(2, fanValue.speed());
         }
 
         @ParameterizedTest
         @DisplayName("should accept valid speeds within range")
-        @ValueSource(ints = {1, 25, 50, 75, 99})
+        @ValueSource(ints = {1, 2, 3})
         void shouldAcceptValidSpeedsWithinRange(int speed) {
             final var fanValue = new FanValue(speed);
             assertEquals(speed, fanValue.speed());
@@ -50,26 +50,26 @@ class FanValueTest {
             final var exception = assertThrows(IllegalArgumentException.class, () ->
                     new FanValue(-1)
             );
-            assertEquals("Fan speed must be between 0 and 100", exception.getMessage());
+            assertEquals("Fan speed must be between 0 and 4", exception.getMessage());
         }
 
         @Test
-        @DisplayName("should reject speed above maximum (101)")
+        @DisplayName("should reject speed above maximum (5)")
         void shouldRejectSpeedAboveMax() {
             final var exception = assertThrows(IllegalArgumentException.class, () ->
-                    new FanValue(101)
+                    new FanValue(5)
             );
-            assertEquals("Fan speed must be between 0 and 100", exception.getMessage());
+            assertEquals("Fan speed must be between 0 and 4", exception.getMessage());
         }
 
         @ParameterizedTest
         @DisplayName("should reject speeds outside valid range")
-        @ValueSource(ints = {-100, -1, 101, 200, 1000})
+        @ValueSource(ints = {-100, -1, 5, 10, 100})
         void shouldRejectSpeedsOutsideValidRange(int invalidSpeed) {
             final var exception = assertThrows(IllegalArgumentException.class, () ->
                     new FanValue(invalidSpeed)
             );
-            assertEquals("Fan speed must be between 0 and 100", exception.getMessage());
+            assertEquals("Fan speed must be between 0 and 4", exception.getMessage());
         }
     }
 
@@ -80,8 +80,8 @@ class FanValueTest {
         @Test
         @DisplayName("should return speed correctly")
         void shouldReturnSpeedCorrectly() {
-            final var fanValue = new FanValue(100);
-            assertEquals(100, fanValue.speed());
+            final var fanValue = new FanValue(4);
+            assertEquals(4, fanValue.speed());
         }
     }
 
@@ -92,7 +92,7 @@ class FanValueTest {
         @Test
         @DisplayName("should implement DeviceValue interface")
         void shouldImplementDeviceValueInterface() {
-            final var fanValue = new FanValue(50);
+            final var fanValue = new FanValue(2);
             assertInstanceOf(DeviceValue.class, fanValue);
         }
     }
@@ -104,24 +104,24 @@ class FanValueTest {
         @Test
         @DisplayName("should be equal when speeds are the same")
         void shouldBeEqualWhenSpeedsAreSame() {
-            final var fanValue1 = new FanValue(100);
-            final var fanValue2 = new FanValue(100);
+            final var fanValue1 = new FanValue(4);
+            final var fanValue2 = new FanValue(4);
             assertEquals(fanValue1, fanValue2);
         }
 
         @Test
         @DisplayName("should not be equal when speeds differ")
         void shouldNotBeEqualWhenSpeedsDiffer() {
-            final var fanValue1 = new FanValue(50);
-            final var fanValue2 = new FanValue(75);
+            final var fanValue1 = new FanValue(2);
+            final var fanValue2 = new FanValue(3);
             assertNotEquals(fanValue1, fanValue2);
         }
 
         @Test
         @DisplayName("should have same hashCode when speeds are the same")
         void shouldHaveSameHashCodeWhenSpeedsAreSame() {
-            final var fanValue1 = new FanValue(100);
-            final var fanValue2 = new FanValue(100);
+            final var fanValue1 = new FanValue(4);
+            final var fanValue2 = new FanValue(4);
             assertEquals(fanValue1.hashCode(), fanValue2.hashCode());
         }
     }

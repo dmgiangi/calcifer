@@ -167,7 +167,7 @@ class RedisDeviceStateRepositoryAdapterIntegrationTest implements RedisTestConta
         @DisplayName("should save and retrieve FAN DesiredDeviceState")
         void shouldSaveAndRetrieveFanDesiredState() {
             final var deviceId = new DeviceId("controller-1", "fan-1");
-            final var state = new DesiredDeviceState(deviceId, DeviceType.FAN, new FanValue(255));
+            final var state = new DesiredDeviceState(deviceId, DeviceType.FAN, new FanValue(4));
 
             repository.saveDesiredState(state);
 
@@ -176,7 +176,7 @@ class RedisDeviceStateRepositoryAdapterIntegrationTest implements RedisTestConta
             assertThat(result).isPresent();
             assertThat(result.get().id()).isEqualTo(deviceId);
             assertThat(result.get().type()).isEqualTo(DeviceType.FAN);
-            assertThat(result.get().value()).isEqualTo(new FanValue(255));
+            assertThat(result.get().value()).isEqualTo(new FanValue(4));
         }
 
         @Test

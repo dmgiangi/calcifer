@@ -45,15 +45,15 @@ public class CommandPayloadTransformer implements GenericTransformer<DeviceComma
     }
 
     /**
-     * Handles FAN device commands for AC dimmer fan control.
+     * Handles FAN device commands for 3-relay discrete fan control.
      * <p>
-     * Sends a single message to the fan topic with the speed value (0-100).
-     * The firmware's FanHandler automatically manages:
-     * - Relay control (0 = OFF, 1-100 = ON)
-     * - TRIAC dimmer level (mapped from minPwm to 100%)
+     * Sends a single message to the fan topic with the speed value (0-4).
+     * The firmware's FanHandler uses 3 relays to achieve 5 discrete speed states:
+     * - 0 = OFF (all relays disabled)
+     * - 1-4 = Increasing speed levels
      * </p>
      *
-     * @param event the device command event containing fan speed (0-100)
+     * @param event the device command event containing fan speed (0-4)
      * @return list containing a single MQTT message to the fan topic
      */
     private List<Message<String>> handleFan(DeviceCommandEvent event) {

@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
  * <p>Payload parsing rules:
  * <ul>
  *   <li>RELAY: "0", "LOW" → false; "1", "HIGH" → true</li>
- *   <li>FAN: "0"-"100" → integer speed value</li>
+ *   <li>FAN: "0"-"4" → integer speed value (5 discrete states)</li>
  * </ul>
  */
 @Component
@@ -104,7 +104,7 @@ public class ActuatorFeedbackProcessor {
 
     /**
      * Parses fan feedback payload.
-     * Valid values: integer between 0 and 100
+     * Valid values: integer between 0 and 4 (5 discrete states)
      *
      * @param rawValue the raw payload
      * @return FanValue with the parsed speed
@@ -113,10 +113,10 @@ public class ActuatorFeedbackProcessor {
     private FanValue parseFanValue(String rawValue) {
         try {
             final var speed = Integer.parseInt(rawValue.trim());
-            return new FanValue(speed); // FanValue constructor validates 0-100 range
+            return new FanValue(speed); // FanValue constructor validates 0-4 range
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(
-                    "Invalid fan value: '" + rawValue + "'. Expected: integer 0-100");
+                    "Invalid fan value: '" + rawValue + "'. Expected: integer 0-4");
         }
     }
 }
