@@ -134,14 +134,14 @@ class ActuatorFeedbackProcessorTest {
         @Test
         @DisplayName("should trim whitespace from fan values")
         void shouldTrimWhitespaceFromFanValues() {
-            final var feedback = createFeedback(DeviceType.FAN, " 128 ");
+            final var feedback = createFeedback(DeviceType.FAN, " 3 ");
             final var event = new ActuatorFeedbackReceivedEvent(this, feedback);
 
             processor.onActuatorFeedbackReceived(event);
 
             final var stateCaptor = ArgumentCaptor.forClass(ReportedDeviceState.class);
             verify(repository).saveReportedState(stateCaptor.capture());
-            assertThat(stateCaptor.getValue().value()).isEqualTo(new FanValue(128));
+            assertThat(stateCaptor.getValue().value()).isEqualTo(new FanValue(3));
         }
     }
 

@@ -62,7 +62,7 @@ class ReportedDeviceStateTest {
         @DisplayName("Should throw IllegalArgumentException when RELAY value is not RelayValue")
         void shouldThrowWhenRelayValueIsNotRelayValue() {
             final var exception = assertThrows(IllegalArgumentException.class, () ->
-                new ReportedDeviceState(DEVICE_ID, DeviceType.RELAY, new FanValue(128), Instant.now(), true)
+                    new ReportedDeviceState(DEVICE_ID, DeviceType.RELAY, new FanValue(3), Instant.now(), true)
             );
             assertEquals("Relay value must be RelayValue", exception.getMessage());
         }
@@ -125,10 +125,10 @@ class ReportedDeviceStateTest {
         @DisplayName("Should create valid known state for FAN")
         void shouldCreateValidKnownFanState() {
             final var now = Instant.now();
-            final var state = new ReportedDeviceState(DEVICE_ID, DeviceType.FAN, new FanValue(192), now, true);
+            final var state = new ReportedDeviceState(DEVICE_ID, DeviceType.FAN, new FanValue(4), now, true);
 
             assertAll(
-                () -> assertEquals(new FanValue(192), state.value()),
+                    () -> assertEquals(new FanValue(4), state.value()),
                 () -> assertTrue(state.isKnown())
             );
         }
@@ -158,10 +158,10 @@ class ReportedDeviceStateTest {
         @Test
         @DisplayName("known() should create state with isKnown=true and provided value")
         void knownShouldCreateKnownState() {
-            final var state = ReportedDeviceState.known(DEVICE_ID, DeviceType.FAN, new FanValue(64));
+            final var state = ReportedDeviceState.known(DEVICE_ID, DeviceType.FAN, new FanValue(2));
 
             assertAll(
-                () -> assertEquals(new FanValue(64), state.value()),
+                    () -> assertEquals(new FanValue(2), state.value()),
                 () -> assertTrue(state.isKnown())
             );
         }

@@ -11,6 +11,12 @@ spring:
       username: machine_user
       password: machine_user_password
       database: 0
+    mongodb:
+      host: localhost
+      port: 27017
+      username: calcifer_user
+      password: calcifer_password
+      authentication-database: admin
 logging:
   level:
     org.springframework.integration.mqtt: DEBUG

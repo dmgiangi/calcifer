@@ -72,7 +72,7 @@ class RedisDeviceStateRepositoryAdapterIntegrationTest implements RedisTestConta
         @DisplayName("should save and retrieve FAN UserIntent")
         void shouldSaveAndRetrieveFanUserIntent() {
             final var deviceId = new DeviceId("controller-1", "fan-1");
-            final var intent = UserIntent.now(deviceId, DeviceType.FAN, new FanValue(128));
+            final var intent = UserIntent.now(deviceId, DeviceType.FAN, new FanValue(3));
 
             repository.saveUserIntent(intent);
 
@@ -81,7 +81,7 @@ class RedisDeviceStateRepositoryAdapterIntegrationTest implements RedisTestConta
             assertThat(result).isPresent();
             assertThat(result.get().id()).isEqualTo(deviceId);
             assertThat(result.get().type()).isEqualTo(DeviceType.FAN);
-            assertThat(result.get().value()).isEqualTo(new FanValue(128));
+            assertThat(result.get().value()).isEqualTo(new FanValue(3));
         }
 
         @Test
@@ -294,7 +294,7 @@ class RedisDeviceStateRepositoryAdapterIntegrationTest implements RedisTestConta
             final var relayId = new DeviceId("controller-1", "relay-1");
             final var fanId = new DeviceId("controller-1", "fan-1");
             final var relayState = new DesiredDeviceState(relayId, DeviceType.RELAY, new RelayValue(true));
-            final var fanState = new DesiredDeviceState(fanId, DeviceType.FAN, new FanValue(192));
+            final var fanState = new DesiredDeviceState(fanId, DeviceType.FAN, new FanValue(4));
 
             repository.saveDesiredState(relayState);
             repository.saveDesiredState(fanState);
@@ -365,7 +365,7 @@ class RedisDeviceStateRepositoryAdapterIntegrationTest implements RedisTestConta
 
             try (final var executor = Executors.newFixedThreadPool(threadCount)) {
                 for (int i = 0; i < threadCount; i++) {
-                    final var fanSpeed = (i + 1) * 50; // Different speeds: 50, 100, 150, 200, 250
+                    final var fanSpeed = i % 5; // Different valid speeds: 0, 1, 2, 3, 4
                     executor.submit(() -> {
                         try {
                             latch.await();

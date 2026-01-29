@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 /**
@@ -38,9 +39,11 @@ public class ActuatorFeedbackProcessor {
     /**
      * Handles actuator feedback events by parsing the raw value,
      * persisting the reported state, and publishing a state change event.
+     * Executed asynchronously to avoid blocking the AMQP listener thread.
      *
      * @param event the actuator feedback received event
      */
+    @Async
     @EventListener
     public void onActuatorFeedbackReceived(ActuatorFeedbackReceivedEvent event) {
         final var feedback = event.getFeedback();

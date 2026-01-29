@@ -1,10 +1,7 @@
 package dev.dmgiangi.core.server.domain.port;
 
-import dev.dmgiangi.core.server.domain.model.DesiredDeviceState;
-import dev.dmgiangi.core.server.domain.model.DeviceId;
-import dev.dmgiangi.core.server.domain.model.DeviceTwinSnapshot;
-import dev.dmgiangi.core.server.domain.model.ReportedDeviceState;
-import dev.dmgiangi.core.server.domain.model.UserIntent;
+import dev.dmgiangi.core.server.domain.model.*;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -42,4 +39,24 @@ public interface DeviceStateRepository {
      * @return Optional containing the snapshot if the device exists, empty otherwise
      */
     Optional<DeviceTwinSnapshot> findTwinSnapshot(DeviceId id);
+
+    // ========== Device Lifecycle Methods ==========
+
+    /**
+     * Deletes a device and all its associated state (intent, reported, desired).
+     * Also removes the device from any indexes.
+     * Per Phase 0.15: Used when device is explicitly decommissioned.
+     *
+     * @param id the device identifier to delete
+     */
+    void deleteDevice(DeviceId id);
+
+    /**
+     * Retrieves the last activity timestamp for a device.
+     * Per Phase 0.15: Used for staleness detection.
+     *
+     * @param id the device identifier
+     * @return Optional containing the last activity timestamp, empty if device doesn't exist
+     */
+    Optional<java.time.Instant> findLastActivity(DeviceId id);
 }

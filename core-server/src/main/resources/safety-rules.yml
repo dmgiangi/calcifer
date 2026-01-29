@@ -1,0 +1,84 @@
+# Safety Rules Configuration
+# Per Phase 0.4: Configurable rules with SpEL conditions
+#
+# Rule Categories (precedence order):
+#   HARDCODED_SAFETY - Java-based, cannot be overridden (not in this file)
+#   SYSTEM_SAFETY    - System-level safety rules (this file)
+#   EMERGENCY        - Emergency overrides
+#   MAINTENANCE      - Maintenance overrides
+#   SCHEDULED        - Scheduled overrides
+#   MANUAL           - Manual overrides
+#   USER_INTENT      - Normal user intent (lowest)
+#
+# SpEL Context Variables:
+#   #deviceId        - DeviceId (controllerId, componentId)
+#   #deviceType      - DeviceType enum (RELAY, FAN, TEMPERATURE_SENSOR)
+#   #proposedValue   - Proposed DeviceValue
+#   #currentValue    - Current DeviceValue (may be null)
+#   #reportedValue   - Reported DeviceValue (may be null)
+#   #systemType      - FunctionalSystem type (may be null)
+#   #metadata        - Map<String, Object> with additional context
+#
+# SpEL Restrictions (per 0.4 sandboxing):
+#   - No method calls on arbitrary objects
+#   - No constructor calls
+#   - No static method access
+#   - Timeout: 100ms per rule evaluation
+
+safety:
+  rules:
+    # Example: Temperature-based fan speed limit
+    - id: TEMP_FAN_LIMIT
+      name: Temperature-Based Fan Speed Limit
+      description: Limits fan speed when temperature is below threshold
+      category: SYSTEM_SAFETY
+      priority: 100
+      enabled: true
+      version: 1
+      condition: "#deviceType.name() == 'FAN' and #metadata['temperature'] != null"
+      action: MODIFY
+      spelExpression: |
+        #metadata['temperature'] < 30 and #proposedValue.speed() > 2 ? 
+          new dev.dmgiangi.core.server.domain.model.FanValue(2) : 
+          #proposedValue
+      reason: "Fan speed limited to 2 when temperature below 30°C"
+
+    # Example: Night mode relay restriction
+    - id: NIGHT_MODE_RELAY
+      name: Night Mode Relay Restriction
+      description: Prevents relay activation during night hours
+      category: SCHEDULED
+      priority: 50
+      enabled: false  # Disabled by default, enable via config
+      version: 1
+      condition: "#deviceType.name() == 'RELAY' and #metadata['hour'] != null"
+      action: REFUSE
+      spelExpression: |
+        #metadata['hour'] >= 22 or #metadata['hour'] < 6
+      reason: "Relay activation not allowed during night hours (22:00-06:00)"
+
+    # Example: System-specific rule for TERMOCAMINO
+    - id: TERMOCAMINO_MIN_PUMP_SPEED
+      name: Termocamino Minimum Pump Speed
+      description: Ensures minimum pump activity in Termocamino systems
+      category: SYSTEM_SAFETY
+      priority: 80
+      enabled: true
+      version: 1
+      condition: "#systemType == 'TERMOCAMINO' and #deviceId.componentId().contains('pump')"
+      action: MODIFY
+      spelExpression: |
+        #proposedValue.state() == false and #metadata['waterTemp'] != null and #metadata['waterTemp'] > 50 ?
+          new dev.dmgiangi.core.server.domain.model.RelayValue(true) :
+          #proposedValue
+      reason: "Pump must remain ON when water temperature exceeds 50°C in Termocamino"
+
+  # Global settings
+  settings:
+    # SpEL evaluation timeout in milliseconds
+    evaluationTimeoutMs: 100
+    # Whether to fail-open (allow) or fail-closed (refuse) on SpEL errors
+    failOpen: false
+    # Log level for rule evaluation (TRACE, DEBUG, INFO)
+    logLevel: DEBUG
+

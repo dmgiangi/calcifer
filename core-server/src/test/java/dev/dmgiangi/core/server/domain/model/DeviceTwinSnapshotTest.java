@@ -39,7 +39,7 @@ class DeviceTwinSnapshotTest {
         @Test
         @DisplayName("Should throw IllegalArgumentException when intent type mismatches")
         void shouldThrowWhenIntentTypeMismatches() {
-            final var intent = new UserIntent(DEVICE_ID, DeviceType.FAN, new FanValue(128), NOW);
+            final var intent = new UserIntent(DEVICE_ID, DeviceType.FAN, new FanValue(3), NOW);
 
             final var exception = assertThrows(IllegalArgumentException.class, () ->
                 new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, intent, null, null)
@@ -61,7 +61,7 @@ class DeviceTwinSnapshotTest {
         @Test
         @DisplayName("Should throw IllegalArgumentException when desired type mismatches")
         void shouldThrowWhenDesiredTypeMismatches() {
-            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.FAN, new FanValue(255));
+            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.FAN, new FanValue(4));
 
             final var exception = assertThrows(IllegalArgumentException.class, () ->
                 new DeviceTwinSnapshot(DEVICE_ID, DeviceType.RELAY, null, null, desired)
@@ -173,8 +173,8 @@ class DeviceTwinSnapshotTest {
         @Test
         @DisplayName("Should return true when FanValue values match")
         void shouldReturnTrueWhenFanValuesMatch() {
-            final var reported = ReportedDeviceState.known(DEVICE_ID, DeviceType.FAN, new FanValue(128));
-            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.FAN, new FanValue(128));
+            final var reported = ReportedDeviceState.known(DEVICE_ID, DeviceType.FAN, new FanValue(3));
+            final var desired = new DesiredDeviceState(DEVICE_ID, DeviceType.FAN, new FanValue(3));
             final var snapshot = new DeviceTwinSnapshot(DEVICE_ID, DeviceType.FAN, null, reported, desired);
 
             assertTrue(snapshot.isConverged());

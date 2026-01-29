@@ -1,3 +1,49 @@
 spring:
   application:
     name: core-server
+  data:
+    mongodb:
+      database: calcifer
+      auto-index-creation: true
+
+# Actuator & Observability
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+      show-components: when_authorized
+      probes:
+        enabled: true
+  health:
+    redis:
+      enabled: true
+    rabbit:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 1.0  # 100% sampling for dev, reduce in production
+  observations:
+    key-values:
+      application: ${spring.application.name}
+
+# Logging with correlation ID
+logging:
+  pattern:
+    correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-}] "
+
+# Application-specific configuration
+app:
+  iot:
+    # Scheduled reconciler polling interval (drift detection / health check)
+    polling-interval-ms: 5000
+  reconciliation:
+    # Debounce window for immediate reconciler (accumulates rapid events)
+    debounce-ms: 50

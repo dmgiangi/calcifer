@@ -1,13 +1,11 @@
 package dev.dmgiangi.core.server.infrastructure.rest;
 
-import dev.dmgiangi.core.server.domain.model.DeviceId;
-import dev.dmgiangi.core.server.domain.model.DeviceTwinSnapshot;
-import dev.dmgiangi.core.server.domain.model.DeviceType;
-import dev.dmgiangi.core.server.domain.model.FanValue;
-import dev.dmgiangi.core.server.domain.model.RelayValue;
-import dev.dmgiangi.core.server.domain.model.UserIntent;
+import dev.dmgiangi.core.server.application.override.OverrideApplicationService;
+import dev.dmgiangi.core.server.domain.model.*;
 import dev.dmgiangi.core.server.domain.model.event.UserIntentChangedEvent;
 import dev.dmgiangi.core.server.domain.port.DeviceStateRepository;
+import dev.dmgiangi.core.server.domain.port.FunctionalSystemRepository.FunctionalSystemData;
+import dev.dmgiangi.core.server.domain.service.DeviceSystemMappingService;
 import dev.dmgiangi.core.server.infrastructure.rest.dto.IntentRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -54,6 +53,12 @@ class DeviceIntentControllerTest {
 
     @MockitoBean
     private DeviceStateRepository repository;
+
+    @MockitoBean
+    private OverrideApplicationService overrideApplicationService;
+
+    @MockitoBean
+    private DeviceSystemMappingService deviceSystemMappingService;
 
     @Autowired
     private TestEventCaptor eventCaptor;
@@ -102,20 +107,29 @@ class DeviceIntentControllerTest {
     class SubmitIntentTests {
 
         @Test
-        @DisplayName("should save RELAY intent with boolean value and publish event")
+        @DisplayName("should save RELAY intent and return standalone response when device not in system")
         void shouldSaveRelayIntentWithBoolean() throws Exception {
             final var request = new IntentRequest(DeviceType.RELAY, true);
+            final var deviceId = new DeviceId(CONTROLLER_ID, COMPONENT_ID);
+
+            // Device is standalone (not in any system)
+            when(deviceSystemMappingService.findSystemByDevice(deviceId)).thenReturn(Optional.empty());
 
             mockMvc.perform(post("/api/devices/{controllerId}/{componentId}/intent", CONTROLLER_ID, COMPONENT_ID)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.deviceId").value(CONTROLLER_ID + ":" + COMPONENT_ID))
+                    .andExpect(jsonPath("$.systemId").doesNotExist())
+                    .andExpect(jsonPath("$.type").value("RELAY"))
+                    .andExpect(jsonPath("$.value").value(true))
+                    .andExpect(jsonPath("$.message").value("Intent saved. Device is standalone - direct passthrough to desired state."));
 
             final var intentArgumentCaptor = ArgumentCaptor.forClass(UserIntent.class);
             verify(repository).saveUserIntent(intentArgumentCaptor.capture());
 
             final var savedIntent = intentArgumentCaptor.getValue();
-            assertThat(savedIntent.id()).isEqualTo(new DeviceId(CONTROLLER_ID, COMPONENT_ID));
+            assertThat(savedIntent.id()).isEqualTo(deviceId);
             assertThat(savedIntent.type()).isEqualTo(DeviceType.RELAY);
             assertThat(savedIntent.value()).isEqualTo(new RelayValue(true));
 
@@ -128,25 +142,33 @@ class DeviceIntentControllerTest {
         @Test
         @DisplayName("should save FAN intent with integer value")
         void shouldSaveFanIntentWithInteger() throws Exception {
-            final var request = new IntentRequest(DeviceType.FAN, 128);
+            final var request = new IntentRequest(DeviceType.FAN, 3);
+            final var deviceId = new DeviceId(CONTROLLER_ID, "fan1");
+
+            when(deviceSystemMappingService.findSystemByDevice(deviceId)).thenReturn(Optional.empty());
 
             mockMvc.perform(post("/api/devices/{controllerId}/{componentId}/intent", CONTROLLER_ID, "fan1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.type").value("FAN"))
+                    .andExpect(jsonPath("$.value").value(3));
 
             final var intentCaptor = ArgumentCaptor.forClass(UserIntent.class);
             verify(repository).saveUserIntent(intentCaptor.capture());
 
             final var savedIntent = intentCaptor.getValue();
             assertThat(savedIntent.type()).isEqualTo(DeviceType.FAN);
-            assertThat(savedIntent.value()).isEqualTo(new FanValue(128));
+            assertThat(savedIntent.value()).isEqualTo(new FanValue(3));
         }
 
         @Test
         @DisplayName("should save RELAY intent with numeric value (1 = true)")
         void shouldSaveRelayIntentWithNumericValue() throws Exception {
             final var request = new IntentRequest(DeviceType.RELAY, 1);
+            final var deviceId = new DeviceId(CONTROLLER_ID, COMPONENT_ID);
+
+            when(deviceSystemMappingService.findSystemByDevice(deviceId)).thenReturn(Optional.empty());
 
             mockMvc.perform(post("/api/devices/{controllerId}/{componentId}/intent", CONTROLLER_ID, COMPONENT_ID)
                             .contentType(MediaType.APPLICATION_JSON)
@@ -162,6 +184,9 @@ class DeviceIntentControllerTest {
         @DisplayName("should save RELAY intent with numeric value (0 = false)")
         void shouldSaveRelayIntentWithNumericValueZero() throws Exception {
             final var request = new IntentRequest(DeviceType.RELAY, 0);
+            final var deviceId = new DeviceId(CONTROLLER_ID, COMPONENT_ID);
+
+            when(deviceSystemMappingService.findSystemByDevice(deviceId)).thenReturn(Optional.empty());
 
             mockMvc.perform(post("/api/devices/{controllerId}/{componentId}/intent", CONTROLLER_ID, COMPONENT_ID)
                             .contentType(MediaType.APPLICATION_JSON)
@@ -171,6 +196,42 @@ class DeviceIntentControllerTest {
             final var intentCaptor = ArgumentCaptor.forClass(UserIntent.class);
             verify(repository).saveUserIntent(intentCaptor.capture());
             assertThat(intentCaptor.getValue().value()).isEqualTo(new RelayValue(false));
+        }
+
+        @Test
+        @DisplayName("should return system info when device belongs to a FunctionalSystem")
+        void shouldReturnSystemInfoWhenDeviceInSystem() throws Exception {
+            final var request = new IntentRequest(DeviceType.RELAY, true);
+            final var deviceId = new DeviceId(CONTROLLER_ID, COMPONENT_ID);
+
+            // Device belongs to a FunctionalSystem
+            final var now = java.time.Instant.now();
+            final var systemData = new FunctionalSystemData(
+                    "system-123",
+                    "HVAC",
+                    "Kitchen HVAC",
+                    java.util.Map.of(),  // configuration
+                    java.util.Set.of(CONTROLLER_ID + ":" + COMPONENT_ID),  // deviceIds
+                    java.util.Map.of(),  // failSafeDefaults
+                    now,  // createdAt
+                    now,  // updatedAt
+                    "admin",  // createdBy
+                    1L  // version
+            );
+            when(deviceSystemMappingService.findSystemByDevice(deviceId)).thenReturn(Optional.of(systemData));
+
+            mockMvc.perform(post("/api/devices/{controllerId}/{componentId}/intent", CONTROLLER_ID, COMPONENT_ID)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.deviceId").value(CONTROLLER_ID + ":" + COMPONENT_ID))
+                    .andExpect(jsonPath("$.systemId").value("system-123"))
+                    .andExpect(jsonPath("$.systemName").value("Kitchen HVAC"))
+                    .andExpect(jsonPath("$.type").value("RELAY"))
+                    .andExpect(jsonPath("$.value").value(true))
+                    .andExpect(jsonPath("$.message").value("Intent saved. Device belongs to system 'Kitchen HVAC' - will be processed through safety rules."));
+
+            verify(repository).saveUserIntent(any(UserIntent.class));
         }
     }
 

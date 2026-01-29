@@ -12,9 +12,11 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 
 
@@ -33,6 +35,7 @@ public class RedisDeviceStateRepositoryAdapter implements DeviceStateRepository 
     private static final String HASH_FIELD_INTENT = "intent";
     private static final String HASH_FIELD_REPORTED = "reported";
     private static final String HASH_FIELD_DESIRED = "desired";
+    private static final String HASH_FIELD_LAST_ACTIVITY = "lastActivity";
 
     // Optimistic locking retry configuration
     private static final int MAX_RETRIES = 3;
@@ -43,12 +46,16 @@ public class RedisDeviceStateRepositoryAdapter implements DeviceStateRepository 
     @Override
     public void saveDesiredState(DesiredDeviceState state) {
         final var key = generateKey(state.id());
+        final var now = Instant.now().toEpochMilli();
 
         executeWithOptimisticLock(key, operations -> {
             // 1. Save state to Hash field
             operations.opsForHash().put(key, HASH_FIELD_DESIRED, state);
 
-            // 2. Manage index for Reconciler
+            // 2. Update lastActivity timestamp
+            operations.opsForHash().put(key, HASH_FIELD_LAST_ACTIVITY, now);
+
+            // 3. Manage index for Reconciler
             if (state.type().capability == DeviceCapability.OUTPUT) {
                 operations.opsForSet().add(INDEX_OUTPUTS, key);
             } else {
@@ -89,9 +96,11 @@ public class RedisDeviceStateRepositoryAdapter implements DeviceStateRepository 
     @Override
     public void saveUserIntent(UserIntent intent) {
         final var key = generateKey(intent.id());
+        final var now = Instant.now().toEpochMilli();
 
         executeWithOptimisticLock(key, operations -> {
             operations.opsForHash().put(key, HASH_FIELD_INTENT, intent);
+            operations.opsForHash().put(key, HASH_FIELD_LAST_ACTIVITY, now);
         });
 
         log.debug("Saved user intent for device {} to Redis Hash", key);
@@ -111,9 +120,11 @@ public class RedisDeviceStateRepositoryAdapter implements DeviceStateRepository 
     @Override
     public void saveReportedState(ReportedDeviceState state) {
         final var key = generateKey(state.id());
+        final var now = Instant.now().toEpochMilli();
 
         executeWithOptimisticLock(key, operations -> {
             operations.opsForHash().put(key, HASH_FIELD_REPORTED, state);
+            operations.opsForHash().put(key, HASH_FIELD_LAST_ACTIVITY, now);
         });
 
         log.debug("Saved reported state for device {} to Redis Hash", key);
@@ -152,6 +163,86 @@ public class RedisDeviceStateRepositoryAdapter implements DeviceStateRepository 
                        : desired.type();
 
         return Optional.of(new DeviceTwinSnapshot(id, type, intent, reported, desired));
+    }
+
+    // ========== Device Lifecycle Methods ==========
+
+    @Override
+    public void deleteDevice(DeviceId id) {
+        final var key = generateKey(id);
+
+        // Delete the device Hash key
+        redisTemplate.delete(key);
+
+        // Remove from active outputs index
+        redisTemplate.opsForSet().remove(INDEX_OUTPUTS, key);
+
+        log.info("Deleted device {} from Redis (key: {}, removed from index)", id, key);
+    }
+
+    @Override
+    public Optional<Instant> findLastActivity(DeviceId id) {
+        final var key = generateKey(id);
+        final var value = redisTemplate.opsForHash().get(key, HASH_FIELD_LAST_ACTIVITY);
+
+        if (value instanceof Long epochMilli) {
+            return Optional.of(Instant.ofEpochMilli(epochMilli));
+        } else if (value instanceof Integer epochMilliInt) {
+            return Optional.of(Instant.ofEpochMilli(epochMilliInt.longValue()));
+        }
+
+        return Optional.empty();
+    }
+
+    /**
+     * Returns all device keys from the active outputs index.
+     * Used by maintenance jobs for staleness detection and orphan cleanup.
+     *
+     * @return set of device keys in the index
+     */
+    public Set<String> getAllIndexedDeviceKeys() {
+        final var keys = redisTemplate.opsForSet().members(INDEX_OUTPUTS);
+        return keys != null ? Set.copyOf(keys.stream().map(Object::toString).toList()) : Set.of();
+    }
+
+    /**
+     * Checks if a device key exists in Redis.
+     * Used by orphan cleanup job.
+     *
+     * @param key the Redis key to check
+     * @return true if the key exists
+     */
+    public boolean keyExists(String key) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+    }
+
+    /**
+     * Removes a key from the active outputs index.
+     * Used by orphan cleanup job.
+     *
+     * @param key the Redis key to remove from index
+     */
+    public void removeFromIndex(String key) {
+        redisTemplate.opsForSet().remove(INDEX_OUTPUTS, key);
+        log.debug("Removed orphan key {} from index", key);
+    }
+
+    /**
+     * Extracts DeviceId from a Redis key.
+     *
+     * @param key the Redis key (format: "device:controllerId:componentId")
+     * @return the DeviceId, or empty if key format is invalid
+     */
+    public Optional<DeviceId> extractDeviceIdFromKey(String key) {
+        if (key == null || !key.startsWith(KEY_PREFIX)) {
+            return Optional.empty();
+        }
+        final var idPart = key.substring(KEY_PREFIX.length());
+        final var parts = idPart.split(":");
+        if (parts.length != 2) {
+            return Optional.empty();
+        }
+        return Optional.of(new DeviceId(parts[0], parts[1]));
     }
 
     // ========== Helper Methods ==========

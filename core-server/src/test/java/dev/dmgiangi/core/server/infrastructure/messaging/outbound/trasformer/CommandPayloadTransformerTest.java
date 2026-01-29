@@ -87,20 +87,20 @@ class CommandPayloadTransformerTest {
         }
 
         @Test
-        @DisplayName("should create fan command with maximum speed 255")
+        @DisplayName("should create fan command with maximum speed 4")
         void shouldCreateFanCommand_withMaxSpeed() {
             final var deviceId = new DeviceId("controller-01", "fan-01");
-            final var event = new DeviceCommandEvent(deviceId, DeviceType.FAN, 255);
+            final var event = new DeviceCommandEvent(deviceId, DeviceType.FAN, 4);
 
             final var result = transformer.transform(event);
 
             assertThat(result).hasSize(1);
             final var message = result.getFirst();
-            assertThat(message.getPayload()).isEqualTo("255");
+            assertThat(message.getPayload()).isEqualTo("4");
         }
 
         @ParameterizedTest(name = "speed={0}")
-        @ValueSource(ints = {1, 64, 128, 192, 254})
+        @ValueSource(ints = {1, 2, 3})
         @DisplayName("should create fan command with various speeds")
         void shouldCreateFanCommand_withVariousSpeeds(int speed) {
             final var deviceId = new DeviceId("controller-01", "fan-01");
@@ -117,7 +117,7 @@ class CommandPayloadTransformerTest {
         @DisplayName("should set correct routing key for fan command")
         void shouldSetCorrectRoutingKeyForFan() {
             final var deviceId = new DeviceId("controller-01", "fan-01");
-            final var event = new DeviceCommandEvent(deviceId, DeviceType.FAN, 128);
+            final var event = new DeviceCommandEvent(deviceId, DeviceType.FAN, 3);
 
             final var result = transformer.transform(event);
 
