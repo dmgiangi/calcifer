@@ -1,3 +1,19 @@
+---
+title: "Calcifer Core Server Domain Model"
+subtitle: "Entities, Rules, and Interaction Patterns for IoT Device Management"
+author: "Calcifer Team"
+date: "\\today"
+lang: "en"
+titlepage: true
+titlepage-color: "0B2C4B"
+titlepage-text-color: "FFFFFF"
+titlepage-rule-color: "E63946"
+titlepage-rule-height: 2
+toc: true
+toc-own-page: true
+listings: true
+---
+
 # Domain Model
 
 This document describes the domain model of the Core Server ("Calcifer"), defining the entities, value objects, business rules, and interaction patterns used to manage IoT devices.

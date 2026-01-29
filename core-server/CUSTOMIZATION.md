@@ -1,3 +1,19 @@
+---
+title: "Calcifer Core Server - Customization Guide"
+subtitle: "Technical Documentation for Extending and Customizing the System"
+author: "Calcifer Team"
+date: "\\today"
+lang: "en"
+titlepage: true
+titlepage-color: "0B2C4B"
+titlepage-text-color: "FFFFFF"
+titlepage-rule-color: "E63946"
+titlepage-rule-height: 2
+toc: true
+toc-own-page: true
+listings: true
+---
+
 # Calcifer Core Server - Customization Guide
 
 This document provides technical documentation for developers who want to customize or extend the Calcifer Core Server.

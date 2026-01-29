@@ -1,3 +1,19 @@
+---
+title: "ESP32 MQTT Actuator & Sensor Node"
+subtitle: "Configuration-Driven Firmware for IoT Devices"
+author: "Calcifer Team"
+date: "\\today"
+lang: "en"
+titlepage: true
+titlepage-color: "0B2C4B"
+titlepage-text-color: "FFFFFF"
+titlepage-rule-color: "E63946"
+titlepage-rule-height: 2
+toc: true
+toc-own-page: true
+listings: true
+---
+
 # ESP32 MQTT Actuator & Sensor Node
 
 A flexible, configuration-driven firmware for ESP32 designed to control actuators and read sensors via MQTT. This project emphasizes **Clean Code** principles, **SOLID** design, and **Data-Driven** configuration, allowing you to define your hardware setup using JSON files without modifying the C++ firmware.

@@ -1,3 +1,19 @@
+---
+title: "WiFiManager Library"
+subtitle: "WiFi Connection Management for ESP32"
+author: "Calcifer Team"
+date: "\\today"
+lang: "en"
+titlepage: true
+titlepage-color: "0B2C4B"
+titlepage-text-color: "FFFFFF"
+titlepage-rule-color: "E63946"
+titlepage-rule-height: 2
+toc: true
+toc-own-page: true
+listings: true
+---
+
 # WiFiManager Library
 
 Handles WiFi connection for ESP32 devices using JSON-based configuration loaded from SPIFFS. Supports both DHCP and static IP configurations with automatic reconnection handling.

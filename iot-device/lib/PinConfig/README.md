@@ -1,3 +1,19 @@
+---
+title: "PinConfig Library"
+subtitle: "JSON-Based Hardware Configuration for ESP32"
+author: "Calcifer Team"
+date: "\\today"
+lang: "en"
+titlepage: true
+titlepage-color: "0B2C4B"
+titlepage-text-color: "FFFFFF"
+titlepage-rule-color: "E63946"
+titlepage-rule-height: 2
+toc: true
+toc-own-page: true
+listings: true
+---
+
 # PinConfig Library
 
 Handles JSON-based hardware configuration and ESP32 pin capability validation. This library parses `pin_config.json` from SPIFFS and validates that each pin supports the requested functionality based on ESP32 DevKit C V4 specifications.

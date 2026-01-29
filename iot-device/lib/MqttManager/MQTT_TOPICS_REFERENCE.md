@@ -1,3 +1,19 @@
+---
+title: "MQTT Topics Reference"
+subtitle: "Complete Reference for Device Handlers and Topic Patterns"
+author: "Calcifer Team"
+date: "\\today"
+lang: "en"
+titlepage: true
+titlepage-color: "0B2C4B"
+titlepage-text-color: "FFFFFF"
+titlepage-rule-color: "E63946"
+titlepage-rule-height: 2
+toc: true
+toc-own-page: true
+listings: true
+---
+
 # MQTT Topics Reference
 
 Complete reference for all device handlers in the MqttManager library. Each handler manages a specific device type and automatically generates MQTT topics based on the `clientId` and device `name`.

@@ -1,3 +1,19 @@
+---
+title: "MqttManager Library"
+subtitle: "MQTT Communication for ESP32 IoT Devices"
+author: "Calcifer Team"
+date: "\\today"
+lang: "en"
+titlepage: true
+titlepage-color: "0B2C4B"
+titlepage-text-color: "FFFFFF"
+titlepage-rule-color: "E63946"
+titlepage-rule-height: 2
+toc: true
+toc-own-page: true
+listings: true
+---
+
 # MqttManager Library
 
 Manages MQTT-based communication for ESP32 IoT devices, providing automatic topic generation and message handling for sensors and actuators.
