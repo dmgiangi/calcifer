@@ -4,23 +4,23 @@ Complete reference for all device handlers in the MqttManager library. Each hand
 
 ## 📋 Quick Reference Table
 
-| Handler | Device Type | Role | Topic Pattern | Payload |
-|:--------|:------------|:-----|:--------------|:--------|
-| `DigitalInputHandler` | Sensor | Producer | `/<clientId>/digital_input/<name>/value` | `0` or `1` |
-| `DigitalOutputHandler` | Actuator | Consumer + Producer | `/<clientId>/digital_output/<name>/set` (cmd) | `0`, `1`, `HIGH`, `LOW` |
-| | | | `/<clientId>/digital_output/<name>/state` (feedback) | `0`, `1`, `HIGH`, `LOW` |
-| `PwmHandler` | Actuator | Consumer + Producer | `/<clientId>/pwm/<name>/set` (cmd) | `0` - `255` |
-| | | | `/<clientId>/pwm/<name>/state` (feedback) | `0` - `255` |
-| `AnalogInputHandler` | Sensor | Producer | `/<clientId>/analog_input/<name>/value` | `0` - `4095` |
-| `AnalogOutputHandler` | Actuator | Consumer + Producer | `/<clientId>/analog_output/<name>/set` (cmd) | `0` - `255` |
-| | | | `/<clientId>/analog_output/<name>/state` (feedback) | `0` - `255` |
-| `FanHandler` | Actuator | Consumer + Producer | `/<clientId>/fan/<name>/set` (cmd) | `0` - `100` (%) |
-| | | | `/<clientId>/fan/<name>/state` (feedback) | `0` - `100` (%) |
-| `Dht22Handler` | Sensor | Producer | `/<clientId>/dht22/<name>/temperature` | Float (°C) |
-| | | | `/<clientId>/dht22/<name>/humidity` | Float (%) |
-| `Yl69Handler` | Sensor | Producer | `/<clientId>/yl69/<name>/value` | `0` - `100` (%) |
-| `Ds18b20Handler` | Sensor | Producer | `/<clientId>/ds18b20/<name>/temperature` | Float (°C) |
-| `ThermocoupleHandler` | Sensor | Producer | `/<clientId>/thermocouple/<name>/temperature` | Float (°C) |
+| Handler                | Device Type | Role                | Topic Pattern                                        | Payload                 |
+|:-----------------------|:------------|:--------------------|:-----------------------------------------------------|:------------------------|
+| `DigitalInputHandler`  | Sensor      | Producer            | `/<clientId>/digital_input/<name>/value`             | `0` or `1`              |
+| `DigitalOutputHandler` | Actuator    | Consumer + Producer | `/<clientId>/digital_output/<name>/set` (cmd)        | `0`, `1`, `HIGH`, `LOW` |
+|                        |             |                     | `/<clientId>/digital_output/<name>/state` (feedback) | `0`, `1`, `HIGH`, `LOW` |
+| `PwmHandler`           | Actuator    | Consumer + Producer | `/<clientId>/pwm/<name>/set` (cmd)                   | `0` - `255`             |
+|                        |             |                     | `/<clientId>/pwm/<name>/state` (feedback)            | `0` - `255`             |
+| `AnalogInputHandler`   | Sensor      | Producer            | `/<clientId>/analog_input/<name>/value`              | `0` - `4095`            |
+| `AnalogOutputHandler`  | Actuator    | Consumer + Producer | `/<clientId>/analog_output/<name>/set` (cmd)         | `0` - `255`             |
+|                        |             |                     | `/<clientId>/analog_output/<name>/state` (feedback)  | `0` - `255`             |
+| `FanHandler`           | Actuator    | Consumer + Producer | `/<clientId>/fan/<name>/set` (cmd)                   | `0` - `4`               |
+|                        |             |                     | `/<clientId>/fan/<name>/state` (feedback)            | `0` - `4`               |
+| `Dht22Handler`         | Sensor      | Producer            | `/<clientId>/dht22/<name>/temperature`               | Float (°C)              |
+|                        |             |                     | `/<clientId>/dht22/<name>/humidity`                  | Float (%)               |
+| `Yl69Handler`          | Sensor      | Producer            | `/<clientId>/yl69/<name>/value`                      | `0` - `100` (%)         |
+| `Ds18b20Handler`       | Sensor      | Producer            | `/<clientId>/ds18b20/<name>/temperature`             | Float (°C)              |
+| `ThermocoupleHandler`  | Sensor      | Producer            | `/<clientId>/thermocouple/<name>/temperature`        | Float (°C)              |
 
 ### Legend
 

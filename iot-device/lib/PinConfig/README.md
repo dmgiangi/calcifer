@@ -43,7 +43,7 @@ struct PinConfig {
     int pinRelay3;         // Third relay GPIO (FAN only)
     PinModeType mode;      // Operation mode
     String name;           // Human-readable identifier (used in MQTT topics)
-    int defaultState;      // Initial state (0/1 for digital, 0-100 for FAN)
+    int defaultState;      // Initial state (0/1 for digital, 0-4 for FAN)
     int pollingInterval;   // Interval in ms (sensors: publish rate, actuators: watchdog)
     bool inverted;         // Logic inversion (Active Low)
     bool kickstartEnabled; // Enable kickstart for FAN mode (default: false)
