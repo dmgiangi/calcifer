@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- Properties from Spring environment -->
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="core-server"/>
+
+    <!-- Console appender for development (human-readable) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%-40.40logger{39}) : %msg
+                %X{traceId:-} %X{spanId:-}%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <!-- JSON appender for production using Logstash Encoder -->
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- Include MDC fields (traceId, spanId) automatically -->
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
+
+            <!-- Custom fields -->
+            <customFields>{"application":"${appName}"}</customFields>
+
+            <!-- Timestamp configuration -->
+            <timestampPattern>yyyy-MM-dd'T'HH:mm:ss.SSSZ</timestampPattern>
+            <timeZone>UTC</timeZone>
+
+            <!-- Field names customization for Loki/Promtail compatibility -->
+            <fieldNames>
+                <timestamp>timestamp</timestamp>
+                <version>[ignore]</version>
+                <levelValue>[ignore]</levelValue>
+            </fieldNames>
+
+            <!-- Include caller info only for ERROR level (performance optimization) -->
+            <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                <maxLength>2048</maxLength>
+                <shortenedClassNameLength>20</shortenedClassNameLength>
+                <rootCauseFirst>true</rootCauseFirst>
+            </throwableConverter>
+        </encoder>
+    </appender>
+
+    <!-- Development profile: human-readable console output -->
+    <springProfile name="dev,default">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+        <logger name="dev.dmgiangi" level="DEBUG"/>
+        <logger name="org.springframework.integration" level="DEBUG"/>
+    </springProfile>
+
+    <!-- Production profile: JSON structured logging -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+        </root>
+        <logger name="dev.dmgiangi" level="INFO"/>
+        <logger name="org.springframework" level="WARN"/>
+        <logger name="org.mongodb" level="WARN"/>
+        <logger name="io.lettuce" level="WARN"/>
+    </springProfile>
+
+</configuration>
+

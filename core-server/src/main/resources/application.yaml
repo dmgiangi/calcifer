@@ -3,8 +3,9 @@ spring:
     name: core-server
   data:
     mongodb:
-      database: calcifer
       auto-index-creation: true
+  mongodb:
+    database: calcifer
 
 # OpenAPI / Swagger UI
 springdoc:
@@ -37,8 +38,6 @@ management:
       show-components: when_authorized
       probes:
         enabled: true
-    loggers:
-      enabled: true
   health:
     redis:
       enabled: true
@@ -49,13 +48,14 @@ management:
       export:
         enabled: true
   tracing:
-    enabled: true
     propagation:
       type: w3c
     baggage:
       enabled: true
       correlation:
         enabled: true
+    export:
+      enabled: true
   observations:
     key-values:
       application: ${spring.application.name}
