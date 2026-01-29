@@ -17,6 +17,11 @@
 
     <properties>
         <java.version>25</java.version>
+        <!-- Docker/Jib Configuration -->
+        <jib.version>3.5.1</jib.version>
+        <docker.registry>docker.io</docker.registry>
+        <docker.username>giangi</docker.username>
+        <docker.image.name>calcifer-core-server</docker.image.name>
     </properties>
 
     <dependencies>
@@ -201,6 +206,80 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                </configuration>
+            </plugin>
+
+            <!-- Jib Maven Plugin for Docker image build and push -->
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>${jib.version}</version>
+                <configuration>
+                    <!-- Base image -->
+                    <from>
+                        <image>eclipse-temurin:25-jre</image>
+                    </from>
+                    <!-- Target image -->
+                    <to>
+                        <image>${docker.registry}/${docker.username}/${docker.image.name}</image>
+                        <tags>
+                            <tag>${project.version}</tag>
+                            <tag>latest</tag>
+                        </tags>
+                        <!-- Auth via ~/.m2/settings.xml or env vars -->
+                        <auth>
+                            <username>${env.DOCKER_USERNAME}</username>
+                            <password>${env.DOCKER_PASSWORD}</password>
+                        </auth>
+                    </to>
+                    <!-- Container configuration -->
+                    <container>
+                        <ports>
+                            <port>8080</port>
+                        </ports>
+                        <environment>
+                            <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
+                            <!-- Placeholders for runtime configuration -->
+                            <JAVA_TOOL_OPTIONS>-XX:+UseZGC -XX:MaxRAMPercentage=75.0</JAVA_TOOL_OPTIONS>
+                        </environment>
+                        <!-- Run as non-root user for security -->
+                        <user>1000:1000</user>
+                        <!-- Use current timestamp for image creation time -->
+                        <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
+                        <!-- JVM flags optimized for containers -->
+                        <jvmFlags>
+                            <jvmFlag>-XX:+UseContainerSupport</jvmFlag>
+                            <jvmFlag>-Djava.security.egd=file:/dev/./urandom</jvmFlag>
+                        </jvmFlags>
+                        <!-- Labels for image metadata -->
+                        <labels>
+                            <org.opencontainers.image.title>${project.name}</org.opencontainers.image.title>
+                            <org.opencontainers.image.version>${project.version}</org.opencontainers.image.version>
+                            <org.opencontainers.image.description>${project.description}
+                            </org.opencontainers.image.description>
+                            <org.opencontainers.image.source>https://github.com/dmgiangi/calcifer
+                            </org.opencontainers.image.source>
+                            <prometheus.scrape>true</prometheus.scrape>
+                            <logging>promtail</logging>
+                        </labels>
+                    </container>
+                    <!-- Extra directories to include (for OTel agent mount point) -->
+                    <extraDirectories>
+                        <paths>
+                            <path>
+                                <from>src/main/jib</from>
+                                <into>/</into>
+                            </path>
+                        </paths>
+                        <permissions>
+                            <permission>
+                                <file>/otel</file>
+                                <mode>755</mode>
+                            </permission>
+                        </permissions>
+                    </extraDirectories>
+                    <!-- Allow insecure registries for local testing -->
+                    <allowInsecureRegistries>false</allowInsecureRegistries>
                 </configuration>
             </plugin>
         </plugins>
