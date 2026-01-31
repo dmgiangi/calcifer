@@ -44,6 +44,11 @@ public:
     int getMqttPort() const { return mqttPort; }
     String getClientId() const { return mqttClientId; }
 
+    // Getters for DisplayManager integration
+    bool isConnected() const { return mqttClient && mqttClient->connected(); }
+    const std::vector<MqttProducer>& getProducers() const { return producers; }
+    const std::vector<MqttConsumer>& getConsumers() const { return consumers; }
+
     // Main Loop
     static void loop();
     static void handleProducers();

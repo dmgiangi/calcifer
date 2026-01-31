@@ -12,6 +12,8 @@
 #include <WiFi.h>
 #include <Logger.h>
 #include "handlers/FanHandler.h"
+#include <DisplayManager.h>
+#include "providers/MqttDataProvider.h"
 
 static const char* TAG = "Setup";
 
@@ -90,6 +92,14 @@ void setup()
     waitForCondition("MQTT connection", []()
                      { return MqttManager::connect(mqttClient); });
 
+    // --- Initialize Display (optional - continues if disabled or not present) ---
+    if (DisplayManager::loadConfig("/display_config.json")) {
+        auto dataProvider = std::make_unique<MqttDataProvider>(pinConfigs);
+        if (DisplayManager::init(std::move(dataProvider))) {
+            LOG_INFO(TAG, "Display initialized");
+        }
+    }
+
     LOG_INFO(TAG, "System initialized successfully!");
 }
 
@@ -102,4 +112,5 @@ void loop()
     MqttManager::handleProducers(); // pubblica periodicamente i valori
     MqttManager::handleConsumers(); // watchdog per i consumer
     FanHandler::processKickstarts(); // process pending fan kickstart transitions
+    DisplayManager::update(); // update display rotation and error detection
 }

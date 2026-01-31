@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "type": "I2C_LCD",
+  "layout": "16x2",
+  "i2c_address": "0x27",
+  "rotationInterval": 3000,
+  "scrollSpeed": 400,
+  "sda": 21,
+  "scl": 22
+}

@@ -1,0 +1,19 @@
+{
+  "_comment": "Display Configuration Template - Copy to data/display_config.json",
+  "enabled": true,
+  "_enabled_comment": "Set to false to disable the display feature entirely",
+  "type": "I2C_LCD",
+  "_type_comment": "Display type. Currently supported: 'I2C_LCD' (PCF8574T-based)",
+  "layout": "20x4",
+  "_layout_comment": "Display layout. Supported: '16x2' (16 cols x 2 rows), '20x4' (20 cols x 4 rows)",
+  "i2c_address": "0x27",
+  "_i2c_address_comment": "I2C address of the LCD backpack. Common values: 0x27 or 0x3F",
+  "rotationInterval": 3000,
+  "_rotationInterval_comment": "Time in milliseconds between rotating to the next device display",
+  "scrollSpeed": 400,
+  "_scrollSpeed_comment": "Scroll speed in ms per character shift for long device names. Default: 400ms",
+  "sda": 21,
+  "_sda_comment": "GPIO pin for I2C SDA. Default for ESP32: 21",
+  "scl": 22,
+  "_scl_comment": "GPIO pin for I2C SCL. Default for ESP32: 22"
+}

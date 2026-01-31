@@ -22,7 +22,7 @@
 # =============================================================================
 
 # IoT User - for MQTT device connections
-iot_user,RABBITMQ_IOT_PASSWORD,,/,^mqtt-subscription-.*,.*,.*,amq.topic,^\..*\..*\..*\..*$,.*
+iot_user,RABBITMQ_IOT_PASSWORD,,/,^mqtt-subscription-.*,.*,.*,amq.topic,.*,.*
 
 # Example: Add more users below
 # app_user,RABBITMQ_APP_PASSWORD,,/,.*,.*,.*,,,
