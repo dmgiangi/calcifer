@@ -33,3 +33,6 @@ build/
 infrastructure/.env
 !.env.example
 !infrastructure/.env.example
+
+### Generated documentation ###
+utils/docs-output/
