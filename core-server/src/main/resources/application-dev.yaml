@@ -22,6 +22,7 @@ spring:
     authentication-database: admin
 
 # OTLP Tracing - HTTP push to Tempo (dev)
+# Metrics are scraped by Prometheus via /actuator/prometheus (no OTLP push)
 management:
   tracing:
     sampling:
@@ -31,6 +32,10 @@ management:
       export:
         otlp:
           endpoint: http://localhost:4318/v1/traces
+  otlp:
+    metrics:
+      export:
+        enabled: false  # Tempo doesn't support /v1/metrics
 
 # Development logging - verbose for debugging
 logging:
