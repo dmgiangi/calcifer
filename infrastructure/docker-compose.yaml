@@ -34,8 +34,8 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_ADMIN_USERNAME:-admin}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_ADMIN_PASSWORD:-password_admin}
     volumes:
-      - ./rabbitmq_enabled_plugins:/etc/rabbitmq/enabled_plugins
-      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "check_running" ]
@@ -59,8 +59,8 @@ services:
       RABBITMQ_ADMIN_PASS: ${RABBITMQ_ADMIN_PASSWORD:-password_admin}
       USERS_CSV: /rabbitmq-users.csv
     volumes:
-      - ./rabbitmq-init.sh:/rabbitmq-init.sh:ro
-      - ./rabbitmq-users.csv:/rabbitmq-users.csv:ro
+      - ./rabbitmq/init.sh:/rabbitmq-init.sh:ro
+      - ./rabbitmq/users.csv:/rabbitmq-users.csv:ro
     entrypoint: [ "/bin/sh", "/rabbitmq-init.sh" ]
     restart: "no"
 
