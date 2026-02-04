@@ -1,19 +1,3 @@
----
-title: "Calcifer"
-subtitle: "IoT Platform with Digital Twin Pattern"
-author: "Calcifer Team"
-date: "\\today"
-lang: "en"
-titlepage: true
-titlepage-color: "0B2C4B"
-titlepage-text-color: "FFFFFF"
-titlepage-rule-color: "E63946"
-titlepage-rule-height: 2
-toc: true
-toc-own-page: true
-listings: true
----
-
 # Calcifer
 
 An IoT platform that uses the **Digital Twin** pattern to provide centralized control, monitoring, and self-healing
@@ -31,31 +15,37 @@ Calcifer consists of three main components:
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           IoT DEVICES (ESP32)                           │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐    │
-│  │  Sensors    │  │  Actuators  │  │  Sensors    │  │  Actuators  │    │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘    │
-└─────────┼────────────────┼────────────────┼────────────────┼───────────┘
-          │                │                │                │
-          └────────────────┴────────┬───────┴────────────────┘
-                                    │ MQTT
-                              ┌─────▼─────┐
-                              │ RabbitMQ  │
-                              └─────┬─────┘
-                                    │
-                         ┌──────────▼──────────┐
-                         │    CORE SERVER      │
-                         │  (Digital Twins)    │
-                         └──────────┬──────────┘
-                                    │
-          ┌─────────────────────────┼─────────────────────────┐
-          │                         │                         │
-    ┌─────▼─────┐            ┌──────▼──────┐           ┌──────▼──────┐
-    │  MongoDB  │            │    Redis    │           │   Grafana   │
-    │  (State)  │            │   (Cache)   │           │ (Dashboard) │
-    └───────────┘            └─────────────┘           └─────────────┘
+```mermaid
+flowchart TB
+    subgraph IoT["IoT DEVICES (ESP32)"]
+        S1[Sensors]
+        A1[Actuators]
+        S2[Sensors]
+        A2[Actuators]
+    end
+
+    subgraph Broker["Message Broker"]
+        RMQ[(RabbitMQ)]
+    end
+
+    subgraph Core["CORE SERVER"]
+        DT[Digital Twins]
+    end
+
+    subgraph Storage["Data Layer"]
+        MongoDB[(MongoDB<br/>State)]
+        Redis[(Redis<br/>Cache)]
+    end
+
+    subgraph Observability["Observability"]
+        Grafana[Grafana<br/>Dashboard]
+    end
+
+    S1 & A1 & S2 & A2 -->|MQTT| RMQ
+    RMQ --> DT
+    DT --> MongoDB
+    DT --> Redis
+    DT --> Grafana
 ```
 
 ## Quick Start
@@ -120,7 +110,7 @@ Complete documentation is available in the following files:
 
 ## Project Structure
 
-```
+```tree
 calcifer/
 ├── core-server/          # Spring Boot backend
 ├── infrastructure/       # Docker Compose + observability
@@ -132,4 +122,3 @@ calcifer/
 ## License
 
 Copyright © 2024 Calcifer Team. All rights reserved.
-

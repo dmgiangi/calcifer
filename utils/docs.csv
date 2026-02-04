@@ -1,14 +1,8 @@
-filepath
-README.md
-core-server/ADR.md
-core-server/CUSTOMIZATION.md
-core-server/DOMAIN.md
-core-server/OPERATIONS.md
-core-server/README.md
-infrastructure/README.md
-iot-device/README.md
-iot-device/lib/MqttManager/MQTT_TOPICS_REFERENCE.md
-iot-device/lib/MqttManager/README.md
-iot-device/lib/PinConfig/README.md
-iot-device/lib/WiFiManager/README.md
+filepath,output_filename
+README.md,Calcifer-Overview.pdf
+core-server/ADR.md,Core-Server-ADR.pdf
+core-server/CUSTOMIZATION.md,Core-Server-Customization.pdf
+core-server/DOMAIN.md,Core-Server-Domain.pdf
+core-server/OPERATIONS.md,Core-Server-Operations.pdf
+core-server/README.md,Core-Server-README.pdf
 

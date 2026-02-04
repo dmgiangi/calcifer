@@ -1,0 +1,68 @@
+% Calcifer Custom Title Page for Quarto PDF
+% Replaces Eisvogel titlepage-* options with native LaTeX
+% Brand colors: Background #0B2C4B, Text #FFFFFF, Accent #E63946
+
+\begin{titlepage}
+    \newgeometry{left=6cm}
+    
+    % Define brand colors
+    \definecolor{titlepage-bg}{HTML}{0B2C4B}
+    \definecolor{titlepage-text}{HTML}{FFFFFF}
+    \definecolor{titlepage-rule}{HTML}{E63946}
+    
+    % Background color block
+    \newpagecolor{titlepage-bg}
+    
+    % Vertical spacing
+    \vspace*{2cm}
+    
+    % Accent rule line
+    \noindent
+    \textcolor{titlepage-rule}{\rule{\linewidth}{2pt}}
+    
+    \vspace{1cm}
+    
+    % Title
+    \noindent
+    {\Huge \textbf{\textcolor{titlepage-text}{$title$}}}
+    
+    \vspace{0.5cm}
+    
+    % Subtitle (if present)
+    $if(subtitle)$
+    \noindent
+    {\Large \textcolor{titlepage-text}{$subtitle$}}
+    $endif$
+    
+    \vspace{1.5cm}
+    
+    % Bottom accent rule
+    \noindent
+    \textcolor{titlepage-rule}{\rule{\linewidth}{2pt}}
+    
+    \vfill
+    
+    % Author
+    $if(author)$
+    \noindent
+    {\large \textcolor{titlepage-text}{$for(author)$$author$$sep$ \\ $endfor$}}
+    
+    \vspace{0.5cm}
+    $endif$
+    
+    % Date
+    $if(date)$
+    \noindent
+    {\normalsize \textcolor{titlepage-text}{$date$}}
+    $endif$
+    
+    \vspace{2cm}
+    
+    % Restore default page color
+    \restorepagecolor
+    \restoregeometry
+\end{titlepage}
+
+% Table of Contents on its own page (replaces toc-own-page: true)
+\clearpage
+

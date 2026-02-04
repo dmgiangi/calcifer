@@ -2,16 +2,38 @@
 title: "Calcifer Core Server"
 subtitle: "IoT Device Management with Digital Twin Pattern"
 author: "Calcifer Team"
-date: "\\today"
-lang: "en"
-titlepage: true
-titlepage-color: "0B2C4B"
-titlepage-text-color: "FFFFFF"
-titlepage-rule-color: "E63946"
-titlepage-rule-height: 2
-toc: true
-toc-own-page: true
-listings: true
+date: last-modified
+lang: en
+format:
+  pdf:
+    documentclass: scrartcl
+    papersize: a4
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    colorlinks: true
+    linkcolor: "calcifer-blue"
+    urlcolor: "calcifer-red"
+    fig-width: 6
+    fig-height: 4
+    geometry:
+      - top=30mm
+      - left=25mm
+      - right=25mm
+      - bottom=30mm
+    filters:
+      - _quarto_temp/utils/resize-images.lua
+    include-in-header:
+      text: |
+        \usepackage{pagecolor}
+        \usepackage{afterpage}
+        \definecolor{calcifer-blue}{HTML}{0B2C4B}
+        \definecolor{calcifer-red}{HTML}{E63946}
+    include-before-body:
+      file: _quarto_temp/utils/before-body.tex
+    highlight-style: github
+    code-block-bg: "#f8f8f8"
+    code-block-border-left: "#0B2C4B"
 ---
 
 # Calcifer Core Server
@@ -44,30 +66,66 @@ state—even if it temporarily loses power or connectivity.
 
 ## Architecture
 
+**Infrastructure & Application Layers:**
+
+```{mermaid}
+%%{init: {"flowchart": {"htmlLabels": false, "useMaxWidth": true}}}%%
+flowchart TB
+    subgraph Infrastructure["Infrastructure Layer"]
+        REST["REST API Controllers"]
+        WS["WebSocket STOMP"]
+        AMQP["AMQP/MQTT Flows"]
+        PERS["Persistence Redis + MongoDB"]
+    end
+
+    subgraph Application["Application Layer"]
+        OAS["OverrideApplicationService"]
+        OVP["OverrideValidationPipeline"]
+    end
+
+    REST --> OAS
+    WS --> OAS
+    AMQP --> OAS
+    PERS --> OAS
+    OAS --> OVP
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Infrastructure Layer                               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐ │
-│  │ REST API     │  │ WebSocket    │  │ AMQP/MQTT    │  │ Persistence      │ │
-│  │ Controllers  │  │ STOMP        │  │ Flows        │  │ Redis + MongoDB  │ │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘ │
-├─────────┼─────────────────┼─────────────────┼───────────────────┼───────────┤
-│         │          Application Layer        │                   │           │
-│         ▼                 ▼                 ▼                   ▼           │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │  OverrideApplicationService  │  OverrideValidationPipeline              ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-├─────────────────────────────────────────────────────────────────────────────┤
-│                            Domain Layer                                      │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │  StateCalculator  │  SafetyValidator  │  ReconciliationCoordinator      ││
-│  │  SafetyRuleEngine │  DeviceSystemMappingService                         ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │  FunctionalSystem (Aggregate)  │  DeviceTwinSnapshot  │  Override       ││
-│  │  UserIntent  │  ReportedDeviceState  │  DesiredDeviceState              ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────────────────┘
+
+**Domain Layer:**
+
+```{mermaid}
+%%{init: {"flowchart": {"htmlLabels": false, "useMaxWidth": true}}}%%
+flowchart TB
+    subgraph DomainServices["Domain Layer - Services"]
+        SC["StateCalculator"]
+        SV["SafetyValidator"]
+        RC["ReconciliationCoordinator"]
+        SRE["SafetyRuleEngine"]
+        DSM["DeviceSystemMappingService"]
+    end
+
+    SC --> RC
+    SV --> SRE
+    RC --> DSM
+```
+
+```{mermaid}
+%%{init: {"flowchart": {"htmlLabels": false, "useMaxWidth": true}}}%%
+flowchart TB
+    subgraph DomainEntities["Domain Layer - Entities"]
+        FS["FunctionalSystem Aggregate"]
+        DTS["DeviceTwinSnapshot"]
+        OVR["Override"]
+        UI["UserIntent"]
+        RDS["ReportedDeviceState"]
+        DDS["DesiredDeviceState"]
+    end
+
+    DSM["DeviceSystemMappingService"] --> FS
+    FS --> DTS
+    FS --> OVR
+    DTS --> UI
+    DTS --> RDS
+    DTS --> DDS
 ```
 
 ## The Three-State Digital Twin Pattern
@@ -82,10 +140,15 @@ Calcifer tracks each controllable device using three separate states:
 
 ### State Calculation Pipeline
 
-```
-User Intent → Override Resolution → Safety Validation → Desired State
-                    ↓                      ↓
-            (if override active)    (may modify/refuse)
+```{mermaid}
+%%{init: {"flowchart": {"htmlLabels": false, "useMaxWidth": true}}}%%
+flowchart LR
+    UI["User Intent"] --> OR["Override Resolution"]
+    OR --> SV["Safety Validation"]
+    SV --> DS["Desired State"]
+
+    OR -.->|if override active| OA["Override Applied"]
+    SV -.->|may modify/refuse| MR["Modified/Refused"]
 ```
 
 1. **You set an intent**: Through the API, you specify what you want a device to do

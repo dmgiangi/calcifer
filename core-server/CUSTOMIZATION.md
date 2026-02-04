@@ -2,16 +2,38 @@
 title: "Calcifer Core Server - Customization Guide"
 subtitle: "Technical Documentation for Extending and Customizing the System"
 author: "Calcifer Team"
-date: "\\today"
-lang: "en"
-titlepage: true
-titlepage-color: "0B2C4B"
-titlepage-text-color: "FFFFFF"
-titlepage-rule-color: "E63946"
-titlepage-rule-height: 2
-toc: true
-toc-own-page: true
-listings: true
+date: last-modified
+lang: en
+format:
+  pdf:
+    documentclass: scrartcl
+    papersize: a4
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    colorlinks: true
+    linkcolor: "calcifer-blue"
+    urlcolor: "calcifer-red"
+    geometry:
+      - top=30mm
+      - left=25mm
+      - right=25mm
+      - bottom=30mm
+    fig-width: 6
+    fig-height: 4
+    filters:
+      - _quarto_temp/utils/resize-images.lua
+    include-in-header:
+      text: |
+        \usepackage{pagecolor}
+        \usepackage{afterpage}
+        \definecolor{calcifer-blue}{HTML}{0B2C4B}
+        \definecolor{calcifer-red}{HTML}{E63946}
+    include-before-body:
+      file: _quarto_temp/utils/before-body.tex
+    highlight-style: github
+    code-block-bg: "#f8f8f8"
+    code-block-border-left: "#0B2C4B"
 ---
 
 # Calcifer Core Server - Customization Guide
@@ -67,7 +89,8 @@ infrastructure concerns:
 
 ### Inbound Flow: Sensor Data Acquisition
 
-```mermaid
+```{mermaid}
+%%{init: {"sequence": {"useMaxWidth": true}}}%%
 sequenceDiagram
     participant Device as IoT Device
     participant MQTT as MQTT Broker
@@ -97,7 +120,8 @@ sequenceDiagram
 
 ### Inbound Flow: Actuator Feedback
 
-```mermaid
+```{mermaid}
+%%{init: {"sequence": {"useMaxWidth": true}}}%%
 sequenceDiagram
     participant Device as IoT Device
     participant MQTT as MQTT Broker
@@ -134,7 +158,8 @@ sequenceDiagram
 
 ### Outbound Flow: Device Commands
 
-```mermaid
+```{mermaid}
+%%{init: {"sequence": {"useMaxWidth": true}}}%%
 sequenceDiagram
     participant Reconciler as DeviceStateReconciler
     participant Repository as DeviceStateRepository
@@ -163,7 +188,10 @@ sequenceDiagram
 
 ### Three-State Digital Twin Flow
 
-```mermaid
+**External Systems & Events:**
+
+```{mermaid}
+%%{init: {"flowchart": {"htmlLabels": false, "useMaxWidth": true}}}%%
 flowchart TB
     subgraph External["External Systems"]
         API["REST API"]
@@ -177,6 +205,15 @@ flowchart TB
         DCE["DeviceCommandEvent"]
     end
 
+    API -->|" POST /intent "| UIE
+    MQTT -->|" Feedback "| RSE
+```
+
+**Domain & Persistence Layers:**
+
+```{mermaid}
+%%{init: {"flowchart": {"htmlLabels": false, "useMaxWidth": true}}}%%
+flowchart TB
     subgraph Domain["Domain Layer"]
         DLS["DeviceLogicService"]
         CALC["calculateDesired()"]
@@ -188,31 +225,25 @@ flowchart TB
         REDIS[("Redis")]
     end
 
-    subgraph Scheduling["Scheduling"]
-        REC["DeviceStateReconciler"]
-    end
-
-    API -->|" POST /intent "| UIE
-    MQTT -->|" Feedback "| RSE
-    UIE --> DLS
-    RSE --> DLS
+    UIE["UserIntentChangedEvent"] --> DLS
+    RSE["ReportedStateChangedEvent"] --> DLS
     DLS -->|" Load snapshot "| REPO
     REPO --> REDIS
     REPO -->|" Return "| SNAP
     SNAP --> CALC
     CALC -->|" Save desired "| REPO
-    CALC --> DSE
-    REC -->|" @Scheduled "| REPO
+    CALC --> DSE["DesiredStateCalculatedEvent"]
+    REC["DeviceStateReconciler"] -->|" @Scheduled "| REPO
     REPO -->|" Active devices "| REC
-    REC --> DCE
-    DCE -->|" MQTT Command "| MQTT
+    REC --> DCE["DeviceCommandEvent"]
 ```
 
 ---
 
 ### Event Flow Architecture
 
-```mermaid
+```{mermaid}
+%%{init: {"flowchart": {"htmlLabels": false, "useMaxWidth": true}}}%%
 flowchart LR
     subgraph Triggers["Trigger Sources"]
         REST["REST Controller"]
