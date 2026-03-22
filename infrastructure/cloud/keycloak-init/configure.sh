@@ -134,7 +134,8 @@ configure_google_idp_for_realm() {
         "${KEYCLOAK_URL}/admin/realms/${target_realm}/identity-provider/instances/google")
 
     # Build JSON without heredoc to avoid escaping issues
-    local idp_config="{\"alias\":\"google\",\"displayName\":\"Google\",\"providerId\":\"google\",\"enabled\":true,\"trustEmail\":true,\"firstBrokerLoginFlowAlias\":\"first broker login\",\"config\":{\"clientId\":\"${GOOGLE_CLIENT_ID}\",\"clientSecret\":\"${GOOGLE_CLIENT_SECRET}\",\"defaultScope\":\"openid email profile\",\"syncMode\":\"FORCE\"}}"
+    # According to Keycloak docs: alias, providerId, enabled, trustEmail, storeToken, addReadTokenRoleOnCreate, firstBrokerLoginFlowAlias, config
+    local idp_config="{\"alias\":\"google\",\"displayName\":\"Google\",\"providerId\":\"google\",\"enabled\":true,\"trustEmail\":true,\"storeToken\":false,\"addReadTokenRoleOnCreate\":false,\"firstBrokerLoginFlowAlias\":\"first broker login\",\"config\":{\"clientId\":\"${GOOGLE_CLIENT_ID}\",\"clientSecret\":\"${GOOGLE_CLIENT_SECRET}\",\"defaultScope\":\"openid email profile\",\"syncMode\":\"INHERIT\"}}"
 
     if [ "$exists" = "200" ]; then
         log "Updating existing Google IDP in ${target_realm}..."
@@ -264,7 +265,8 @@ configure_gateway_client() {
 
     if [ -z "$client_uuid" ]; then
         log "Creating gateway client..."
-        local create_json="{\"clientId\":\"${KEYCLOAK_CLIENT_ID}\",\"name\":\"Calcifer Gateway\",\"enabled\":true,\"publicClient\":false,\"redirectUris\":[\"https://*.dmgiangi.dev/*\",\"https://auth.dmgiangi.dev/_oauth\"],\"webOrigins\":[\"https://*.dmgiangi.dev\"],\"standardFlowEnabled\":true,\"directAccessGrantsEnabled\":true,\"protocol\":\"openid-connect\"}"
+        # clientAuthenticatorType=client-secret is required for confidential clients
+        local create_json="{\"clientId\":\"${KEYCLOAK_CLIENT_ID}\",\"name\":\"Calcifer Gateway\",\"enabled\":true,\"publicClient\":false,\"clientAuthenticatorType\":\"client-secret\",\"secret\":\"${KEYCLOAK_CLIENT_SECRET}\",\"redirectUris\":[\"https://*.dmgiangi.dev/*\",\"https://auth.dmgiangi.dev/_oauth\"],\"webOrigins\":[\"https://*.dmgiangi.dev\"],\"standardFlowEnabled\":true,\"directAccessGrantsEnabled\":true,\"protocol\":\"openid-connect\"}"
 
         local response=$(curl -s -w "\n%{http_code}" -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
             -H "Authorization: Bearer ${token}" \
@@ -323,12 +325,18 @@ configure_api_client() {
 
     if [ -z "$client_uuid" ]; then
         log "Creating API client..."
-        local create_json="{\"clientId\":\"${API_CLIENT_ID}\",\"name\":\"Calcifer API Client\",\"description\":\"Service account for programmatic API access (M2M)\",\"enabled\":true,\"publicClient\":false,\"secret\":\"${API_CLIENT_SECRET}\",\"standardFlowEnabled\":false,\"directAccessGrantsEnabled\":false,\"serviceAccountsEnabled\":true,\"protocol\":\"openid-connect\"}"
+        # clientAuthenticatorType=client-secret and serviceAccountsEnabled=true for M2M
+        local create_json="{\"clientId\":\"${API_CLIENT_ID}\",\"name\":\"Calcifer API Client\",\"description\":\"Service account for programmatic API access (M2M)\",\"enabled\":true,\"publicClient\":false,\"clientAuthenticatorType\":\"client-secret\",\"secret\":\"${API_CLIENT_SECRET}\",\"standardFlowEnabled\":false,\"directAccessGrantsEnabled\":false,\"serviceAccountsEnabled\":true,\"protocol\":\"openid-connect\"}"
 
-        curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
+        local response=$(curl -s -w "\n%{http_code}" -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
             -H "Authorization: Bearer ${token}" \
             -H "Content-Type: application/json" \
-            -d "${create_json}" > /dev/null
+            -d "${create_json}")
+
+        local http_code=$(echo "$response" | tail -1)
+        if [ "$http_code" != "201" ]; then
+            warn "Failed to create API client (HTTP $http_code)"
+        fi
 
         # Get the new client UUID
         client=$(curl -sf \
