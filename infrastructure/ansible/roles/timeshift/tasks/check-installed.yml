@@ -1,0 +1,21 @@
+---
+# Reusable task: Verify Timeshift is installed
+# Include this in playbooks that require Timeshift to be present
+#
+# Usage: ansible.builtin.include_role:
+#          name: timeshift
+#          tasks_from: check-installed
+
+- name: Check if Timeshift binary exists
+  ansible.builtin.command: which timeshift
+  register: timeshift_binary_check
+  changed_when: false
+  failed_when: false
+
+- name: Fail if Timeshift is not installed
+  ansible.builtin.fail:
+    msg: |
+      Timeshift is not installed on this system.
+      Run 'ansible-playbook playbooks/site.yml --ask-become-pass' to install it.
+  when: timeshift_binary_check.rc != 0
+

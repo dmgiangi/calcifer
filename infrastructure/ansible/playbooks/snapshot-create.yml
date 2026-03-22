@@ -1,0 +1,88 @@
+---
+# Create a Timeshift snapshot with a mandatory mnemonic name
+#
+# This playbook creates a system snapshot that can be restored later.
+# A descriptive name is required to identify the snapshot purpose.
+#
+# Usage: ansible-playbook playbooks/snapshot-create.yml -e "snapshot_name='pre-docker-install'" --ask-become-pass
+#
+# The retention policy automatically removes oldest snapshots when the limit is exceeded.
+
+- name: Create Timeshift snapshot
+  hosts: all
+  become: true
+
+  pre_tasks:
+    - name: Validate snapshot name parameter
+      ansible.builtin.include_role:
+        name: timeshift
+        tasks_from: validate-snapshot-name
+
+    - name: Verify Timeshift is installed
+      ansible.builtin.include_role:
+        name: timeshift
+        tasks_from: check-installed
+
+  tasks:
+    - name: Get current snapshot count before creation
+      ansible.builtin.shell: |
+        set -o pipefail
+        timeshift --list 2>/dev/null | grep -c "^[0-9]" || echo "0"
+      args:
+        executable: /bin/bash
+      register: snapshot_count_before
+      changed_when: false
+
+    - name: Display current snapshot count
+      ansible.builtin.debug:
+        msg: "Current snapshots before creation: {{ snapshot_count_before.stdout | trim }}"
+
+    - name: Create snapshot with mnemonic name
+      ansible.builtin.command: >
+        timeshift --create --comments "{{ validated_snapshot_name }}" --scripted
+      register: snapshot_create_result
+      changed_when: snapshot_create_result.rc == 0
+      failed_when: snapshot_create_result.rc != 0
+
+    - name: Display snapshot creation output
+      ansible.builtin.debug:
+        msg: "{{ snapshot_create_result.stdout_lines }}"
+
+    # Retention policy: keep only the N most recent snapshots
+    - name: Enforce retention policy by removing oldest snapshots
+      ansible.builtin.shell: |
+        set -o pipefail
+        # List snapshots sorted by date (oldest first based on timestamp directory name)
+        snapshots=$(timeshift --list 2>/dev/null | grep "^[0-9]" | awk '{print $3}' | sort)
+        count=$(echo "$snapshots" | grep -c . || echo "0")
+        to_delete=$((count - {{ timeshift_retention }}))
+
+        if [ "$to_delete" -gt 0 ]; then
+          echo "$snapshots" | head -n "$to_delete" | while read -r snapshot; do
+            echo "Removing old snapshot to enforce retention ({{ timeshift_retention }}): $snapshot"
+            timeshift --delete --snapshot "$snapshot" --scripted
+          done
+        else
+          echo "Retention policy satisfied. Current: $count, Limit: {{ timeshift_retention }}"
+        fi
+      args:
+        executable: /bin/bash
+      register: retention_result
+      changed_when: "'Removing old snapshot' in retention_result.stdout"
+
+    - name: Display retention policy result
+      ansible.builtin.debug:
+        msg: "{{ retention_result.stdout_lines }}"
+
+    - name: Get final snapshot list
+      ansible.builtin.command: timeshift --list
+      register: final_snapshot_list
+      changed_when: false
+
+    - name: Display completion summary
+      ansible.builtin.debug:
+        msg: |
+          ✅ Snapshot '{{ validated_snapshot_name }}' created successfully!
+
+          {{ final_snapshot_list.stdout }}
+

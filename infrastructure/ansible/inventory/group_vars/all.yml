@@ -1,0 +1,70 @@
+---
+# Common variables for all hosts
+# These variables are shared across all playbooks and roles
+
+# Python interpreter for Ansible modules
+ansible_python_interpreter: /usr/bin/python3
+
+# =============================================================================
+# TIMESHIFT SNAPSHOT CONFIGURATION
+# =============================================================================
+
+# Partition mount point where Timeshift stores snapshots
+# Timeshift automatically creates /data/timeshift/snapshots/ structure
+timeshift_backup_partition: /data
+
+# Full path to snapshot data directory (created automatically by Timeshift)
+timeshift_snapshots_data_path: "{{ timeshift_backup_partition }}/timeshift/snapshots"
+
+# Number of snapshots to retain (oldest are deleted when exceeded)
+timeshift_retention: 3
+
+# Snapshot mode: 'rsync' for ext4/xfs, 'btrfs' for btrfs filesystem
+timeshift_mode: rsync
+
+# Enable/disable BTRFS mode (set to true only if using BTRFS filesystem)
+timeshift_btrfs_mode: false
+
+# Directories to exclude from snapshots
+# These paths won't be backed up or restored
+timeshift_exclude_dirs:
+  - /home/**
+  - /data/**
+  - /var/lib/docker/**
+  - /tmp/**
+  - /var/tmp/**
+  - /var/cache/**
+  - /root/**
+  - /lost+found
+  - /media/**
+  - /mnt/**
+  - /proc/**
+  - /run/**
+  - /sys/**
+  - /dev/**
+
+# =============================================================================
+# TIMESHIFT SCHEDULE CONFIGURATION
+# Disabled by default - snapshots are created manually via playbook
+# =============================================================================
+timeshift_schedule:
+  monthly: false
+  weekly: false
+  daily: false
+  hourly: false
+  boot: false
+
+timeshift_schedule_count:
+  monthly: 0
+  weekly: 0
+  daily: 0
+  hourly: 0
+  boot: 0
+
+# =============================================================================
+# DOCKER ENGINE CONFIGURATION
+# =============================================================================
+
+# User to add to docker group (allows running docker without sudo)
+docker_user: "{{ ansible_user }}"
+

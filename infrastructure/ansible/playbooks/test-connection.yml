@@ -1,0 +1,31 @@
+---
+# Test connection playbook
+# Verifies SSH connectivity and basic system information
+
+- name: Test connection to Calcifer server
+  hosts: all
+  gather_facts: true
+
+  tasks:
+    - name: Ping host
+      ansible.builtin.ping:
+
+    - name: Display basic system information
+      ansible.builtin.debug:
+        msg: |
+          Hostname: {{ ansible_hostname }}
+          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Kernel: {{ ansible_kernel }}
+          Architecture: {{ ansible_architecture }}
+          Python: {{ ansible_python_version }}
+
+    - name: Test sudo access
+      ansible.builtin.command: whoami
+      become: true
+      register: sudo_test
+      changed_when: false
+
+    - name: Confirm sudo access
+      ansible.builtin.debug:
+        msg: "Sudo access confirmed - running as: {{ sudo_test.stdout }}"
+

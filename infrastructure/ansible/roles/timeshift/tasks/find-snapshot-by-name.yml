@@ -1,0 +1,46 @@
+---
+# Reusable task: Find a snapshot by its mnemonic name
+# Searches through snapshot info.json files to find matching comment
+#
+# Required variable: validated_snapshot_name (set by validate-snapshot-name.yml)
+# Sets fact: found_snapshot_timestamp (the timestamp identifier of the snapshot)
+#
+# Usage: ansible.builtin.include_role:
+#          name: timeshift
+#          tasks_from: find-snapshot-by-name
+
+- name: Search for snapshot by mnemonic name in info.json files
+  ansible.builtin.shell: |
+    set -o pipefail
+    for snapshot_dir in {{ timeshift_snapshots_data_path }}/*/; do
+      if [ -f "${snapshot_dir}info.json" ]; then
+        comment=$(grep -o '"comments"[[:space:]]*:[[:space:]]*"[^"]*"' "${snapshot_dir}info.json" | cut -d'"' -f4)
+        if [ "$comment" = "{{ validated_snapshot_name }}" ]; then
+          basename "$snapshot_dir"
+          exit 0
+        fi
+      fi
+    done
+    exit 1
+  args:
+    executable: /bin/bash
+  register: snapshot_search_result
+  changed_when: false
+  failed_when: false
+
+- name: Fail if snapshot not found
+  ansible.builtin.fail:
+    msg: |
+      ERROR: No snapshot found with name '{{ validated_snapshot_name }}'
+      
+      Run 'ansible-playbook playbooks/snapshot-list.yml --ask-become-pass' to see available snapshots.
+  when: snapshot_search_result.rc != 0
+
+- name: Set found snapshot timestamp fact
+  ansible.builtin.set_fact:
+    found_snapshot_timestamp: "{{ snapshot_search_result.stdout | trim }}"
+
+- name: Display found snapshot
+  ansible.builtin.debug:
+    msg: "Found snapshot '{{ validated_snapshot_name }}' with timestamp: {{ found_snapshot_timestamp }}"
+

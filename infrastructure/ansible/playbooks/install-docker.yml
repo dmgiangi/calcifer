@@ -1,0 +1,87 @@
+---
+# Install Docker Engine on Ubuntu
+#
+# This playbook installs Docker Engine following the official documentation:
+# https://docs.docker.com/engine/install/ubuntu/
+#
+# It installs:
+#   - Docker Engine (docker-ce)
+#   - Docker CLI (docker-ce-cli)
+#   - containerd.io
+#   - Docker Buildx plugin
+#   - Docker Compose plugin
+#
+# Usage: ansible-playbook playbooks/install-docker.yml --ask-become-pass
+#
+# After installation, logout and login again to use Docker without sudo.
+
+- name: Install Docker Engine
+  hosts: all
+  become: true
+
+  pre_tasks:
+    - name: Display target server information
+      ansible.builtin.debug:
+        msg: |
+          ═══════════════════════════════════════════════════
+          Installing Docker Engine on: {{ inventory_hostname }}
+          Target: {{ ansible_user }}@{{ ansible_host }}
+          ═══════════════════════════════════════════════════
+
+    - name: Verify operating system is Ubuntu
+      ansible.builtin.fail:
+        msg: |
+          ERROR: This playbook only supports Ubuntu.
+          Detected OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+      when: ansible_distribution != 'Ubuntu'
+
+    - name: Display detected Ubuntu version
+      ansible.builtin.debug:
+        msg: "Detected: {{ ansible_distribution }} {{ ansible_distribution_version }} ({{ ansible_distribution_release }})"
+
+    - name: Update apt package cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+  roles:
+    - role: docker
+      tags: [ docker ]
+
+  post_tasks:
+    - name: Verify Docker daemon is running
+      ansible.builtin.command: docker info
+      register: docker_info_check
+      changed_when: false
+      failed_when: docker_info_check.rc != 0
+
+    - name: Test Docker with hello-world image
+      ansible.builtin.command: docker run --rm hello-world
+      register: docker_hello_world
+      changed_when: false
+      failed_when: docker_hello_world.rc != 0
+
+    - name: Display installation completion message
+      ansible.builtin.debug:
+        msg: |
+          ╔══════════════════════════════════════════════════════════════════╗
+          ║              ✅ DOCKER ENGINE INSTALLED SUCCESSFULLY             ║
+          ╠══════════════════════════════════════════════════════════════════╣
+          ║                                                                  ║
+          ║  Docker Engine and Docker Compose are now installed.             ║
+          ║                                                                  ║
+          ║  User '{{ docker_user }}' has been added to the 'docker' group.
+          ║                                                                  ║
+          ║  ⚠️  IMPORTANT: To run Docker without sudo, you must:            ║
+          ║                                                                  ║
+          ║     1. Logout from the server                                    ║
+          ║     2. Login again                                               ║
+          ║                                                                  ║
+          ║  Or run this command in your current session:                    ║
+          ║     newgrp docker                                                ║
+          ║                                                                  ║
+          ║  Then verify with:                                               ║
+          ║     docker run hello-world                                       ║
+          ║                                                                  ║
+          ╚══════════════════════════════════════════════════════════════════╝
+

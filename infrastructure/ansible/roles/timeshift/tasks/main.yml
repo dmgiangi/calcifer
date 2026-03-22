@@ -1,0 +1,66 @@
+---
+# Timeshift installation and configuration tasks
+#
+# This role installs Timeshift and configures it for RSYNC-based snapshots.
+# Configuration is driven by variables defined in group_vars/all.yml
+
+- name: Install Timeshift package
+  ansible.builtin.apt:
+    name: timeshift
+    state: present
+  # Note: apt cache update is handled by the calling playbook (site.yml)
+  # to avoid redundant updates when multiple roles are applied
+
+- name: Verify backup partition is mounted
+  ansible.builtin.command: findmnt --target {{ timeshift_backup_partition }}
+  register: backup_partition_check
+  changed_when: false
+  failed_when: backup_partition_check.rc != 0
+
+- name: Detect UUID of backup partition
+  ansible.builtin.shell: |
+    set -o pipefail
+    findmnt -n -o UUID --target {{ timeshift_backup_partition }}
+  args:
+    executable: /bin/bash
+  register: snapshot_partition_uuid_result
+  changed_when: false
+  failed_when: snapshot_partition_uuid_result.rc != 0
+
+- name: Store backup device UUID for template
+  ansible.builtin.set_fact:
+    timeshift_backup_device_uuid: "{{ snapshot_partition_uuid_result.stdout | trim }}"
+
+- name: Create Timeshift configuration directory
+  ansible.builtin.file:
+    path: "{{ timeshift_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Deploy Timeshift configuration from template
+  ansible.builtin.template:
+    src: timeshift.json.j2
+    dest: "{{ timeshift_config_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+  # backup: true creates a backup of existing config before overwriting
+
+- name: Verify Timeshift installation
+  ansible.builtin.command: timeshift --version
+  register: timeshift_version_check
+  changed_when: false
+
+- name: Display Timeshift installation summary
+  ansible.builtin.debug:
+    msg: |
+      Timeshift configured successfully:
+        Version: {{ timeshift_version_check.stdout }}
+        Backup partition: {{ timeshift_backup_partition }}
+        Snapshots path: {{ timeshift_snapshots_data_path }}
+        Retention: {{ timeshift_retention }} snapshots
+        Mode: {{ timeshift_mode }}
+

@@ -18,6 +18,43 @@ listings: true
 
 Complete observability stack for the Calcifer IoT platform.
 
+## Deployment Targets
+
+The infrastructure is organized into two deployment targets:
+
+| Target    | Directory | Description                                         |
+|-----------|-----------|-----------------------------------------------------|
+| **home**  | `home/`   | LAN environment: Core Server deps + monitoring      |
+| **cloud** | `cloud/`  | Public environment: Keycloak + Traefik + monitoring |
+
+### Quick Start
+
+```bash
+# Using Makefile
+make up ENV=home      # Start home environment
+make up ENV=cloud     # Start cloud environment
+make ps ENV=home      # Check status
+make down ENV=home    # Stop
+
+# Using deploy script (LLM-friendly)
+./deploy status --target home
+./deploy run --target cloud
+```
+
+### Directory Structure
+
+```
+infrastructure/
+├── common/           # Shared configs (Loki, Tempo, Promtail, Grafana base)
+├── cloud/            # Keycloak + Traefik + Monitoring
+├── home/             # RabbitMQ + Redis + MongoDB + Monitoring
+└── Makefile          # Unified commands
+```
+
+> **Note:** Root-level compose files are deprecated. Use `cloud/` and `home/` directories.
+
+---
+
 ## Architecture Overview
 
 ```

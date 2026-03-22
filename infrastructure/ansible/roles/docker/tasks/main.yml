@@ -1,0 +1,70 @@
+---
+# Docker Engine installation and configuration tasks
+#
+# This role installs Docker Engine following the official documentation:
+# https://docs.docker.com/engine/install/ubuntu/
+#
+# It performs the following steps:
+# 1. Removes conflicting packages (docker.io, podman-docker, etc.)
+# 2. Sets up Docker official apt repository
+# 3. Installs Docker Engine, CLI, containerd, and plugins
+# 4. Configures user to run Docker without sudo
+
+# Step 1: Remove conflicting packages
+- name: Check for conflicting Docker packages
+  ansible.builtin.shell: |
+    set -o pipefail
+    dpkg --get-selections {{ docker_conflicting_packages | join(' ') }} 2>/dev/null | grep -v deinstall | cut -f1 || true
+  args:
+    executable: /bin/bash
+  register: conflicting_packages_check
+  changed_when: false
+
+- name: Remove conflicting Docker packages
+  ansible.builtin.apt:
+    name: "{{ conflicting_packages_check.stdout_lines }}"
+    state: absent
+    purge: true
+  when: conflicting_packages_check.stdout_lines | length > 0
+
+# Step 2: Setup Docker apt repository
+- name: Setup Docker official apt repository
+  ansible.builtin.include_tasks: setup-repository.yml
+
+# Step 3: Install Docker packages
+- name: Install Docker Engine packages
+  ansible.builtin.apt:
+    name: "{{ docker_packages }}"
+    state: present
+    update_cache: true
+
+# Step 4: Ensure Docker service is running
+- name: Ensure Docker service is enabled and started
+  ansible.builtin.systemd:
+    name: docker
+    enabled: "{{ docker_service_enabled }}"
+    state: "{{ docker_service_state }}"
+
+# Step 5: Configure user permissions
+- name: Configure user to run Docker without sudo
+  ansible.builtin.include_tasks: configure-user.yml
+
+# Step 6: Verify installation
+- name: Verify Docker installation
+  ansible.builtin.command: docker --version
+  register: docker_version_check
+  changed_when: false
+
+- name: Verify Docker Compose installation
+  ansible.builtin.command: docker compose version
+  register: docker_compose_version_check
+  changed_when: false
+
+- name: Display Docker installation summary
+  ansible.builtin.debug:
+    msg: |
+      Docker installed successfully:
+        Docker Engine: {{ docker_version_check.stdout }}
+        Docker Compose: {{ docker_compose_version_check.stdout }}
+        User '{{ docker_user }}' added to docker group: {{ docker_user_group_changed | default(false) }}
+
