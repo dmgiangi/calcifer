@@ -85,7 +85,7 @@ def cmd_clean(args: List[str]) -> int:
     ssh_run(config, f"rm -f {target.deploy_dir}/infrastructure/{target.compose_dir}/.env", check=False)
     
     print_step("🗑️ ", f"Removing repository: {target.deploy_dir}")
-    ssh_run(config, f"rm -rf {target.deploy_dir}", check=False)
+    ssh_run(config, f"sudo rm -rf {target.deploy_dir}", check=False)
 
     print_header("REMOVING SYSTEMD SERVICE")
     print_step("🗑️ ", "Disabling calcifer service...")

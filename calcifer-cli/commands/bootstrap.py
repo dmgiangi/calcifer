@@ -120,6 +120,7 @@ def cmd_bootstrap(args: List[str]) -> int:
     print_step("🔒", "Setting permissions...")
     ssh_run(config, f"sudo chown -R 65534:65534 {data_dir}/prometheus")  # nobody
     ssh_run(config, f"sudo chown -R 472:0 {data_dir}/grafana")  # grafana
+    ssh_run(config, f"sudo chown -R 1000:1000 {data_dir}/keycloak")  # keycloak
     ssh_run(config, f"sudo chown -R 10001:10001 {data_dir}/loki")
     ssh_run(config, f"sudo chown -R 10001:10001 {data_dir}/tempo")
     ssh_run(config, f"sudo chmod 700 {certs_dir}")
