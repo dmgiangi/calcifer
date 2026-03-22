@@ -157,9 +157,13 @@ services:
     image: thomseddon/traefik-forward-auth:2
     container_name: calcifer_cloud_forward_auth
     restart: unless-stopped
+    depends_on:
+      keycloak:
+        condition: service_healthy
     environment:
       - DEFAULT_PROVIDER=oidc
-      - PROVIDERS_OIDC_ISSUER_URL=https://keycloak.${DOMAIN:-dmgiangi.dev}/realms/calcifer
+      # Internal URL for OIDC discovery (container-to-container)
+      - PROVIDERS_OIDC_ISSUER_URL=http://calcifer_cloud_keycloak:8080/realms/calcifer
       - PROVIDERS_OIDC_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-calcifer-gateway}
       - PROVIDERS_OIDC_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me-in-production}
       - SECRET=${FORWARD_AUTH_SECRET:-a-random-secret-change-me}
