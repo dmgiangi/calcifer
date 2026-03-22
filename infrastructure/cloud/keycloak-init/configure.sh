@@ -197,24 +197,10 @@ configure_admin_user() {
         "${KEYCLOAK_URL}/admin/realms/${REALM}/users?email=${email}&exact=true" | jq -r '.[0].id // empty')
 
     if [ -z "$user_id" ]; then
-        log "Creating user ${email}..."
-        # Create user
-        curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/users" \
-            -H "Authorization: Bearer ${token}" \
-            -H "Content-Type: application/json" \
-            -d "{
-                \"username\": \"${email}\",
-                \"email\": \"${email}\",
-                \"enabled\": true,
-                \"emailVerified\": true
-            }"
-
-        # Get the new user ID
-        user_id=$(curl -sf \
-            -H "Authorization: Bearer ${token}" \
-            "${KEYCLOAK_URL}/admin/realms/${REALM}/users?email=${email}&exact=true" | jq -r '.[0].id // empty')
+        log "User ${email} will be created on first Google login"
+        return 0
     else
-        log "User ${email} already exists"
+        log "User ${email} already exists (id: ${user_id})"
     fi
 
     if [ -n "$user_id" ]; then
