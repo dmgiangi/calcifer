@@ -256,10 +256,17 @@ configure_gateway_client() {
         log "Creating gateway client..."
         local create_json="{\"clientId\":\"${KEYCLOAK_CLIENT_ID}\",\"name\":\"Calcifer Gateway\",\"enabled\":true,\"publicClient\":false,\"redirectUris\":[\"https://*.dmgiangi.dev/*\",\"https://auth.dmgiangi.dev/_oauth\"],\"webOrigins\":[\"https://*.dmgiangi.dev\"],\"standardFlowEnabled\":true,\"directAccessGrantsEnabled\":true,\"protocol\":\"openid-connect\"}"
 
-        curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
+        local response=$(curl -s -w "\n%{http_code}" -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
             -H "Authorization: Bearer ${token}" \
             -H "Content-Type: application/json" \
-            -d "${create_json}" > /dev/null
+            -d "${create_json}")
+
+        local http_code=$(echo "$response" | tail -1)
+        local body=$(echo "$response" | head -n -1)
+
+        if [ "$http_code" != "201" ]; then
+            warn "Failed to create gateway client (HTTP $http_code): $body"
+        fi
 
         # Get the newly created client UUID
         client=$(curl -sf \
