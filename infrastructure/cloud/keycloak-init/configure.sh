@@ -368,7 +368,7 @@ configure_gateway_client() {
 
     if [ -z "$client_uuid" ]; then
         log "Creating gateway client..."
-        curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
+        curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
             -H "Authorization: Bearer ${token}" \
             -H "Content-Type: application/json" \
             -d "{
@@ -376,31 +376,48 @@ configure_gateway_client() {
                 \"name\": \"Calcifer Gateway\",
                 \"enabled\": true,
                 \"publicClient\": false,
-                \"secret\": \"${KEYCLOAK_CLIENT_SECRET}\",
                 \"redirectUris\": [\"https://*.dmgiangi.dev/*\", \"https://auth.dmgiangi.dev/_oauth\"],
                 \"webOrigins\": [\"https://*.dmgiangi.dev\"],
                 \"standardFlowEnabled\": true,
                 \"directAccessGrantsEnabled\": true,
                 \"protocol\": \"openid-connect\"
-            }"
-    else
-        log "Updating gateway client secret..."
-        curl -sf -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_uuid}" \
+            }" > /dev/null
+
+        # Get the newly created client UUID
+        client=$(curl -sf \
+            -H "Authorization: Bearer ${token}" \
+            "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=${KEYCLOAK_CLIENT_ID}")
+        client_uuid=$(echo "$client" | jq -r '.[0].id // empty')
+    fi
+
+    # Set the client secret explicitly
+    if [ -n "$client_uuid" ]; then
+        log "Setting gateway client secret..."
+        curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_uuid}/client-secret" \
+            -H "Authorization: Bearer ${token}" \
+            -H "Content-Type: application/json" > /dev/null
+
+        # Now update the client with the correct secret value
+        curl -s -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_uuid}" \
             -H "Authorization: Bearer ${token}" \
             -H "Content-Type: application/json" \
             -d "{
+                \"id\": \"${client_uuid}\",
                 \"clientId\": \"${KEYCLOAK_CLIENT_ID}\",
                 \"secret\": \"${KEYCLOAK_CLIENT_SECRET}\",
                 \"enabled\": true,
                 \"publicClient\": false,
+                \"clientAuthenticatorType\": \"client-secret\",
                 \"redirectUris\": [\"https://*.dmgiangi.dev/*\", \"https://auth.dmgiangi.dev/_oauth\"],
                 \"webOrigins\": [\"https://*.dmgiangi.dev\"],
                 \"standardFlowEnabled\": true,
                 \"directAccessGrantsEnabled\": true
-            }" || true
-    fi
+            }" > /dev/null || warn "Failed to update gateway client"
 
-    log "Gateway client configured!"
+        log "Gateway client configured!"
+    else
+        warn "Could not find or create gateway client"
+    fi
 }
 
 # Configure API client for M2M access
