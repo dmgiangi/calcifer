@@ -165,8 +165,8 @@ services:
         condition: service_healthy
     environment:
       - DEFAULT_PROVIDER=oidc
-      # Internal URL for OIDC discovery (container-to-container)
-      - PROVIDERS_OIDC_ISSUER_URL=http://calcifer_cloud_keycloak:8080/realms/calcifer
+      # Use public URL - issuer must match what Keycloak returns
+      - PROVIDERS_OIDC_ISSUER_URL=https://keycloak.${DOMAIN:-dmgiangi.dev}/realms/calcifer
       - PROVIDERS_OIDC_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-calcifer-gateway}
       - PROVIDERS_OIDC_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me-in-production}
       - SECRET=${FORWARD_AUTH_SECRET:-a-random-secret-change-me}
@@ -177,6 +177,9 @@ services:
       - URL_PATH=/_oauth
     networks:
       - calcifer_net
+    # Add host entry to resolve keycloak.dmgiangi.dev to traefik inside Docker network
+    extra_hosts:
+      - "keycloak.${DOMAIN:-dmgiangi.dev}:host-gateway"
     labels:
       - "traefik.enable=true"
       # OAuth callback route
