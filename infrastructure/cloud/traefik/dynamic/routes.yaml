@@ -58,7 +58,7 @@ http:
 
     traefik-api:
       rule: "Host(`traefik.dmgiangi.dev`) && HeaderRegexp(`Authorization`, `^Bearer .+`)"
-      service: traefik-dashboard
+      service: api@internal
       middlewares:
         - token-auth
       entryPoints:
@@ -121,11 +121,6 @@ http:
       loadBalancer:
         servers:
           - url: "http://prometheus:9090"
-
-    traefik-dashboard:
-      loadBalancer:
-        servers:
-          - url: "http://traefik:8080"
 
     homepage:
       loadBalancer:
