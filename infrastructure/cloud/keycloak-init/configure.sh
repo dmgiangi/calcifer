@@ -8,6 +8,7 @@
 # 2. Creates admin user from ADMIN_EMAILS with master realm admin role
 # 3. Disables the temporary bootstrap admin account
 # 4. Configures Google IDP in calcifer realm for application access
+# 5. Configures API client for M2M (machine-to-machine) access
 # =============================================================================
 
 set -e
@@ -16,6 +17,8 @@ KEYCLOAK_URL="${KEYCLOAK_URL:-http://keycloak:8080}"
 KEYCLOAK_ADMIN="${KEYCLOAK_ADMIN:-admin}"
 KEYCLOAK_ADMIN_PASSWORD="${KEYCLOAK_ADMIN_PASSWORD:-admin}"
 REALM="${REALM:-calcifer}"
+API_CLIENT_ID="${API_CLIENT_ID:-calcifer-api}"
+API_CLIENT_SECRET="${API_CLIENT_SECRET:-}"
 
 # Colors
 RED='\033[0;31m'
@@ -305,6 +308,91 @@ configure_realm_admins() {
     done
 }
 
+# Configure API client for M2M access
+configure_api_client() {
+    local token=$1
+
+    if [ -z "${API_CLIENT_SECRET}" ]; then
+        warn "API_CLIENT_SECRET not set, skipping API client configuration"
+        return 0
+    fi
+
+    log "Configuring API client: ${API_CLIENT_ID}"
+
+    # Get client ID
+    local client=$(curl -sf \
+        -H "Authorization: Bearer ${token}" \
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=${API_CLIENT_ID}")
+
+    local client_uuid=$(echo "$client" | jq -r '.[0].id // empty')
+
+    if [ -z "$client_uuid" ]; then
+        log "Creating API client..."
+        curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
+            -H "Authorization: Bearer ${token}" \
+            -H "Content-Type: application/json" \
+            -d "{
+                \"clientId\": \"${API_CLIENT_ID}\",
+                \"name\": \"Calcifer API Client\",
+                \"description\": \"Service account for programmatic API access (M2M)\",
+                \"enabled\": true,
+                \"publicClient\": false,
+                \"secret\": \"${API_CLIENT_SECRET}\",
+                \"standardFlowEnabled\": false,
+                \"directAccessGrantsEnabled\": false,
+                \"serviceAccountsEnabled\": true,
+                \"protocol\": \"openid-connect\"
+            }"
+
+        # Get the new client UUID
+        client=$(curl -sf \
+            -H "Authorization: Bearer ${token}" \
+            "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=${API_CLIENT_ID}")
+        client_uuid=$(echo "$client" | jq -r '.[0].id // empty')
+    else
+        log "Updating API client secret..."
+        curl -sf -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_uuid}" \
+            -H "Authorization: Bearer ${token}" \
+            -H "Content-Type: application/json" \
+            -d "{
+                \"clientId\": \"${API_CLIENT_ID}\",
+                \"secret\": \"${API_CLIENT_SECRET}\",
+                \"serviceAccountsEnabled\": true
+            }" || true
+    fi
+
+    # Assign admin role to service account
+    if [ -n "$client_uuid" ]; then
+        log "Configuring service account roles..."
+
+        # Get service account user
+        local sa_user=$(curl -sf \
+            -H "Authorization: Bearer ${token}" \
+            "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_uuid}/service-account-user")
+
+        local sa_user_id=$(echo "$sa_user" | jq -r '.id // empty')
+
+        if [ -n "$sa_user_id" ]; then
+            # Get admin role
+            local admin_role=$(curl -sf \
+                -H "Authorization: Bearer ${token}" \
+                "${KEYCLOAK_URL}/admin/realms/${REALM}/roles/admin")
+
+            local admin_role_id=$(echo "$admin_role" | jq -r '.id // empty')
+
+            if [ -n "$admin_role_id" ]; then
+                log "Assigning admin role to API service account..."
+                curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/users/${sa_user_id}/role-mappings/realm" \
+                    -H "Authorization: Bearer ${token}" \
+                    -H "Content-Type: application/json" \
+                    -d "[{\"id\": \"${admin_role_id}\", \"name\": \"admin\"}]" || true
+            fi
+        fi
+    fi
+
+    log "API client configured!"
+}
+
 # Main
 main() {
     wait_for_keycloak
@@ -344,6 +432,9 @@ main() {
     # Configure realm admins
     configure_realm_admins "$TOKEN"
 
+    # Configure API client for M2M access
+    configure_api_client "$TOKEN"
+
     log "=========================================="
     log "Keycloak configuration complete!"
     log ""
@@ -352,6 +443,14 @@ main() {
     log "2. Click 'Sign in with Google' and login with: ${ADMIN_EMAILS}"
     log "3. Re-run this init container to assign admin role"
     log ""
+    if [ -n "${API_CLIENT_SECRET}" ]; then
+        log "API Access configured! Use:"
+        log "  curl -X POST https://keycloak.dmgiangi.dev/realms/calcifer/protocol/openid-connect/token \\"
+        log "    -d 'grant_type=client_credentials' \\"
+        log "    -d 'client_id=${API_CLIENT_ID}' \\"
+        log "    -d 'client_secret=\${API_CLIENT_SECRET}'"
+        log ""
+    fi
 }
 
 main "$@"

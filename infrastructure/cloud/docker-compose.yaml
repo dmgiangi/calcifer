@@ -148,6 +148,8 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - ADMIN_EMAILS=${ADMIN_EMAILS:-}
+      - API_CLIENT_ID=${API_CLIENT_ID:-calcifer-api}
+      - API_CLIENT_SECRET=${API_CLIENT_SECRET:-}
     networks:
       - calcifer_net
 

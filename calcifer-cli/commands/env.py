@@ -32,6 +32,10 @@ ENV_VARS = {
             "KEYCLOAK_CLIENT_ID": ("calcifer-gateway", "OAuth client ID"),
             "KEYCLOAK_CLIENT_SECRET": ("auto", "OAuth client secret"),
         },
+        "api_access": {
+            "API_CLIENT_ID": ("calcifer-api", "API client ID for M2M access"),
+            "API_CLIENT_SECRET": ("auto", "API client secret for M2M access"),
+        },
         "forward_auth": {
             "FORWARD_AUTH_SECRET": ("auto", "Forward auth cookie secret (32 bytes hex)"),
         },

@@ -154,6 +154,33 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "calcifer-api",
+      "name": "Calcifer API Client",
+      "description": "Service account for programmatic API access (M2M)",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "change-me-api-secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "3600"
+      },
+      "protocolMappers": [
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles"
+          }
+        }
+      ]
     }
   ],
   "defaultDefaultClientScopes": [
