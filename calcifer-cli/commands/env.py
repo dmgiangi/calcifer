@@ -166,10 +166,13 @@ def cmd_env(args: List[str]) -> int:
     """Main env command handler."""
     parser = argparse.ArgumentParser(prog="calcifer-cli.py env")
     parser.add_argument("--target", choices=["home", "cloud"], default="cloud")
+    parser.add_argument("--no-prompt", action="store_true",
+                        help="Use existing .env file without prompting for missing values")
     opts = parser.parse_args(args)
 
     target = opts.target
     env_file = CLI_DIR / f".env.{target}"
+    no_prompt = opts.no_prompt
 
     print_header(f"CALCIFER ENVIRONMENT SETUP ({target.upper()})")
 
@@ -178,6 +181,9 @@ def cmd_env(args: List[str]) -> int:
     if existing_env:
         print_step("📂", f"Loaded existing config from {env_file.name}")
     else:
+        if no_prompt:
+            print_step("❌", f"No existing config found and --no-prompt specified!")
+            return 1
         print_step("📝", f"No existing config found. Creating new one.")
 
     # Process all variables
@@ -203,15 +209,22 @@ def cmd_env(args: List[str]) -> int:
                     print_step("🔑", f"{var_name}: (auto-generated)")
 
             elif default == "external":
-                # Prompt for external values
-                print()
-                value = prompt_value(var_name, description, current)
-                if value:
-                    env[var_name] = value
-                elif current:
-                    env[var_name] = current
+                # Prompt for external values (or use existing if --no-prompt)
+                if no_prompt:
+                    if current:
+                        env[var_name] = current
+                        print_step("📌", f"{var_name}: (using existing)")
+                    else:
+                        print_step("⚠️ ", f"Warning: {var_name} not set!")
                 else:
-                    print_step("⚠️ ", f"Warning: {var_name} not set!")
+                    print()
+                    value = prompt_value(var_name, description, current)
+                    if value:
+                        env[var_name] = value
+                    elif current:
+                        env[var_name] = current
+                    else:
+                        print_step("⚠️ ", f"Warning: {var_name} not set!")
 
             else:
                 # Use default or existing

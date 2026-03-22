@@ -67,8 +67,10 @@ def cmd_bootstrap(args: List[str]) -> int:
     parser.add_argument("--repo", default="https://github.com/dmgiangi/calcifer.git",
                         help="Git repository URL")
     parser.add_argument("--branch", default="master", help="Git branch")
-    parser.add_argument("--skip-env", action="store_true", 
-                        help="Skip environment configuration (use existing .env)")
+    parser.add_argument("--skip-env", action="store_true",
+                        help="Skip environment configuration entirely")
+    parser.add_argument("--use-current-env", action="store_true",
+                        help="Use existing local .env file without prompts")
     opts = parser.parse_args(args)
 
     config = Config.load(target=opts.target)
@@ -128,9 +130,15 @@ def cmd_bootstrap(args: List[str]) -> int:
 
     # Step 3: Generate environment
     print_header("3. CONFIGURE ENVIRONMENT")
-    
+
     if opts.skip_env:
         print_step("⏭️ ", "Skipping (--skip-env)")
+    elif opts.use_current_env:
+        print_step("📄", "Using existing local .env file...")
+        result = cmd_env(["--target", opts.target, "--no-prompt"])
+        if result != 0:
+            print_step("❌", "Environment sync failed!")
+            return 1
     else:
         print_step("🔧", "Running env configuration...")
         result = cmd_env(["--target", opts.target])
