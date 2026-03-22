@@ -38,7 +38,7 @@ services:
       - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
       - "traefik.http.routers.prometheus.middlewares=forward-auth@file"
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
-      # Homepage labels
+      # Homepage
       - "homepage.group=Monitoring"
       - "homepage.name=Prometheus"
       - "homepage.icon=prometheus.png"
@@ -82,7 +82,7 @@ services:
       - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
       - "traefik.http.routers.grafana.middlewares=forward-auth@file"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-      # Homepage labels
+      # Homepage
       - "homepage.group=Monitoring"
       - "homepage.name=Grafana"
       - "homepage.icon=grafana.png"
@@ -122,7 +122,7 @@ services:
       - "traefik.http.routers.keycloak.entrypoints=websecure"
       - "traefik.http.routers.keycloak.tls.certresolver=letsencrypt"
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
-      # Homepage labels
+      # Homepage
       - "homepage.group=Identity"
       - "homepage.name=Keycloak"
       - "homepage.icon=keycloak.png"
@@ -172,7 +172,7 @@ services:
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
       - "traefik.http.routers.traefik-dashboard.middlewares=forward-auth@file"
-      # Homepage labels
+      # Homepage
       - "homepage.group=Infrastructure"
       - "homepage.name=Traefik"
       - "homepage.icon=traefik.png"
