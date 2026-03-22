@@ -1,189 +1,91 @@
 # Calcifer CLI
 
-LLM-friendly deployment and management tool for the Calcifer IoT platform.
+Environment configuration and deployment tool for Calcifer IoT platform.
 
 ## Features
 
-- **JSON Output**: All commands return structured JSON for easy parsing by LLMs
-- **Multi-target**: Deploy to `home` (LAN) or `cloud` (public) environments
-- **Git-based deployment**: Uses git pull for deployments (no image registry needed)
-- **Health checks**: Built-in smoke tests for all services
+- **Environment Management**: Generate and sync environment configuration
+- **Secret Generation**: Auto-generates internal secrets (passwords, tokens)
+- **External Credentials**: Prompts for external secrets (Google OAuth)
+- **Remote Sync**: Pushes configuration to deployment servers
 
 ## Requirements
 
-### Local Machine (where CLI runs)
-
 | Requirement | Version | Notes |
 |-------------|---------|-------|
-| Python | 3.8+ | Standard library only, no pip dependencies |
-| Git | 2.x | For version management |
-| SSH | OpenSSH | With key-based authentication configured |
-| Docker | 20.x+ | Only for `build` and `push` commands |
+| Python | 3.8+ | Standard library only |
+| SSH | OpenSSH | With key-based authentication |
 
-### Target Servers
-
-Both `home` and `cloud` servers must have:
-
-| Requirement | Version | Installation |
-|-------------|---------|--------------|
-| **Ubuntu** | 22.04+ | Recommended OS |
-| **Docker Engine** | 24.x+ | [Install Docker](https://docs.docker.com/engine/install/ubuntu/) |
-| **Docker Compose** | v2 (plugin) | Included with Docker Engine |
-| **Git** | 2.x | `sudo apt install git` |
-| **SSH Server** | OpenSSH | `sudo apt install openssh-server` |
-
-#### Docker Installation (one-time setup)
+## Usage
 
 ```bash
-# On target server (Ubuntu 22.04+)
-curl -fsSL https://get.docker.com | sudo sh
-sudo usermod -aG docker $USER
-# Logout and login again
+./calcifer-cli.py env [--target home|cloud]
 ```
 
-#### SSH Key Setup
+## Environment Setup
+
+The CLI manages `.env.{target}` files locally (git-ignored) and syncs them to servers.
+
+### Cloud Environment
 
 ```bash
-# On local machine
-ssh-copy-id -i ~/.ssh/github_id user@server
+./calcifer-cli.py env --target cloud
 ```
 
-### Network Requirements
+This will:
+1. Load existing `.env.cloud` if present
+2. Auto-generate internal secrets (Keycloak, Grafana, Forward Auth)
+3. Prompt for external credentials (Google OAuth)
+4. Save locally to `.env.cloud`
+5. Push to cloud server
 
-| Target | Hostname | Ports Required |
-|--------|----------|----------------|
-| `cloud` | dmgiangi.dev | 22 (SSH), 80/443 (HTTP/S) |
-| `home` | 192.168.8.180 | 22 (SSH), 3000, 8080, 9090 |
-
-## Installation
-
-### Quick Start (No Installation)
-
-No installation required. Just ensure Python 3.8+ is available:
+### Home Environment
 
 ```bash
-chmod +x calcifer-cli.py
-./calcifer-cli.py help
+./calcifer-cli.py env --target home
 ```
 
-Or use via the wrapper script:
+Simpler setup for home server (no OAuth, no external services).
+
+## Generated Secrets
+
+| Variable | Description |
+|----------|-------------|
+| `GRAFANA_ADMIN_PASSWORD` | Grafana admin password |
+| `KEYCLOAK_ADMIN_PASSWORD` | Keycloak admin password |
+| `KEYCLOAK_CLIENT_SECRET` | OAuth client secret |
+| `FORWARD_AUTH_SECRET` | Cookie encryption key (64 hex chars) |
+
+## Required External Credentials
+
+For cloud deployment with Google OAuth:
+
+| Variable | Description | Where to get |
+|----------|-------------|--------------|
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | Same as above |
+| `ADMIN_EMAILS` | Admin email addresses | Your Google email(s) |
+
+## Bootstrap from Scratch
 
 ```bash
-./deploy help
-```
+# 1. Clone the repository
+git clone https://github.com/dmgiangi/calcifer.git
+cd calcifer/calcifer-cli
 
-### Install as Python Package
+# 2. Configure cloud environment
+./calcifer-cli.py env --target cloud
 
-For a proper installation with the `calcifer` command available system-wide:
-
-```bash
-# Install in editable mode (recommended for development)
-pip install -e .
-
-# Or install normally
-pip install .
-
-# Then use the CLI
-calcifer help
-```
-
-### Development Setup
-
-To set up the development environment with testing tools:
-
-```bash
-# Create virtual environment (recommended)
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Install with development dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Run tests with coverage
-pytest --cov=commands --cov=utils
-```
-
-### Available pip extras
-
-| Extra | Dependencies | Usage |
-|-------|--------------|-------|
-| `dev` | pytest, pytest-mock | `pip install -e ".[dev]"` |
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `status` | Get current state of all services |
-| `run` | Deploy to remote server via Git pull |
-| `test` | Run health checks and smoke tests |
-| `logs` | Fetch logs from services |
-| `rollback` | Rollback to previous version |
-| `build` | Build Docker images locally |
-| `push` | Push images to container registry |
-| `sync-env` | Copy .env files to remote server |
-
-## Usage Examples
-
-```bash
-# Check status
-./deploy status --target cloud
-
-# Deploy latest
-./deploy run --target cloud --branch master
-
-# View logs
-./deploy logs grafana --target cloud -n 100
-
-# Run health checks
-./deploy test --target cloud
-
-# Rollback
-./deploy rollback --target cloud --confirm
-```
-
-## Output Format
-
-All commands return JSON:
-
-```json
-{
-  "timestamp": "2026-03-22T15:30:00Z",
-  "command": "status",
-  "success": true,
-  "server": "dmgiangi.dev",
-  "data": { ... },
-  "errors": [],
-  "next_actions": ["./deploy test --target cloud"]
-}
+# 3. SSH to server and start services
+ssh user@server "cd /opt/calcifer/infrastructure/cloud && docker compose up -d"
 ```
 
 ## Configuration
 
-Edit `deploy.conf` in project root:
+SSH targets are configured in `utils/config.py`:
 
-```bash
-HOME_HOST=192.168.8.180
-HOME_USER=dmgiangi
-HOME_SSH_KEY=~/.ssh/github_id
-
-CLOUD_HOST=dmgiangi.dev
-CLOUD_USER=dmgiangi
-CLOUD_SSH_KEY=~/.ssh/github_id
-```
-
-## Data Storage
-
-Persistent data stored in `/var/lib/calcifer/<target>/`:
-
-```
-├── prometheus/    # Metrics
-├── grafana/       # Dashboards
-├── keycloak/      # Auth DB
-├── traefik/certs/ # SSL certs
-├── loki/          # Logs
-└── tempo/         # Traces
-```
+| Target | Host | Deploy Directory |
+|--------|------|------------------|
+| `cloud` | dmgiangi.dev | /opt/calcifer |
+| `home` | 192.168.8.180 | /opt/calcifer |
 
