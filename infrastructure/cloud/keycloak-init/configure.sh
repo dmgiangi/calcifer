@@ -24,8 +24,10 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # Wait for Keycloak to be ready
 wait_for_keycloak() {
     log "Waiting for Keycloak to be ready..."
+    # Health check is on port 9000, API is on port 8080
+    local health_url="${KEYCLOAK_URL%:8080}:9000/health/ready"
     for i in {1..60}; do
-        if curl -sf "${KEYCLOAK_URL}/health/ready" > /dev/null 2>&1; then
+        if curl -sf "${health_url}" > /dev/null 2>&1; then
             log "Keycloak is ready!"
             return 0
         fi
