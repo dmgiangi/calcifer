@@ -44,6 +44,7 @@ services:
       - "homepage.icon=prometheus.png"
       - "homepage.href=https://prometheus.${DOMAIN:-dmgiangi.dev}"
       - "homepage.description=Metrics & Alerting"
+      - "homepage.siteMonitor=http://calcifer_cloud_prometheus:9090/-/healthy"
 
   # ==================== VISUALIZATION ====================
   grafana:
@@ -88,6 +89,7 @@ services:
       - "homepage.icon=grafana.png"
       - "homepage.href=https://grafana.${DOMAIN:-dmgiangi.dev}"
       - "homepage.description=Dashboards & Visualization"
+      - "homepage.siteMonitor=http://calcifer_cloud_grafana:3000/api/health"
 
   # ==================== IDENTITY PROVIDER ====================
   keycloak:
@@ -128,6 +130,7 @@ services:
       - "homepage.icon=keycloak.png"
       - "homepage.href=https://keycloak.${DOMAIN:-dmgiangi.dev}"
       - "homepage.description=Identity & Access Management"
+      - "homepage.siteMonitor=http://calcifer_cloud_keycloak:9000/health/ready"
 
   # ==================== EDGE ROUTER ====================
   traefik:
@@ -178,6 +181,7 @@ services:
       - "homepage.icon=traefik.png"
       - "homepage.href=https://traefik.${DOMAIN:-dmgiangi.dev}"
       - "homepage.description=Edge Router & Load Balancer"
+      - "homepage.siteMonitor=http://calcifer_cloud_traefik:8080/ping"
 
   # ==================== FORWARD AUTH ====================
   forward-auth:
