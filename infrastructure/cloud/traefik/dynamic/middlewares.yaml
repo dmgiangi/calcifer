@@ -14,39 +14,16 @@ http:
           - "X-Forwarded-Email"
           - "X-Forwarded-Groups"
 
-    # ==================== STRIP PREFIX ====================
-    strip-grafana:
-      stripPrefix:
-        prefixes:
-          - "/grafana"
-
-    strip-prometheus:
-      stripPrefix:
-        prefixes:
-          - "/prometheus"
-
-    strip-rabbitmq:
-      stripPrefix:
-        prefixes:
-          - "/rabbitmq"
-
-    strip-loki:
-      stripPrefix:
-        prefixes:
-          - "/loki"
-
-    strip-api:
-      stripPrefix:
-        prefixes:
-          - "/api"
-
     # ==================== HEADERS ====================
     secure-headers:
       headers:
         browserXssFilter: true
         contentTypeNosniff: true
         frameDeny: true
-        sslRedirect: false  # Set true in production
+        sslRedirect: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
         customFrameOptionsValue: "SAMEORIGIN"
 
     # ==================== RATE LIMITING ====================
@@ -67,8 +44,8 @@ http:
           - OPTIONS
         accessControlAllowHeaders:
           - "*"
-        accessControlAllowOriginList:
-          - "*"
+        accessControlAllowOriginListRegex:
+          - "https://.*\\.dmgiangi\\.dev"
         accessControlMaxAge: 100
         addVaryHeader: true
 

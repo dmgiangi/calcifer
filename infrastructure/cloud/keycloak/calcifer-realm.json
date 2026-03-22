@@ -114,19 +114,19 @@
       "publicClient": false,
       "secret": "change-me-in-production",
       "redirectUris": [
-        "http://localhost/*",
-        "http://localhost:8080/*",
-        "http://*.localhost/*"
+        "https://*.dmgiangi.dev/*",
+        "https://auth.dmgiangi.dev/_oauth",
+        "http://localhost/*"
       ],
       "webOrigins": [
-        "*"
+        "https://*.dmgiangi.dev"
       ],
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost/*"
+        "post.logout.redirect.uris": "https://*.dmgiangi.dev/*"
       },
       "protocolMappers": [
         {

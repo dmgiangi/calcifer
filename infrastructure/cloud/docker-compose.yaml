@@ -14,8 +14,6 @@ services:
     image: prom/prometheus:v2.48.1
     container_name: calcifer_cloud_prometheus
     restart: unless-stopped
-    ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -33,20 +31,25 @@ services:
       retries: 3
     networks:
       - calcifer_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN:-dmgiangi.dev}`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.prometheus.middlewares=forward-auth@file"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
   # ==================== VISUALIZATION ====================
   grafana:
     image: grafana/grafana:10.2.3
     container_name: calcifer_cloud_grafana
     restart: unless-stopped
-    ports:
-      - "${GRAFANA_PORT:-3000}:3000"
     env_file:
       - ../common/grafana/grafana.env
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
-      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
+      - GF_SERVER_ROOT_URL=https://grafana.${DOMAIN:-dmgiangi.dev}
       # Auth proxy for Traefik/Keycloak
       - GF_AUTH_PROXY_ENABLED=true
       - GF_AUTH_PROXY_HEADER_NAME=X-Forwarded-User
@@ -60,35 +63,50 @@ services:
       - loki
       - tempo
     healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:3000/api/health" ]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:3000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 3
     networks:
       - calcifer_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN:-dmgiangi.dev}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.grafana.middlewares=forward-auth@file"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
   # ==================== IDENTITY PROVIDER ====================
   keycloak:
     image: quay.io/keycloak/keycloak:24.0
     container_name: calcifer_cloud_keycloak
     restart: unless-stopped
-    command: start-dev --import-realm
+    command: start --import-realm --optimized
     environment:
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
       - KC_PROXY=edge
+      - KC_HOSTNAME=keycloak.${DOMAIN:-dmgiangi.dev}
       - KC_HOSTNAME_STRICT=false
       - KC_HTTP_ENABLED=true
     volumes:
       - ./keycloak/calcifer-realm.json:/opt/keycloak/data/import/calcifer-realm.json:ro
       - keycloak_data:/opt/keycloak/data
     healthcheck:
-      test: [ "CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080;echo -e 'GET /health/ready HTTP/1.1\r\nhost: localhost\r\nConnection: close\r\n\r\n' >&3;if [ $? -eq 0 ]; then echo 'Healthcheck Successful';exit 0;else echo 'Healthcheck Failed';exit 1;fi;" ]
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080;echo -e 'GET /health/ready HTTP/1.1\r\nhost: localhost\r\nConnection: close\r\n\r\n' >&3;if [ $? -eq 0 ]; then echo 'Healthcheck Successful';exit 0;else echo 'Healthcheck Failed';exit 1;fi;"]
       interval: 30s
       timeout: 10s
       retries: 3
     networks:
       - calcifer_net
+    labels:
+      - "traefik.enable=true"
+      # Keycloak does NOT use forward-auth (it IS the auth provider)
+      - "traefik.http.routers.keycloak.rule=Host(`keycloak.${DOMAIN:-dmgiangi.dev}`)"
+      - "traefik.http.routers.keycloak.entrypoints=websecure"
+      - "traefik.http.routers.keycloak.tls.certresolver=letsencrypt"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
 
   # ==================== EDGE ROUTER ====================
   traefik:
@@ -96,24 +114,43 @@ services:
     container_name: calcifer_cloud_traefik
     restart: unless-stopped
     command:
+      # API & Dashboard
       - "--api.dashboard=true"
-      - "--api.insecure=true"
+      - "--api.insecure=false"
+      # Providers
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.file.directory=/etc/traefik/dynamic"
       - "--providers.file.watch=true"
+      # Entrypoints
       - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.websecure.address=:443"
+      # Let's Encrypt ACME
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@dmgiangi.dev}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      # Logging
       - "--log.level=INFO"
+      - "--accesslog=true"
     ports:
-      - "${TRAEFIK_HTTP_PORT:-80}:80"
-      - "${TRAEFIK_HTTPS_PORT:-443}:443"
-      - "${TRAEFIK_DASHBOARD_PORT:-8080}:8080"
+      - "80:80"
+      - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - traefik_certs:/letsencrypt
     networks:
       - calcifer_net
+    labels:
+      - "traefik.enable=true"
+      # Dashboard on traefik.dmgiangi.dev
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.${DOMAIN:-dmgiangi.dev}`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      - "traefik.http.routers.traefik-dashboard.middlewares=forward-auth@file"
 
   # ==================== FORWARD AUTH ====================
   forward-auth:
@@ -122,21 +159,30 @@ services:
     restart: unless-stopped
     environment:
       - DEFAULT_PROVIDER=oidc
-      - PROVIDERS_OIDC_ISSUER_URL=${KEYCLOAK_ISSUER_URL:-http://keycloak:8080/realms/calcifer}
+      - PROVIDERS_OIDC_ISSUER_URL=https://keycloak.${DOMAIN:-dmgiangi.dev}/realms/calcifer
       - PROVIDERS_OIDC_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-calcifer-gateway}
       - PROVIDERS_OIDC_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me-in-production}
       - SECRET=${FORWARD_AUTH_SECRET:-a-random-secret-change-me}
-      - AUTH_HOST=${AUTH_HOST:-auth.localhost}
-      - COOKIE_DOMAIN=${COOKIE_DOMAIN:-localhost}
-      - INSECURE_COOKIE=${INSECURE_COOKIE:-true}
+      - AUTH_HOST=auth.${DOMAIN:-dmgiangi.dev}
+      - COOKIE_DOMAIN=${DOMAIN:-dmgiangi.dev}
+      - INSECURE_COOKIE=false
       - LOG_LEVEL=info
+      - URL_PATH=/_oauth
     networks:
       - calcifer_net
+    labels:
+      - "traefik.enable=true"
+      # OAuth callback route
+      - "traefik.http.routers.forward-auth.rule=Host(`auth.${DOMAIN:-dmgiangi.dev}`) && PathPrefix(`/_oauth`)"
+      - "traefik.http.routers.forward-auth.entrypoints=websecure"
+      - "traefik.http.routers.forward-auth.tls.certresolver=letsencrypt"
+      - "traefik.http.services.forward-auth.loadbalancer.server.port=4181"
 
 volumes:
   prometheus_data:
   grafana_data:
   keycloak_data:
+  traefik_certs:
 
 networks:
   calcifer_net:

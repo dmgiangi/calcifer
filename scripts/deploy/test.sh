@@ -28,11 +28,11 @@ cmd_test() {
 
     log_progress "Running health checks (target: ${target}, timeout: ${timeout}s)..."
 
-    local base_url
+    local base_url="http://localhost"
+    local use_ssh=false
+
     if [[ "${target}" == "remote" ]]; then
-        base_url="http://${REMOTE_HOST}"
-    else
-        base_url="http://localhost"
+        use_ssh=true
     fi
 
     # Define health check endpoints based on target environment
@@ -42,9 +42,9 @@ cmd_test() {
         checks=(
             "grafana|${base_url}:3000/api/health|Grafana Dashboard"
             "prometheus|${base_url}:9090/-/healthy|Prometheus Metrics"
-            "loki|${base_url}:3100/ready|Loki Logs"
-            "tempo|${base_url}:3200/ready|Tempo Traces"
-            "keycloak|${base_url}:8080/health/ready|Keycloak Identity"
+            "loki|http://calcifer-cloud_loki:3100/ready|Loki Logs"
+            "tempo|http://calcifer-cloud_tempo:3200/ready|Tempo Traces"
+            "keycloak|http://calcifer_cloud_keycloak:8080/health/ready|Keycloak Identity"
             "traefik|${base_url}:8080/api/overview|Traefik Router"
         )
     else
@@ -65,16 +65,24 @@ cmd_test() {
 
     for check in "${checks[@]}"; do
         IFS='|' read -r name url description <<< "${check}"
-        
+
         log_progress "Checking ${description}..."
-        
+
         local http_code
         local response_time
         local start
         start=$(date +%s%3N)
-        
-        http_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time "${timeout}" "${url}" 2>/dev/null || echo "000")
-        
+
+        if [[ "${use_ssh}" == "true" ]]; then
+            # Execute curl via SSH on remote server (localhost inside server)
+            http_code=$(ssh_exec "curl -s -o /dev/null -w %{http_code} --max-time ${timeout} ${url} 2>/dev/null || echo 000")
+        else
+            http_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time "${timeout}" "${url}" 2>/dev/null || echo "000")
+        fi
+
+        # Clean http_code (remove any whitespace)
+        http_code=$(echo "${http_code}" | tr -d '[:space:]')
+
         local end
         end=$(date +%s%3N)
         response_time=$((end - start))
