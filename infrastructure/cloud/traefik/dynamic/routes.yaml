@@ -1,0 +1,75 @@
+# =============================================================================
+# Traefik Dynamic Configuration - Routes
+# =============================================================================
+
+http:
+  routers:
+    # ==================== CORE SERVER API ====================
+    core-server:
+      rule: "PathPrefix(`/api`)"
+      service: core-server
+      middlewares:
+        - forward-auth
+        - cors
+      entryPoints:
+        - web
+        - websecure
+
+    # ==================== WEBSOCKET (STOMP) ====================
+    core-server-ws:
+      rule: "PathPrefix(`/ws`)"
+      service: core-server
+      middlewares:
+        - forward-auth
+      entryPoints:
+        - web
+        - websecure
+
+    # ==================== ACTUATOR (Health checks - no auth) ====================
+    core-server-actuator:
+      rule: "PathPrefix(`/actuator/health`)"
+      service: core-server
+      entryPoints:
+        - web
+
+    # ==================== LOKI ====================
+    loki:
+      rule: "PathPrefix(`/loki`)"
+      service: loki
+      middlewares:
+        - forward-auth
+        - strip-loki
+      entryPoints:
+        - web
+        - websecure
+
+    # ==================== TEMPO ====================
+    tempo:
+      rule: "PathPrefix(`/tempo`)"
+      service: tempo
+      middlewares:
+        - forward-auth
+      entryPoints:
+        - web
+        - websecure
+
+  services:
+    core-server:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8080"
+        healthCheck:
+          path: /actuator/health
+          interval: 10s
+          timeout: 3s
+
+    loki:
+      loadBalancer:
+        servers:
+          - url: "http://loki:3100"
+
+    tempo:
+      loadBalancer:
+        servers:
+          - url: "http://tempo:3200"
+

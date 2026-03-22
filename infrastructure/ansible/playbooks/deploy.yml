@@ -1,0 +1,121 @@
+---
+# =============================================================================
+# Calcifer Deploy Playbook
+# =============================================================================
+# Deploys Calcifer infrastructure to remote server
+# Usage: ansible-playbook playbooks/deploy.yml -e "version_tag=abc123"
+# =============================================================================
+
+- name: Deploy Calcifer Infrastructure
+  hosts: calcifer_servers
+  become: false
+  
+  vars:
+    deploy_dir: /opt/calcifer
+    version_tag: "{{ version_tag | default('latest') }}"
+    with_auth: "{{ with_auth | default(false) }}"
+    compose_files: >-
+      {% if with_auth | bool %}
+      -f docker-compose.yaml -f docker-compose.auth.yaml
+      {% else %}
+      -f docker-compose.yaml
+      {% endif %}
+
+  tasks:
+    # ==================== PRE-FLIGHT CHECKS ====================
+    - name: Check Docker is running
+      command: docker info
+      changed_when: false
+      register: docker_info
+
+    - name: Ensure deploy directory exists
+      file:
+        path: "{{ deploy_dir }}"
+        state: directory
+        mode: '0755'
+
+    # ==================== SYNC FILES ====================
+    - name: Sync infrastructure files
+      synchronize:
+        src: "{{ playbook_dir }}/../../../infrastructure/"
+        dest: "{{ deploy_dir }}/infrastructure/"
+        delete: yes
+        rsync_opts:
+          - "--exclude=.env"
+          - "--exclude=*.log"
+      register: sync_result
+
+    - name: Ensure .env file exists
+      stat:
+        path: "{{ deploy_dir }}/infrastructure/.env"
+      register: env_file
+
+    - name: Copy .env template if not exists
+      copy:
+        src: "{{ playbook_dir }}/../../../infrastructure/.env"
+        dest: "{{ deploy_dir }}/infrastructure/.env"
+        mode: '0600'
+      when: not env_file.stat.exists
+
+    # ==================== BACKUP CURRENT STATE ====================
+    - name: Get current version
+      slurp:
+        src: "{{ deploy_dir }}/.deploy-version"
+      register: current_version_file
+      ignore_errors: true
+
+    - name: Save previous version
+      copy:
+        content: "{{ current_version_file.content | b64decode | default('none') }}"
+        dest: "{{ deploy_dir }}/.deploy-version.previous"
+      when: current_version_file is succeeded
+
+    # ==================== DEPLOY ====================
+    - name: Pull Docker images
+      command: >
+        docker compose {{ compose_files }} pull
+      args:
+        chdir: "{{ deploy_dir }}/infrastructure"
+      environment:
+        IMAGE_TAG: "{{ version_tag }}"
+      register: pull_result
+
+    - name: Start services
+      command: >
+        docker compose {{ compose_files }} up -d --remove-orphans
+      args:
+        chdir: "{{ deploy_dir }}/infrastructure"
+      environment:
+        IMAGE_TAG: "{{ version_tag }}"
+      register: up_result
+
+    # ==================== HEALTH CHECK ====================
+    - name: Wait for services to be healthy
+      uri:
+        url: "http://localhost:{{ item.port }}{{ item.path }}"
+        status_code: 200
+        timeout: 5
+      register: health_check
+      until: health_check.status == 200
+      retries: 30
+      delay: 2
+      loop:
+        - { name: "grafana", port: 3000, path: "/api/health" }
+        - { name: "prometheus", port: 9090, path: "/-/healthy" }
+        - { name: "loki", port: 3100, path: "/ready" }
+      ignore_errors: true
+
+    # ==================== SAVE VERSION ====================
+    - name: Save deployed version
+      copy:
+        content: "{{ version_tag }}"
+        dest: "{{ deploy_dir }}/.deploy-version"
+
+    # ==================== OUTPUT ====================
+    - name: Deployment summary
+      debug:
+        msg:
+          - "Deployed version: {{ version_tag }}"
+          - "With auth: {{ with_auth }}"
+          - "Services started: {{ up_result.rc == 0 }}"
+

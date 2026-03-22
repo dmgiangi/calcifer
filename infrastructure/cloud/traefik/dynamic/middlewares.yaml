@@ -1,0 +1,74 @@
+# =============================================================================
+# Traefik Dynamic Configuration - Middlewares
+# =============================================================================
+
+http:
+  middlewares:
+    # ==================== FORWARD AUTH ====================
+    forward-auth:
+      forwardAuth:
+        address: "http://forward-auth:4181"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "X-Forwarded-User"
+          - "X-Forwarded-Email"
+          - "X-Forwarded-Groups"
+
+    # ==================== STRIP PREFIX ====================
+    strip-grafana:
+      stripPrefix:
+        prefixes:
+          - "/grafana"
+
+    strip-prometheus:
+      stripPrefix:
+        prefixes:
+          - "/prometheus"
+
+    strip-rabbitmq:
+      stripPrefix:
+        prefixes:
+          - "/rabbitmq"
+
+    strip-loki:
+      stripPrefix:
+        prefixes:
+          - "/loki"
+
+    strip-api:
+      stripPrefix:
+        prefixes:
+          - "/api"
+
+    # ==================== HEADERS ====================
+    secure-headers:
+      headers:
+        browserXssFilter: true
+        contentTypeNosniff: true
+        frameDeny: true
+        sslRedirect: false  # Set true in production
+        customFrameOptionsValue: "SAMEORIGIN"
+
+    # ==================== RATE LIMITING ====================
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: 1s
+
+    # ==================== CORS ====================
+    cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowOriginList:
+          - "*"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+

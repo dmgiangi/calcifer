@@ -1,0 +1,66 @@
+# =============================================================================
+# Calcifer Common - Monitoring Stack
+# =============================================================================
+# Shared monitoring services: Loki, Tempo, Promtail
+# Extended by cloud/ and home/ docker-compose files
+# =============================================================================
+
+services:
+  # ==================== LOG AGGREGATION ====================
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: ${COMPOSE_PROJECT_NAME:-calcifer}_loki
+    restart: unless-stopped
+    volumes:
+      - ../common/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:3100/ready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - calcifer_net
+
+  # ==================== LOG COLLECTION ====================
+  promtail:
+    image: grafana/promtail:2.9.3
+    container_name: ${COMPOSE_PROJECT_NAME:-calcifer}_promtail
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ../common/promtail/promtail-config.yaml:/etc/promtail/config.yml:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - calcifer_net
+
+  # ==================== DISTRIBUTED TRACING ====================
+  tempo:
+    image: grafana/tempo:2.3.1
+    container_name: ${COMPOSE_PROJECT_NAME:-calcifer}_tempo
+    restart: unless-stopped
+    volumes:
+      - ../common/tempo/tempo-config.yaml:/etc/tempo/config.yaml:ro
+      - tempo_data:/tmp/tempo
+    command: [ "-config.file=/etc/tempo/config.yaml" ]
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:3200/ready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - calcifer_net
+
+volumes:
+  loki_data:
+  tempo_data:
+
+networks:
+  calcifer_net:
+    driver: bridge
+

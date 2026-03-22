@@ -1,0 +1,149 @@
+# =============================================================================
+# Calcifer Home - LAN Infrastructure
+# =============================================================================
+# Components: Core Server + Dependencies + Monitoring (local)
+# Usage: docker compose up -d
+# =============================================================================
+
+include:
+  - ../common/docker-compose.monitoring.yaml
+
+services:
+  # ==================== DATA STORES ====================
+  redis:
+    image: redis:7
+    container_name: calcifer_home_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command:
+      - redis-server
+      - "--user"
+      - "${REDIS_USERNAME:-calcifer}"
+      - "on"
+      - ">${REDIS_PASSWORD:-calcifer_password}"
+      - "~*"
+      - "+@all"
+      - "--user"
+      - "default"
+      - "off"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - calcifer_net
+
+  mongodb:
+    image: mongo:7
+    container_name: calcifer_home_mongodb
+    restart: unless-stopped
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-calcifer}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-calcifer_password}
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - calcifer_net
+
+  # ==================== MESSAGE BROKER ====================
+  rabbitmq:
+    image: rabbitmq:4.0-management
+    container_name: calcifer_home_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+      - "${RABBITMQ_MQTT_PORT:-1883}:1883"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin_password}
+    volumes:
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "check_running" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - calcifer_net
+
+  # ==================== METRICS ====================
+  prometheus:
+    image: prom/prometheus:v2.48.1
+    container_name: calcifer_home_prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'
+      - '--enable-feature=exemplar-storage'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:9090/-/healthy" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - calcifer_net
+
+  # ==================== VISUALIZATION ====================
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: calcifer_home_grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    env_file:
+      - ../common/grafana/grafana.env
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - ../common/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:3000/api/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - calcifer_net
+
+volumes:
+  redis_data:
+  mongodb_data:
+  rabbitmq_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  calcifer_net:
+    driver: bridge
+

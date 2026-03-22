@@ -1,0 +1,165 @@
+{
+  "realm": "calcifer",
+  "enabled": true,
+  "displayName": "Calcifer IoT Platform",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Full access to all services and configurations"
+      },
+      {
+        "name": "operator",
+        "description": "Can control devices and view dashboards"
+      },
+      {
+        "name": "viewer",
+        "description": "Read-only access to dashboards"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "name": "admins",
+      "realmRoles": [
+        "admin"
+      ]
+    },
+    {
+      "name": "operators",
+      "realmRoles": [
+        "operator"
+      ]
+    },
+    {
+      "name": "viewers",
+      "realmRoles": [
+        "viewer"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@calcifer.local",
+      "firstName": "Admin",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "admin"
+      ],
+      "groups": [
+        "admins"
+      ]
+    },
+    {
+      "username": "operator",
+      "enabled": true,
+      "email": "operator@calcifer.local",
+      "firstName": "Operator",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "operator",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "operator"
+      ],
+      "groups": [
+        "operators"
+      ]
+    },
+    {
+      "username": "viewer",
+      "enabled": true,
+      "email": "viewer@calcifer.local",
+      "firstName": "Viewer",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "viewer",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "viewer"
+      ],
+      "groups": [
+        "viewers"
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "calcifer-gateway",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "change-me-in-production",
+      "redirectUris": [
+        "http://localhost/*",
+        "http://localhost:8080/*",
+        "http://*.localhost/*"
+      ],
+      "webOrigins": [
+        "*"
+      ],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "config": {
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "groups",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultDefaultClientScopes": [
+    "profile",
+    "email",
+    "roles"
+  ]
+}
+

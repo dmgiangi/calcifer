@@ -1,0 +1,145 @@
+# =============================================================================
+# Calcifer Cloud - Public Infrastructure
+# =============================================================================
+# Components: Monitoring (federated) + Keycloak + Traefik
+# Usage: docker compose up -d
+# =============================================================================
+
+include:
+  - ../common/docker-compose.monitoring.yaml
+
+services:
+  # ==================== METRICS ====================
+  prometheus:
+    image: prom/prometheus:v2.48.1
+    container_name: calcifer_cloud_prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'
+      - '--enable-feature=exemplar-storage'
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:9090/-/healthy" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - calcifer_net
+
+  # ==================== VISUALIZATION ====================
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: calcifer_cloud_grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    env_file:
+      - ../common/grafana/grafana.env
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
+      # Auth proxy for Traefik/Keycloak
+      - GF_AUTH_PROXY_ENABLED=true
+      - GF_AUTH_PROXY_HEADER_NAME=X-Forwarded-User
+      - GF_AUTH_PROXY_HEADER_PROPERTY=username
+      - GF_AUTH_PROXY_AUTO_SIGN_UP=true
+    volumes:
+      - ../common/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning/override:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:3000/api/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - calcifer_net
+
+  # ==================== IDENTITY PROVIDER ====================
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: calcifer_cloud_keycloak
+    restart: unless-stopped
+    command: start-dev --import-realm
+    environment:
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - KC_PROXY=edge
+      - KC_HOSTNAME_STRICT=false
+      - KC_HTTP_ENABLED=true
+    volumes:
+      - ./keycloak/calcifer-realm.json:/opt/keycloak/data/import/calcifer-realm.json:ro
+      - keycloak_data:/opt/keycloak/data
+    healthcheck:
+      test: [ "CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080;echo -e 'GET /health/ready HTTP/1.1\r\nhost: localhost\r\nConnection: close\r\n\r\n' >&3;if [ $? -eq 0 ]; then echo 'Healthcheck Successful';exit 0;else echo 'Healthcheck Failed';exit 1;fi;" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - calcifer_net
+
+  # ==================== EDGE ROUTER ====================
+  traefik:
+    image: traefik:v3.0
+    container_name: calcifer_cloud_traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--log.level=INFO"
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
+      - "${TRAEFIK_DASHBOARD_PORT:-8080}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+    networks:
+      - calcifer_net
+
+  # ==================== FORWARD AUTH ====================
+  forward-auth:
+    image: thomseddon/traefik-forward-auth:2
+    container_name: calcifer_cloud_forward_auth
+    restart: unless-stopped
+    environment:
+      - DEFAULT_PROVIDER=oidc
+      - PROVIDERS_OIDC_ISSUER_URL=${KEYCLOAK_ISSUER_URL:-http://keycloak:8080/realms/calcifer}
+      - PROVIDERS_OIDC_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-calcifer-gateway}
+      - PROVIDERS_OIDC_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me-in-production}
+      - SECRET=${FORWARD_AUTH_SECRET:-a-random-secret-change-me}
+      - AUTH_HOST=${AUTH_HOST:-auth.localhost}
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN:-localhost}
+      - INSECURE_COOKIE=${INSECURE_COOKIE:-true}
+      - LOG_LEVEL=info
+    networks:
+      - calcifer_net
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  keycloak_data:
+
+networks:
+  calcifer_net:
+    driver: bridge
+

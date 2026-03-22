@@ -1,0 +1,51 @@
+# =============================================================================
+# Prometheus Base Configuration
+# =============================================================================
+# Common configuration shared between cloud and home environments
+# This file is extended by environment-specific configs
+# =============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: '${ENVIRONMENT:-unknown}'
+
+# Alerting configuration (common)
+alerting:
+  alertmanagers: [ ]
+
+# Rule files (common)
+rule_files: [ ]
+# - /etc/prometheus/rules/*.yml
+
+# Common scrape configs
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: [ 'localhost:9090' ]
+        labels:
+          service: 'prometheus'
+
+  # Grafana
+  - job_name: 'grafana'
+    static_configs:
+      - targets: [ 'grafana:3000' ]
+        labels:
+          service: 'grafana'
+
+  # Loki
+  - job_name: 'loki'
+    static_configs:
+      - targets: [ 'loki:3100' ]
+        labels:
+          service: 'loki'
+
+  # Tempo
+  - job_name: 'tempo'
+    static_configs:
+      - targets: [ 'tempo:3200' ]
+        labels:
+          service: 'tempo'
+

@@ -1,0 +1,89 @@
+# =============================================================================
+# Prometheus Configuration - Home Environment
+# =============================================================================
+# Local metrics collection + remote_write to cloud
+# =============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'home'
+    location: 'lan'
+
+# Remote write to cloud Prometheus (optional)
+# Uncomment to enable federation push
+# remote_write:
+#   - url: "${CLOUD_PROMETHEUS_URL:-http://cloud.example.com:9090}/api/v1/write"
+#     basic_auth:
+#       username: "${CLOUD_PROMETHEUS_USER:-}"
+#       password: "${CLOUD_PROMETHEUS_PASSWORD:-}"
+
+# Rule files
+rule_files: [ ]
+
+# Scrape configs
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: [ 'localhost:9090' ]
+        labels:
+          service: 'prometheus'
+          env: 'home'
+
+  # Core Server (running on host)
+  - job_name: 'core-server'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: [ 'host.docker.internal:8080' ]
+        labels:
+          service: 'core-server'
+          env: 'home'
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: [ 'redis:6379' ]
+        labels:
+          service: 'redis'
+          env: 'home'
+
+  # MongoDB (requires mongodb_exporter sidecar)
+  # - job_name: 'mongodb'
+  #   static_configs:
+  #     - targets: ['mongodb-exporter:9216']
+
+  # RabbitMQ
+  - job_name: 'rabbitmq'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: [ 'rabbitmq:15692' ]
+        labels:
+          service: 'rabbitmq'
+          env: 'home'
+
+  # Grafana
+  - job_name: 'grafana'
+    static_configs:
+      - targets: [ 'grafana:3000' ]
+        labels:
+          service: 'grafana'
+          env: 'home'
+
+  # Loki
+  - job_name: 'loki'
+    static_configs:
+      - targets: [ 'loki:3100' ]
+        labels:
+          service: 'loki'
+          env: 'home'
+
+  # Tempo
+  - job_name: 'tempo'
+    static_configs:
+      - targets: [ 'tempo:3200' ]
+        labels:
+          service: 'tempo'
+          env: 'home'
+
