@@ -113,7 +113,7 @@ services:
 
   # ==================== EDGE ROUTER ====================
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.3
     container_name: calcifer_cloud_traefik
     restart: unless-stopped
     command:
