@@ -159,15 +159,75 @@ configure_google_mappers() {
 # Configure admin users from ADMIN_EMAILS
 configure_admin_users() {
     local token=$1
-    
+
     if [ -z "${ADMIN_EMAILS}" ]; then
         warn "ADMIN_EMAILS not set, skipping admin user configuration"
         return 0
     fi
-    
+
     log "Configuring admin users: ${ADMIN_EMAILS}"
-    # Users will be created on first login via Google
-    # We just need to ensure the admin role mapper exists
+
+    # Get admin role ID
+    local admin_role_id=$(curl -sf \
+        -H "Authorization: Bearer ${token}" \
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/roles/admin" | jq -r '.id')
+
+    if [ -z "$admin_role_id" ] || [ "$admin_role_id" = "null" ]; then
+        warn "Admin role not found, skipping user configuration"
+        return 0
+    fi
+
+    # Process each email (comma-separated)
+    IFS=',' read -ra EMAILS <<< "$ADMIN_EMAILS"
+    for email in "${EMAILS[@]}"; do
+        email=$(echo "$email" | xargs)  # trim whitespace
+        configure_admin_user "$token" "$email" "$admin_role_id"
+    done
+}
+
+# Configure a single admin user
+configure_admin_user() {
+    local token=$1
+    local email=$2
+    local admin_role_id=$3
+
+    log "Configuring admin user: ${email}"
+
+    # Check if user exists
+    local user_id=$(curl -sf \
+        -H "Authorization: Bearer ${token}" \
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/users?email=${email}&exact=true" | jq -r '.[0].id // empty')
+
+    if [ -z "$user_id" ]; then
+        log "Creating user ${email}..."
+        # Create user
+        curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/users" \
+            -H "Authorization: Bearer ${token}" \
+            -H "Content-Type: application/json" \
+            -d "{
+                \"username\": \"${email}\",
+                \"email\": \"${email}\",
+                \"enabled\": true,
+                \"emailVerified\": true
+            }"
+
+        # Get the new user ID
+        user_id=$(curl -sf \
+            -H "Authorization: Bearer ${token}" \
+            "${KEYCLOAK_URL}/admin/realms/${REALM}/users?email=${email}&exact=true" | jq -r '.[0].id // empty')
+    else
+        log "User ${email} already exists"
+    fi
+
+    if [ -n "$user_id" ]; then
+        # Assign admin role
+        log "Assigning admin role to ${email}..."
+        curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/users/${user_id}/role-mappings/realm" \
+            -H "Authorization: Bearer ${token}" \
+            -H "Content-Type: application/json" \
+            -d "[{\"id\": \"${admin_role_id}\", \"name\": \"admin\"}]" || true
+        log "Admin role assigned to ${email}"
+    fi
 }
 
 # Main
