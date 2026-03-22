@@ -1,0 +1,4 @@
+---
+calcifer:
+  socket: /var/run/docker.sock
+

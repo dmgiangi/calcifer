@@ -57,6 +57,8 @@ ssh-copy-id -i ~/.ssh/github_id user@server
 
 ## Installation
 
+### Quick Start (No Installation)
+
 No installation required. Just ensure Python 3.8+ is available:
 
 ```bash
@@ -69,6 +71,46 @@ Or use via the wrapper script:
 ```bash
 ./deploy help
 ```
+
+### Install as Python Package
+
+For a proper installation with the `calcifer` command available system-wide:
+
+```bash
+# Install in editable mode (recommended for development)
+pip install -e .
+
+# Or install normally
+pip install .
+
+# Then use the CLI
+calcifer help
+```
+
+### Development Setup
+
+To set up the development environment with testing tools:
+
+```bash
+# Create virtual environment (recommended)
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install with development dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Run tests with coverage
+pytest --cov=commands --cov=utils
+```
+
+### Available pip extras
+
+| Extra | Dependencies | Usage |
+|-------|--------------|-------|
+| `dev` | pytest, pytest-mock | `pip install -e ".[dev]"` |
 
 ## Commands
 

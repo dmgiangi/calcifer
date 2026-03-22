@@ -1,0 +1,17 @@
+---
+title: Calcifer Cloud
+favicon: https://cdn-icons-png.flaticon.com/512/785/785116.png
+theme: dark
+color: slate
+headerStyle: clean
+layout:
+  Monitoring:
+    style: row
+    columns: 3
+  Identity:
+    style: row
+    columns: 2
+  Infrastructure:
+    style: row
+    columns: 2
+

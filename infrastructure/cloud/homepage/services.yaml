@@ -1,0 +1,4 @@
+---
+# Services are auto-discovered via Docker labels
+# This file can be empty or contain additional static services
+

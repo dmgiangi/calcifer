@@ -38,6 +38,12 @@ services:
       - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
       - "traefik.http.routers.prometheus.middlewares=forward-auth@file"
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      # Homepage labels
+      - "homepage.group=Monitoring"
+      - "homepage.name=Prometheus"
+      - "homepage.icon=prometheus.png"
+      - "homepage.href=https://prometheus.${DOMAIN:-dmgiangi.dev}"
+      - "homepage.description=Metrics & Alerting"
 
   # ==================== VISUALIZATION ====================
   grafana:
@@ -76,6 +82,12 @@ services:
       - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
       - "traefik.http.routers.grafana.middlewares=forward-auth@file"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      # Homepage labels
+      - "homepage.group=Monitoring"
+      - "homepage.name=Grafana"
+      - "homepage.icon=grafana.png"
+      - "homepage.href=https://grafana.${DOMAIN:-dmgiangi.dev}"
+      - "homepage.description=Dashboards & Visualization"
 
   # ==================== IDENTITY PROVIDER ====================
   keycloak:
@@ -110,6 +122,12 @@ services:
       - "traefik.http.routers.keycloak.entrypoints=websecure"
       - "traefik.http.routers.keycloak.tls.certresolver=letsencrypt"
       - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+      # Homepage labels
+      - "homepage.group=Identity"
+      - "homepage.name=Keycloak"
+      - "homepage.icon=keycloak.png"
+      - "homepage.href=https://keycloak.${DOMAIN:-dmgiangi.dev}"
+      - "homepage.description=Identity & Access Management"
 
   # ==================== EDGE ROUTER ====================
   traefik:
@@ -154,6 +172,12 @@ services:
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
       - "traefik.http.routers.traefik-dashboard.middlewares=forward-auth@file"
+      # Homepage labels
+      - "homepage.group=Infrastructure"
+      - "homepage.name=Traefik"
+      - "homepage.icon=traefik.png"
+      - "homepage.href=https://traefik.${DOMAIN:-dmgiangi.dev}"
+      - "homepage.description=Edge Router & Load Balancer"
 
   # ==================== FORWARD AUTH ====================
   forward-auth:
@@ -187,6 +211,24 @@ services:
       - "traefik.http.routers.forward-auth.entrypoints=websecure"
       - "traefik.http.routers.forward-auth.tls.certresolver=letsencrypt"
       - "traefik.http.services.forward-auth.loadbalancer.server.port=4181"
+
+  # ==================== HOMEPAGE DASHBOARD ====================
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: calcifer_cloud_homepage
+    restart: unless-stopped
+    volumes:
+      - ./homepage:/app/config:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - calcifer_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homepage.rule=Host(`home.${DOMAIN:-dmgiangi.dev}`)"
+      - "traefik.http.routers.homepage.entrypoints=websecure"
+      - "traefik.http.routers.homepage.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.homepage.middlewares=forward-auth@file"
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
 
 networks:
   calcifer_net:
