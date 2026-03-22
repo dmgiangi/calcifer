@@ -100,10 +100,20 @@ realm_exists() {
 create_realm() {
     local token=$1
     log "Creating realm ${REALM}..."
-    curl -sf -X POST "${KEYCLOAK_URL}/admin/realms" \
+
+    local response=$(curl -s -w "\n%{http_code}" -X POST "${KEYCLOAK_URL}/admin/realms" \
         -H "Authorization: Bearer ${token}" \
         -H "Content-Type: application/json" \
-        -d "{\"realm\": \"${REALM}\", \"enabled\": true}"
+        -d "{\"realm\": \"${REALM}\", \"enabled\": true, \"registrationAllowed\": false, \"loginWithEmailAllowed\": true}")
+
+    local http_code=$(echo "$response" | tail -1)
+    local body=$(echo "$response" | head -n -1)
+
+    if [ "$http_code" = "201" ]; then
+        log "Realm ${REALM} created successfully"
+    else
+        warn "Failed to create realm (HTTP $http_code): $body"
+    fi
 }
 
 # Configure Google Identity Provider in a realm
