@@ -48,14 +48,43 @@ wait_for_keycloak() {
     exit 1
 }
 
-# Get admin token
+# Get admin token - tries multiple methods
 get_token() {
-    curl -sf -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
+    local token=""
+
+    # Method 1: Try bootstrap admin (password grant)
+    log "Trying bootstrap admin authentication..."
+    token=$(curl -sf -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
         -H "Content-Type: application/x-www-form-urlencoded" \
         -d "username=${KEYCLOAK_ADMIN}" \
         -d "password=${KEYCLOAK_ADMIN_PASSWORD}" \
         -d "grant_type=password" \
-        -d "client_id=admin-cli" | jq -r '.access_token'
+        -d "client_id=admin-cli" 2>/dev/null | jq -r '.access_token // empty')
+
+    if [ -n "$token" ] && [ "$token" != "null" ]; then
+        log "Authenticated via bootstrap admin"
+        echo "$token"
+        return 0
+    fi
+
+    # Method 2: Try init service account (client credentials)
+    if [ -n "${INIT_CLIENT_SECRET}" ]; then
+        log "Trying init service account..."
+        token=$(curl -sf -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "client_id=calcifer-init" \
+            -d "client_secret=${INIT_CLIENT_SECRET}" \
+            -d "grant_type=client_credentials" 2>/dev/null | jq -r '.access_token // empty')
+
+        if [ -n "$token" ] && [ "$token" != "null" ]; then
+            log "Authenticated via init service account"
+            echo "$token"
+            return 0
+        fi
+    fi
+
+    # No authentication method worked
+    echo ""
 }
 
 # Check if realm exists
@@ -458,7 +487,31 @@ main() {
     TOKEN=$(get_token)
 
     if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-        error "Failed to get admin token"
+        error "Failed to get admin token!"
+        echo ""
+        echo "╔════════════════════════════════════════════════════════════════╗"
+        echo "║  AUTHENTICATION FAILED - Manual action required                ║"
+        echo "╚════════════════════════════════════════════════════════════════╝"
+        echo ""
+        echo "The bootstrap admin is disabled and no service account is configured."
+        echo ""
+        echo "To fix this:"
+        echo "  1. Login to Keycloak admin console with Google:"
+        echo "     https://keycloak.dmgiangi.dev/admin/master/console/"
+        echo ""
+        echo "  2. Create a service account for init:"
+        echo "     - Go to: Clients → Create client"
+        echo "     - Client ID: calcifer-init"
+        echo "     - Enable: Client authentication, Service account roles"
+        echo "     - Save, then go to Credentials tab and copy the secret"
+        echo ""
+        echo "  3. Assign admin role to service account:"
+        echo "     - Go to: Clients → calcifer-init → Service account roles"
+        echo "     - Assign role → Filter by clients → admin-cli"
+        echo "     - Select: admin"
+        echo ""
+        echo "  4. Add INIT_CLIENT_SECRET to .env and re-run init"
+        echo ""
         exit 1
     fi
 
