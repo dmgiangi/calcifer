@@ -79,14 +79,15 @@ services:
 
   # ==================== IDENTITY PROVIDER ====================
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0
+    image: quay.io/keycloak/keycloak:23.0
     container_name: calcifer_cloud_keycloak
     restart: unless-stopped
-    command: start-dev --import-realm --hostname-strict=false
+    command: start-dev --import-realm
     environment:
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      - KC_PROXY_HEADERS=forwarded
+      - KC_PROXY=edge
+      - KC_HOSTNAME_STRICT=false
       - KC_HTTP_ENABLED=true
       - KC_HEALTH_ENABLED=true
     volumes:
