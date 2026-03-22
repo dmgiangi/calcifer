@@ -9,6 +9,66 @@
   "resetPasswordAllowed": true,
   "editUsernameAllowed": false,
   "bruteForceProtected": true,
+  "identityProviders": [
+    {
+      "alias": "google",
+      "displayName": "Google",
+      "providerId": "google",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "${GOOGLE_CLIENT_ID:your-google-client-id}",
+        "clientSecret": "${GOOGLE_CLIENT_SECRET:your-google-client-secret}",
+        "defaultScope": "openid email profile",
+        "syncMode": "INHERIT",
+        "useJwksUrl": "true"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "email-mapper",
+      "identityProviderAlias": "google",
+      "identityProviderMapper": "hardcoded-attribute-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "attribute": "emailVerified",
+        "attribute.value": "true"
+      }
+    },
+    {
+      "name": "username-from-email",
+      "identityProviderAlias": "google",
+      "identityProviderMapper": "oidc-username-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "template": "${CLAIM.email}"
+      }
+    },
+    {
+      "name": "first-name-mapper",
+      "identityProviderAlias": "google",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "claim": "given_name",
+        "user.attribute": "firstName"
+      }
+    },
+    {
+      "name": "last-name-mapper",
+      "identityProviderAlias": "google",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "claim": "family_name",
+        "user.attribute": "lastName"
+      }
+    }
+  ],
   "roles": {
     "realm": [
       {
@@ -46,6 +106,20 @@
     }
   ],
   "users": [
+    {
+      "username": "dem.gianluigi@gmail.com",
+      "enabled": true,
+      "email": "dem.gianluigi@gmail.com",
+      "firstName": "Gianluigi",
+      "lastName": "Demartini",
+      "emailVerified": true,
+      "realmRoles": [
+        "admin"
+      ],
+      "groups": [
+        "admins"
+      ]
+    },
     {
       "username": "admin",
       "enabled": true,

@@ -13,7 +13,7 @@ services:
     restart: unless-stopped
     volumes:
       - ../common/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
-      - loki_data:/loki
+      - ${DATA_DIR:-/var/lib/calcifer}/loki:/loki
     command: -config.file=/etc/loki/local-config.yaml
     healthcheck:
       test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:3100/ready" ]
@@ -46,7 +46,7 @@ services:
     restart: unless-stopped
     volumes:
       - ../common/tempo/tempo-config.yaml:/etc/tempo/config.yaml:ro
-      - tempo_data:/tmp/tempo
+      - ${DATA_DIR:-/var/lib/calcifer}/tempo:/tmp/tempo
     command: [ "-config.file=/etc/tempo/config.yaml" ]
     healthcheck:
       test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:3200/ready" ]
@@ -55,10 +55,6 @@ services:
       retries: 3
     networks:
       - calcifer_net
-
-volumes:
-  loki_data:
-  tempo_data:
 
 networks:
   calcifer_net:

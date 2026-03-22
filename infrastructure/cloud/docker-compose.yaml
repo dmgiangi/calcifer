@@ -16,7 +16,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
+      - ${DATA_DIR:-/var/lib/calcifer/cloud}/prometheus:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -57,7 +57,7 @@ services:
       - GF_AUTH_PROXY_AUTO_SIGN_UP=true
     volumes:
       - ../common/grafana/provisioning:/etc/grafana/provisioning:ro
-      - grafana_data:/var/lib/grafana
+      - ${DATA_DIR:-/var/lib/calcifer/cloud}/grafana:/var/lib/grafana
     depends_on:
       - prometheus
       - loki
@@ -95,7 +95,7 @@ services:
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
     volumes:
       - ./keycloak/calcifer-realm.json:/opt/keycloak/data/import/calcifer-realm.json:ro
-      - keycloak_data:/opt/keycloak/data
+      - ${DATA_DIR:-/var/lib/calcifer/cloud}/keycloak:/opt/keycloak/data
     healthcheck:
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080;echo -e 'GET /health/ready HTTP/1.1\r\nhost: localhost\r\nConnection: close\r\n\r\n' >&3;if [ $? -eq 0 ]; then echo 'Healthcheck Successful';exit 0;else echo 'Healthcheck Failed';exit 1;fi;"]
       interval: 30s
@@ -143,7 +143,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/dynamic:/etc/traefik/dynamic:ro
-      - traefik_certs:/letsencrypt
+      - ${DATA_DIR:-/var/lib/calcifer/cloud}/traefik/certs:/letsencrypt
     networks:
       - calcifer_net
     labels:
@@ -187,12 +187,6 @@ services:
       - "traefik.http.routers.forward-auth.entrypoints=websecure"
       - "traefik.http.routers.forward-auth.tls.certresolver=letsencrypt"
       - "traefik.http.services.forward-auth.loadbalancer.server.port=4181"
-
-volumes:
-  prometheus_data:
-  grafana_data:
-  keycloak_data:
-  traefik_certs:
 
 networks:
   calcifer_net:

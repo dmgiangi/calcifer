@@ -106,7 +106,18 @@ EOF
         fi
     fi
 
-    # Step 3: Run docker compose for the target environment
+    # Step 3: Create data directories for bind mounts
+    if [[ "${deploy_success}" == "true" ]]; then
+        log_progress "Creating data directories..."
+        local data_dir="/var/lib/calcifer/${DEPLOY_TARGET}"
+        local dirs_cmd="sudo mkdir -p ${data_dir}/{prometheus,grafana,keycloak,traefik/certs,loki,tempo} && sudo chown -R \$(id -u):\$(id -g) ${data_dir}"
+
+        if ! ssh_exec "${dirs_cmd}"; then
+            log_progress "Warning: Could not create data directories (may already exist or need manual setup)"
+        fi
+    fi
+
+    # Step 4: Run docker compose for the target environment
     if [[ "${deploy_success}" == "true" ]]; then
         log_progress "Starting ${DEPLOY_TARGET} services..."
 
