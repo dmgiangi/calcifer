@@ -47,20 +47,6 @@
   ],
   "users": [
     {
-      "username": "dem.gianluigi@gmail.com",
-      "enabled": true,
-      "email": "dem.gianluigi@gmail.com",
-      "firstName": "Gianluigi",
-      "lastName": "Demartini",
-      "emailVerified": true,
-      "realmRoles": [
-        "admin"
-      ],
-      "groups": [
-        "admins"
-      ]
-    },
-    {
       "username": "admin",
       "enabled": true,
       "email": "admin@calcifer.local",
