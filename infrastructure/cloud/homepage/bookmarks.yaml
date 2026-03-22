@@ -4,8 +4,5 @@
         - abbr: GH
           href: https://github.com/dmgiangi/calcifer
           icon: github.png
-    - Documentation:
-        - abbr: DOC
-          href: https://gethomepage.dev
-          icon: homepage.png
+          description: Calcifer Repository
 

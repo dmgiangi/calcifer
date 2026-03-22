@@ -93,28 +93,26 @@ configure_google_idp() {
         "clientId": "${GOOGLE_CLIENT_ID}",
         "clientSecret": "${GOOGLE_CLIENT_SECRET}",
         "defaultScope": "openid email profile",
-        "syncMode": "INHERIT"
+        "syncMode": "FORCE"
     }
 }
 EOF
 )
 
     if [ "$exists" = "200" ]; then
-        log "Updating existing Google IDP..."
-        curl -sf -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/identity-provider/instances/google" \
-            -H "Authorization: Bearer ${token}" \
-            -H "Content-Type: application/json" \
-            -d "${idp_config}"
-    else
-        log "Creating Google IDP..."
-        curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/identity-provider/instances" \
-            -H "Authorization: Bearer ${token}" \
-            -H "Content-Type: application/json" \
-            -d "${idp_config}"
-
-        # Add mappers for Google IDP
-        configure_google_mappers "$token"
+        log "Deleting existing Google IDP to recreate with correct settings..."
+        curl -sf -X DELETE "${KEYCLOAK_URL}/admin/realms/${REALM}/identity-provider/instances/google" \
+            -H "Authorization: Bearer ${token}"
     fi
+
+    log "Creating Google IDP..."
+    curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/identity-provider/instances" \
+        -H "Authorization: Bearer ${token}" \
+        -H "Content-Type: application/json" \
+        -d "${idp_config}"
+
+    # Add mappers for Google IDP
+    configure_google_mappers "$token"
 }
 
 # Configure Google IDP Mappers
@@ -130,7 +128,7 @@ configure_google_mappers() {
             "name": "username-from-email",
             "identityProviderAlias": "google",
             "identityProviderMapper": "oidc-username-idp-mapper",
-            "config": {"syncMode": "INHERIT", "template": "${CLAIM.email}"}
+            "config": {"syncMode": "FORCE", "template": "${CLAIM.email}"}
         }' || true
 
     # First name
@@ -141,7 +139,7 @@ configure_google_mappers() {
             "name": "first-name",
             "identityProviderAlias": "google",
             "identityProviderMapper": "oidc-user-attribute-idp-mapper",
-            "config": {"syncMode": "INHERIT", "claim": "given_name", "user.attribute": "firstName"}
+            "config": {"syncMode": "FORCE", "claim": "given_name", "user.attribute": "firstName"}
         }' || true
 
     # Last name
@@ -152,7 +150,7 @@ configure_google_mappers() {
             "name": "last-name",
             "identityProviderAlias": "google",
             "identityProviderMapper": "oidc-user-attribute-idp-mapper",
-            "config": {"syncMode": "INHERIT", "claim": "family_name", "user.attribute": "lastName"}
+            "config": {"syncMode": "FORCE", "claim": "family_name", "user.attribute": "lastName"}
         }' || true
 }
 
