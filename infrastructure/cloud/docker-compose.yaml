@@ -261,6 +261,57 @@ services:
       - "traefik.http.services.token-validator.loadbalancer.server.port=4182"
 
   # ==================== HOMEPAGE DASHBOARD ====================
+  # ==================== LOKI ====================
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: calcifer_cloud_loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki/local-config.yaml:/etc/loki/local-config.yaml:ro
+      - ${DATA_DIR:-/var/lib/calcifer/cloud}/loki:/loki
+    networks:
+      - calcifer_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "homepage.group=Monitoring"
+      - "homepage.name=Loki"
+      - "homepage.icon=loki.png"
+      - "homepage.href=https://loki.${DOMAIN:-dmgiangi.dev}"
+      - "homepage.description=Log Aggregation"
+      - "homepage.siteMonitor=http://calcifer_cloud_loki:3100/ready"
+
+  # ==================== TEMPO ====================
+  tempo:
+    image: grafana/tempo:2.3.1
+    container_name: calcifer_cloud_tempo
+    restart: unless-stopped
+    command: -config.file=/etc/tempo/tempo.yaml
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - ${DATA_DIR:-/var/lib/calcifer/cloud}/tempo:/var/tempo
+    networks:
+      - calcifer_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3200/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "homepage.group=Monitoring"
+      - "homepage.name=Tempo"
+      - "homepage.icon=tempo.png"
+      - "homepage.href=https://tempo.${DOMAIN:-dmgiangi.dev}"
+      - "homepage.description=Distributed Tracing"
+      - "homepage.siteMonitor=http://calcifer_cloud_tempo:3200/ready"
+
+  # ==================== HOMEPAGE ====================
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: calcifer_cloud_homepage
@@ -277,8 +328,15 @@ services:
       - "traefik.http.routers.homepage.rule=Host(`home.${DOMAIN:-dmgiangi.dev}`)"
       - "traefik.http.routers.homepage.entrypoints=websecure"
       - "traefik.http.routers.homepage.tls.certresolver=letsencrypt"
-      # No authentication - public dashboard
+      - "traefik.http.routers.homepage.middlewares=forward-auth@file"
       - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+      # Homepage self-reference
+      - "homepage.group=Infrastructure"
+      - "homepage.name=Homepage"
+      - "homepage.icon=homepage.png"
+      - "homepage.href=https://home.${DOMAIN:-dmgiangi.dev}"
+      - "homepage.description=Dashboard"
+      - "homepage.siteMonitor=http://calcifer_cloud_homepage:3000"
 
 networks:
   calcifer_net:
