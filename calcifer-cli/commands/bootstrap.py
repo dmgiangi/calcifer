@@ -83,7 +83,7 @@ def cmd_bootstrap(args: List[str]) -> int:
 
     # Step 1: Clone repository
     print_header("1. CLONE REPOSITORY")
-    
+
     # Check if already exists
     result = ssh_run(config, f"test -d {target.deploy_dir}/.git && echo 'exists'", check=False)
     if 'exists' in result.stdout:
@@ -91,6 +91,9 @@ def cmd_bootstrap(args: List[str]) -> int:
         ssh_run(config, f"cd {target.deploy_dir} && git fetch && git checkout {opts.branch} && git pull")
     else:
         print_step("📥", f"Cloning {opts.repo}...")
+        # Create parent directory if needed
+        ssh_run(config, f"sudo mkdir -p {target.deploy_dir}", check=False)
+        ssh_run(config, f"sudo chown {target.user}:{target.user} {target.deploy_dir}")
         ssh_run(config, f"git clone -b {opts.branch} {opts.repo} {target.deploy_dir}")
     print_step("✅", "Repository ready")
 

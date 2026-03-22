@@ -88,7 +88,10 @@ class Config:
                     continue
                 if "=" in line:
                     key, value = line.split("=", 1)
-                    self._set_from_key(key.strip(), value.strip().strip('"\''))
+                    value = value.strip().strip('"\'')
+                    # Expand environment variables like ${HOME}
+                    value = os.path.expandvars(value)
+                    self._set_from_key(key.strip(), value)
     
     def _load_env(self) -> None:
         """Load configuration from environment variables."""
