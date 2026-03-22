@@ -1,4 +1,23 @@
 ---
-# Services are auto-discovered via Docker labels
-# Leave empty for pure Docker discovery
+- Monitoring:
+    - Grafana:
+        icon: grafana.png
+        href: https://grafana.dmgiangi.dev
+        description: Dashboards & Visualization
+    - Prometheus:
+        icon: prometheus.png
+        href: https://prometheus.dmgiangi.dev
+        description: Metrics & Alerting
+
+- Identity:
+    - Keycloak:
+        icon: keycloak.png
+        href: https://keycloak.dmgiangi.dev
+        description: Identity & Access Management
+
+- Infrastructure:
+    - Traefik:
+        icon: traefik.png
+        href: https://traefik.dmgiangi.dev
+        description: Edge Router & Load Balancer
 
