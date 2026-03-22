@@ -49,7 +49,7 @@ class TestCLI:
         data = json.loads(result.stdout)
         command_names = [cmd["name"] for cmd in data["data"]["available_commands"]]
         
-        expected = ["status", "run", "logs", "test", "rollback", "build", "push", "sync-env", "ansible"]
+        expected = ["status", "run", "logs", "test", "rollback", "build", "push", "sync-env"]
         for cmd in expected:
             assert cmd in command_names, f"Command {cmd} not registered"
 

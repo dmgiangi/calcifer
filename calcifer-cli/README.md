@@ -8,7 +8,52 @@ LLM-friendly deployment and management tool for the Calcifer IoT platform.
 - **Multi-target**: Deploy to `home` (LAN) or `cloud` (public) environments
 - **Git-based deployment**: Uses git pull for deployments (no image registry needed)
 - **Health checks**: Built-in smoke tests for all services
-- **Ansible integration**: Run playbooks directly from CLI
+
+## Requirements
+
+### Local Machine (where CLI runs)
+
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| Python | 3.8+ | Standard library only, no pip dependencies |
+| Git | 2.x | For version management |
+| SSH | OpenSSH | With key-based authentication configured |
+| Docker | 20.x+ | Only for `build` and `push` commands |
+
+### Target Servers
+
+Both `home` and `cloud` servers must have:
+
+| Requirement | Version | Installation |
+|-------------|---------|--------------|
+| **Ubuntu** | 22.04+ | Recommended OS |
+| **Docker Engine** | 24.x+ | [Install Docker](https://docs.docker.com/engine/install/ubuntu/) |
+| **Docker Compose** | v2 (plugin) | Included with Docker Engine |
+| **Git** | 2.x | `sudo apt install git` |
+| **SSH Server** | OpenSSH | `sudo apt install openssh-server` |
+
+#### Docker Installation (one-time setup)
+
+```bash
+# On target server (Ubuntu 22.04+)
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+# Logout and login again
+```
+
+#### SSH Key Setup
+
+```bash
+# On local machine
+ssh-copy-id -i ~/.ssh/github_id user@server
+```
+
+### Network Requirements
+
+| Target | Hostname | Ports Required |
+|--------|----------|----------------|
+| `cloud` | dmgiangi.dev | 22 (SSH), 80/443 (HTTP/S) |
+| `home` | 192.168.8.180 | 22 (SSH), 3000, 8080, 9090 |
 
 ## Installation
 
@@ -37,45 +82,35 @@ Or use via the wrapper script:
 | `build` | Build Docker images locally |
 | `push` | Push images to container registry |
 | `sync-env` | Copy .env files to remote server |
-| `ansible` | Run Ansible playbooks |
 
-## Usage
+## Usage Examples
 
-### Check status
 ```bash
+# Check status
 ./deploy status --target cloud
-```
 
-### Deploy
-```bash
+# Deploy latest
 ./deploy run --target cloud --branch master
-```
 
-### View logs
-```bash
+# View logs
 ./deploy logs grafana --target cloud -n 100
-```
 
-### Run health checks
-```bash
+# Run health checks
 ./deploy test --target cloud
-```
 
-### Rollback
-```bash
+# Rollback
 ./deploy rollback --target cloud --confirm
 ```
 
 ## Output Format
 
-All commands return JSON with this structure:
+All commands return JSON:
 
 ```json
 {
   "timestamp": "2026-03-22T15:30:00Z",
   "command": "status",
   "success": true,
-  "environment": "production",
   "server": "dmgiangi.dev",
   "data": { ... },
   "errors": [],
@@ -85,47 +120,28 @@ All commands return JSON with this structure:
 
 ## Configuration
 
-Configuration is loaded from:
-1. `deploy.conf` - Default settings
-2. Environment variables - Override defaults
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DEPLOY_TARGET` | Target environment | `home` |
-| `CLOUD_HOST` | Cloud server hostname | `dmgiangi.dev` |
-| `HOME_HOST` | Home server IP | `192.168.8.180` |
-
-## Testing
+Edit `deploy.conf` in project root:
 
 ```bash
-cd calcifer-cli
-pip install pytest pytest-mock
-pytest tests/ -v
+HOME_HOST=192.168.8.180
+HOME_USER=dmgiangi
+HOME_SSH_KEY=~/.ssh/github_id
+
+CLOUD_HOST=dmgiangi.dev
+CLOUD_USER=dmgiangi
+CLOUD_SSH_KEY=~/.ssh/github_id
 ```
 
-## Project Structure
+## Data Storage
+
+Persistent data stored in `/var/lib/calcifer/<target>/`:
 
 ```
-calcifer-cli/
-├── calcifer-cli.py    # Main entry point
-├── commands/          # Command implementations
-│   ├── status.py
-│   ├── run.py
-│   ├── logs.py
-│   ├── test.py
-│   ├── rollback.py
-│   ├── build.py
-│   ├── push.py
-│   ├── sync_env.py
-│   └── ansible.py
-├── utils/             # Shared utilities
-│   ├── config.py      # Configuration management
-│   ├── output.py      # JSON formatting
-│   ├── ssh.py         # SSH helpers
-│   ├── git.py         # Git helpers
-│   └── docker.py      # Docker helpers
-└── tests/             # Unit tests
+├── prometheus/    # Metrics
+├── grafana/       # Dashboards
+├── keycloak/      # Auth DB
+├── traefik/certs/ # SSL certs
+├── loki/          # Logs
+└── tempo/         # Traces
 ```
 

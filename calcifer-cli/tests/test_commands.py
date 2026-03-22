@@ -145,13 +145,5 @@ class TestSyncEnvCommand:
         assert info["name"] == "sync-env"
 
 
-class TestAnsibleCommand:
-    """Tests for ansible command."""
-    
-    def test_register(self):
-        """Command should register correctly."""
-        from commands.ansible import register
-        info = register()
-        
-        assert info["name"] == "ansible"
+
 
