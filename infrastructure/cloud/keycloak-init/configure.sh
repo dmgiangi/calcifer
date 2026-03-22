@@ -17,6 +17,8 @@ KEYCLOAK_URL="${KEYCLOAK_URL:-http://keycloak:8080}"
 KEYCLOAK_ADMIN="${KEYCLOAK_ADMIN:-admin}"
 KEYCLOAK_ADMIN_PASSWORD="${KEYCLOAK_ADMIN_PASSWORD:-admin}"
 REALM="${REALM:-calcifer}"
+KEYCLOAK_CLIENT_ID="${KEYCLOAK_CLIENT_ID:-calcifer-gateway}"
+KEYCLOAK_CLIENT_SECRET="${KEYCLOAK_CLIENT_SECRET:-}"
 API_CLIENT_ID="${API_CLIENT_ID:-calcifer-api}"
 API_CLIENT_SECRET="${API_CLIENT_SECRET:-}"
 
@@ -308,6 +310,61 @@ configure_realm_admins() {
     done
 }
 
+# Configure gateway client (for forward-auth)
+configure_gateway_client() {
+    local token=$1
+
+    if [ -z "${KEYCLOAK_CLIENT_SECRET}" ]; then
+        warn "KEYCLOAK_CLIENT_SECRET not set, skipping gateway client configuration"
+        return 0
+    fi
+
+    log "Configuring gateway client: ${KEYCLOAK_CLIENT_ID}"
+
+    # Get client UUID
+    local client=$(curl -sf \
+        -H "Authorization: Bearer ${token}" \
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=${KEYCLOAK_CLIENT_ID}")
+
+    local client_uuid=$(echo "$client" | jq -r '.[0].id // empty')
+
+    if [ -z "$client_uuid" ]; then
+        log "Creating gateway client..."
+        curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
+            -H "Authorization: Bearer ${token}" \
+            -H "Content-Type: application/json" \
+            -d "{
+                \"clientId\": \"${KEYCLOAK_CLIENT_ID}\",
+                \"name\": \"Calcifer Gateway\",
+                \"enabled\": true,
+                \"publicClient\": false,
+                \"secret\": \"${KEYCLOAK_CLIENT_SECRET}\",
+                \"redirectUris\": [\"https://*.dmgiangi.dev/*\", \"https://auth.dmgiangi.dev/_oauth\"],
+                \"webOrigins\": [\"https://*.dmgiangi.dev\"],
+                \"standardFlowEnabled\": true,
+                \"directAccessGrantsEnabled\": true,
+                \"protocol\": \"openid-connect\"
+            }"
+    else
+        log "Updating gateway client secret..."
+        curl -sf -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_uuid}" \
+            -H "Authorization: Bearer ${token}" \
+            -H "Content-Type: application/json" \
+            -d "{
+                \"clientId\": \"${KEYCLOAK_CLIENT_ID}\",
+                \"secret\": \"${KEYCLOAK_CLIENT_SECRET}\",
+                \"enabled\": true,
+                \"publicClient\": false,
+                \"redirectUris\": [\"https://*.dmgiangi.dev/*\", \"https://auth.dmgiangi.dev/_oauth\"],
+                \"webOrigins\": [\"https://*.dmgiangi.dev\"],
+                \"standardFlowEnabled\": true,
+                \"directAccessGrantsEnabled\": true
+            }" || true
+    fi
+
+    log "Gateway client configured!"
+}
+
 # Configure API client for M2M access
 configure_api_client() {
     local token=$1
@@ -428,6 +485,9 @@ main() {
 
     # Configure Google IDP in calcifer realm for app access
     configure_google_idp_for_realm "$TOKEN" "${REALM}"
+
+    # Configure gateway client (for forward-auth)
+    configure_gateway_client "$TOKEN"
 
     # Configure realm admins
     configure_realm_admins "$TOKEN"
