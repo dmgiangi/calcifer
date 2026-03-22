@@ -2,6 +2,12 @@
 # =============================================================================
 # Keycloak Init Script
 # Configures realm, users, and identity providers via Admin REST API
+#
+# This script:
+# 1. Configures Google IDP in MASTER realm for server admin access
+# 2. Creates admin user from ADMIN_EMAILS with master realm admin role
+# 3. Disables the temporary bootstrap admin account
+# 4. Configures Google IDP in calcifer realm for application access
 # =============================================================================
 
 set -e
@@ -65,21 +71,22 @@ create_realm() {
         -d "{\"realm\": \"${REALM}\", \"enabled\": true}"
 }
 
-# Configure Google Identity Provider
-configure_google_idp() {
+# Configure Google Identity Provider in a realm
+configure_google_idp_for_realm() {
     local token=$1
+    local target_realm=$2
 
     if [ -z "${GOOGLE_CLIENT_ID}" ] || [ -z "${GOOGLE_CLIENT_SECRET}" ]; then
         warn "GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not set, skipping Google IDP"
         return 0
     fi
 
-    log "Configuring Google Identity Provider..."
+    log "Configuring Google IDP in realm: ${target_realm}..."
 
     # Check if IDP exists
     local exists=$(curl -sf -o /dev/null -w "%{http_code}" \
         -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/identity-provider/instances/google")
+        "${KEYCLOAK_URL}/admin/realms/${target_realm}/identity-provider/instances/google")
 
     local idp_config=$(cat <<EOF
 {
@@ -100,28 +107,31 @@ EOF
 )
 
     if [ "$exists" = "200" ]; then
-        log "Deleting existing Google IDP to recreate with correct settings..."
-        curl -sf -X DELETE "${KEYCLOAK_URL}/admin/realms/${REALM}/identity-provider/instances/google" \
-            -H "Authorization: Bearer ${token}"
+        log "Updating existing Google IDP in ${target_realm}..."
+        curl -sf -X PUT "${KEYCLOAK_URL}/admin/realms/${target_realm}/identity-provider/instances/google" \
+            -H "Authorization: Bearer ${token}" \
+            -H "Content-Type: application/json" \
+            -d "${idp_config}" || true
+    else
+        log "Creating Google IDP in ${target_realm}..."
+        curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${target_realm}/identity-provider/instances" \
+            -H "Authorization: Bearer ${token}" \
+            -H "Content-Type: application/json" \
+            -d "${idp_config}"
+
+        # Add mappers for Google IDP
+        configure_google_mappers "$token" "$target_realm"
     fi
-
-    log "Creating Google IDP..."
-    curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/identity-provider/instances" \
-        -H "Authorization: Bearer ${token}" \
-        -H "Content-Type: application/json" \
-        -d "${idp_config}"
-
-    # Add mappers for Google IDP
-    configure_google_mappers "$token"
 }
 
 # Configure Google IDP Mappers
 configure_google_mappers() {
     local token=$1
-    log "Configuring Google IDP mappers..."
+    local target_realm=$2
+    log "Configuring Google IDP mappers in ${target_realm}..."
 
     # Username from email
-    curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/identity-provider/instances/google/mappers" \
+    curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${target_realm}/identity-provider/instances/google/mappers" \
         -H "Authorization: Bearer ${token}" \
         -H "Content-Type: application/json" \
         -d '{
@@ -132,7 +142,7 @@ configure_google_mappers() {
         }' || true
 
     # First name
-    curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/identity-provider/instances/google/mappers" \
+    curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${target_realm}/identity-provider/instances/google/mappers" \
         -H "Authorization: Bearer ${token}" \
         -H "Content-Type: application/json" \
         -d '{
@@ -143,7 +153,7 @@ configure_google_mappers() {
         }' || true
 
     # Last name
-    curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/identity-provider/instances/google/mappers" \
+    curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${target_realm}/identity-provider/instances/google/mappers" \
         -H "Authorization: Bearer ${token}" \
         -H "Content-Type: application/json" \
         -d '{
@@ -154,88 +164,194 @@ configure_google_mappers() {
         }' || true
 }
 
-# Configure admin users from ADMIN_EMAILS
-configure_admin_users() {
+# Configure MASTER realm admin user from ADMIN_EMAILS
+# This gives full server admin access via Google login
+configure_master_admin() {
     local token=$1
 
     if [ -z "${ADMIN_EMAILS}" ]; then
-        warn "ADMIN_EMAILS not set, skipping admin user configuration"
+        warn "ADMIN_EMAILS not set, skipping master admin configuration"
         return 0
     fi
 
-    log "Configuring admin users: ${ADMIN_EMAILS}"
+    # Get first admin email
+    local admin_email=$(echo "${ADMIN_EMAILS}" | cut -d',' -f1 | xargs)
+    log "Configuring master admin: ${admin_email}"
 
-    # Get admin role ID
+    # Check if user exists in master realm
+    local user_id=$(curl -sf \
+        -H "Authorization: Bearer ${token}" \
+        "${KEYCLOAK_URL}/admin/realms/master/users?email=${admin_email}&exact=true" | jq -r '.[0].id // empty')
+
+    if [ -z "$user_id" ]; then
+        log "Master admin user ${admin_email} will be created on first Google login to master realm"
+        log "After first login, re-run this init to assign admin role"
+        return 0
+    fi
+
+    log "User ${admin_email} exists in master realm (id: ${user_id})"
+
+    # Get master realm admin role
+    local admin_role=$(curl -sf \
+        -H "Authorization: Bearer ${token}" \
+        "${KEYCLOAK_URL}/admin/realms/master/roles/admin")
+
+    local admin_role_id=$(echo "$admin_role" | jq -r '.id')
+
+    if [ -z "$admin_role_id" ] || [ "$admin_role_id" = "null" ]; then
+        warn "Master admin role not found"
+        return 0
+    fi
+
+    # Assign admin role
+    log "Assigning master admin role to ${admin_email}..."
+    curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/master/users/${user_id}/role-mappings/realm" \
+        -H "Authorization: Bearer ${token}" \
+        -H "Content-Type: application/json" \
+        -d "[{\"id\": \"${admin_role_id}\", \"name\": \"admin\"}]" || true
+
+    log "Master admin role assigned to ${admin_email}"
+}
+
+# Disable the temporary bootstrap admin account
+disable_bootstrap_admin() {
+    local token=$1
+
+    log "Checking for bootstrap admin account..."
+
+    # Get bootstrap admin user
+    local admin_user=$(curl -sf \
+        -H "Authorization: Bearer ${token}" \
+        "${KEYCLOAK_URL}/admin/realms/master/users?username=${KEYCLOAK_ADMIN}&exact=true" | jq -r '.[0]')
+
+    local admin_id=$(echo "$admin_user" | jq -r '.id // empty')
+
+    if [ -z "$admin_id" ]; then
+        log "Bootstrap admin not found (already removed or renamed)"
+        return 0
+    fi
+
+    # Check if this is a temporary admin (email not set or same as username)
+    local admin_email=$(echo "$admin_user" | jq -r '.email // empty')
+
+    # Only disable if admin email is in ADMIN_EMAILS (meaning permanent admin exists)
+    if [ -z "${ADMIN_EMAILS}" ]; then
+        warn "Cannot disable bootstrap admin: no ADMIN_EMAILS configured"
+        return 0
+    fi
+
+    # Check if permanent admin has logged in
+    local first_admin_email=$(echo "${ADMIN_EMAILS}" | cut -d',' -f1 | xargs)
+    local permanent_admin=$(curl -sf \
+        -H "Authorization: Bearer ${token}" \
+        "${KEYCLOAK_URL}/admin/realms/master/users?email=${first_admin_email}&exact=true" | jq -r '.[0].id // empty')
+
+    if [ -z "$permanent_admin" ]; then
+        warn "Cannot disable bootstrap admin: permanent admin ${first_admin_email} hasn't logged in yet"
+        warn "Login to Keycloak master realm with Google first, then re-run init"
+        return 0
+    fi
+
+    log "Permanent admin exists. Disabling bootstrap admin account..."
+
+    # Disable the bootstrap admin
+    curl -sf -X PUT "${KEYCLOAK_URL}/admin/realms/master/users/${admin_id}" \
+        -H "Authorization: Bearer ${token}" \
+        -H "Content-Type: application/json" \
+        -d '{"enabled": false}' || true
+
+    log "Bootstrap admin account disabled!"
+}
+
+# Configure admin users in calcifer realm
+configure_realm_admins() {
+    local token=$1
+
+    if [ -z "${ADMIN_EMAILS}" ]; then
+        warn "ADMIN_EMAILS not set, skipping realm admin configuration"
+        return 0
+    fi
+
+    log "Configuring realm admins: ${ADMIN_EMAILS}"
+
+    # Get admin role ID for calcifer realm
     local admin_role_id=$(curl -sf \
         -H "Authorization: Bearer ${token}" \
         "${KEYCLOAK_URL}/admin/realms/${REALM}/roles/admin" | jq -r '.id')
 
     if [ -z "$admin_role_id" ] || [ "$admin_role_id" = "null" ]; then
-        warn "Admin role not found, skipping user configuration"
+        warn "Admin role not found in ${REALM} realm, skipping"
         return 0
     fi
 
-    # Process each email (comma-separated)
+    # Process each email
     IFS=',' read -ra EMAILS <<< "$ADMIN_EMAILS"
     for email in "${EMAILS[@]}"; do
-        email=$(echo "$email" | xargs)  # trim whitespace
-        configure_admin_user "$token" "$email" "$admin_role_id"
-    done
-}
+        email=$(echo "$email" | xargs)
 
-# Configure a single admin user
-configure_admin_user() {
-    local token=$1
-    local email=$2
-    local admin_role_id=$3
-
-    log "Configuring admin user: ${email}"
-
-    # Check if user exists
-    local user_id=$(curl -sf \
-        -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/users?email=${email}&exact=true" | jq -r '.[0].id // empty')
-
-    if [ -z "$user_id" ]; then
-        log "User ${email} will be created on first Google login"
-        return 0
-    else
-        log "User ${email} already exists (id: ${user_id})"
-    fi
-
-    if [ -n "$user_id" ]; then
-        # Assign admin role
-        log "Assigning admin role to ${email}..."
-        curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/users/${user_id}/role-mappings/realm" \
+        local user_id=$(curl -sf \
             -H "Authorization: Bearer ${token}" \
-            -H "Content-Type: application/json" \
-            -d "[{\"id\": \"${admin_role_id}\", \"name\": \"admin\"}]" || true
-        log "Admin role assigned to ${email}"
-    fi
+            "${KEYCLOAK_URL}/admin/realms/${REALM}/users?email=${email}&exact=true" | jq -r '.[0].id // empty')
+
+        if [ -n "$user_id" ]; then
+            log "Assigning admin role to ${email} in ${REALM} realm..."
+            curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/users/${user_id}/role-mappings/realm" \
+                -H "Authorization: Bearer ${token}" \
+                -H "Content-Type: application/json" \
+                -d "[{\"id\": \"${admin_role_id}\", \"name\": \"admin\"}]" || true
+        else
+            log "User ${email} not found in ${REALM} realm (will be created on first login)"
+        fi
+    done
 }
 
 # Main
 main() {
     wait_for_keycloak
-    
+
     log "Getting admin token..."
     TOKEN=$(get_token)
-    
+
     if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
         error "Failed to get admin token"
         exit 1
     fi
-    
+
+    # ===== MASTER REALM CONFIGURATION =====
+    log "========== MASTER REALM SETUP =========="
+
+    # Configure Google IDP in master realm for admin access
+    configure_google_idp_for_realm "$TOKEN" "master"
+
+    # Configure permanent admin user
+    configure_master_admin "$TOKEN"
+
+    # Disable bootstrap admin (only if permanent admin exists)
+    disable_bootstrap_admin "$TOKEN"
+
+    # ===== CALCIFER REALM CONFIGURATION =====
+    log "========== CALCIFER REALM SETUP =========="
+
     if ! realm_exists "$TOKEN"; then
         create_realm "$TOKEN"
     else
         log "Realm ${REALM} already exists"
     fi
-    
-    configure_google_idp "$TOKEN"
-    configure_admin_users "$TOKEN"
-    
+
+    # Configure Google IDP in calcifer realm for app access
+    configure_google_idp_for_realm "$TOKEN" "${REALM}"
+
+    # Configure realm admins
+    configure_realm_admins "$TOKEN"
+
+    log "=========================================="
     log "Keycloak configuration complete!"
+    log ""
+    log "IMPORTANT: To complete admin setup:"
+    log "1. Go to https://keycloak.dmgiangi.dev/admin/master/console/"
+    log "2. Click 'Sign in with Google' and login with: ${ADMIN_EMAILS}"
+    log "3. Re-run this init container to assign admin role"
+    log ""
 }
 
 main "$@"
