@@ -142,19 +142,27 @@ EOF
 
     if [ "$exists" = "200" ]; then
         log "Updating existing Google IDP in ${target_realm}..."
-        curl -sf -X PUT "${KEYCLOAK_URL}/admin/realms/${target_realm}/identity-provider/instances/google" \
+        curl -s -X PUT "${KEYCLOAK_URL}/admin/realms/${target_realm}/identity-provider/instances/google" \
             -H "Authorization: Bearer ${token}" \
             -H "Content-Type: application/json" \
-            -d "${idp_config}" || true
+            -d "${idp_config}" > /dev/null || warn "Failed to update Google IDP"
     else
         log "Creating Google IDP in ${target_realm}..."
-        curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${target_realm}/identity-provider/instances" \
+        local response=$(curl -s -w "\n%{http_code}" -X POST "${KEYCLOAK_URL}/admin/realms/${target_realm}/identity-provider/instances" \
             -H "Authorization: Bearer ${token}" \
             -H "Content-Type: application/json" \
-            -d "${idp_config}"
+            -d "${idp_config}")
 
-        # Add mappers for Google IDP
-        configure_google_mappers "$token" "$target_realm"
+        local http_code=$(echo "$response" | tail -1)
+        local body=$(echo "$response" | head -n -1)
+
+        if [ "$http_code" = "201" ] || [ "$http_code" = "204" ]; then
+            log "Google IDP created successfully"
+            # Add mappers for Google IDP
+            configure_google_mappers "$token" "$target_realm"
+        else
+            warn "Failed to create Google IDP (HTTP $http_code): $body"
+        fi
     fi
 }
 
