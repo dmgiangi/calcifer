@@ -1,13 +1,12 @@
 # Calcifer CLI
 
-Environment configuration and deployment tool for Calcifer IoT platform.
+Server management and deployment tool for Calcifer IoT platform.
 
 ## Features
 
-- **Environment Management**: Generate and sync environment configuration
-- **Secret Generation**: Auto-generates internal secrets (passwords, tokens)
-- **External Credentials**: Prompts for external secrets (Google OAuth)
-- **Remote Sync**: Pushes configuration to deployment servers
+- **Bootstrap**: Full remote server setup from scratch
+- **Environment Management**: Generate and sync secrets/configuration
+- **Clean**: Wipe server while preserving SSL certificates
 
 ## Requirements
 
@@ -16,36 +15,62 @@ Environment configuration and deployment tool for Calcifer IoT platform.
 | Python | 3.8+ | Standard library only |
 | SSH | OpenSSH | With key-based authentication |
 
-## Usage
+## Commands
+
+### `bootstrap` - Full Server Setup
 
 ```bash
-./calcifer-cli.py env [--target home|cloud]
+./calcifer-cli.py bootstrap --target cloud
 ```
 
-## Environment Setup
+This will:
+1. Clone repository to remote server
+2. Create data volume directories with correct permissions
+3. Configure environment (prompts for Google OAuth credentials)
+4. Create systemd service for auto-start on boot
+5. Run `docker compose up`
 
-The CLI manages `.env.{target}` files locally (git-ignored) and syncs them to servers.
-
-### Cloud Environment
+### `env` - Configure Environment
 
 ```bash
 ./calcifer-cli.py env --target cloud
 ```
 
-This will:
-1. Load existing `.env.cloud` if present
-2. Auto-generate internal secrets (Keycloak, Grafana, Forward Auth)
-3. Prompt for external credentials (Google OAuth)
-4. Save locally to `.env.cloud`
-5. Push to cloud server
+Manages environment configuration:
+- Auto-generates internal secrets (passwords, tokens)
+- Prompts for external credentials (Google OAuth)
+- Saves locally to `.env.{target}` (git-ignored)
+- Pushes to remote server
 
-### Home Environment
+### `clean` - Wipe Server
 
 ```bash
-./calcifer-cli.py env --target home
+./calcifer-cli.py clean --target cloud --confirm
 ```
 
-Simpler setup for home server (no OAuth, no external services).
+Removes everything EXCEPT SSL certificates:
+- Repository clone
+- Environment secrets
+- Data volumes
+- Systemd service
+
+## Bootstrap from Scratch
+
+```bash
+# 1. Clone this repository locally
+git clone https://github.com/dmgiangi/calcifer.git
+cd calcifer/calcifer-cli
+
+# 2. Bootstrap the cloud server
+./calcifer-cli.py bootstrap --target cloud
+
+# 3. Login to Keycloak admin with Google
+# https://keycloak.dmgiangi.dev/admin/master/console/
+
+# 4. Re-run keycloak-init to assign admin role
+ssh user@server "cd /opt/calcifer/infrastructure/cloud && \
+  docker compose up -d --force-recreate keycloak-init"
+```
 
 ## Generated Secrets
 
@@ -54,11 +79,10 @@ Simpler setup for home server (no OAuth, no external services).
 | `GRAFANA_ADMIN_PASSWORD` | Grafana admin password |
 | `KEYCLOAK_ADMIN_PASSWORD` | Keycloak admin password |
 | `KEYCLOAK_CLIENT_SECRET` | OAuth client secret |
-| `FORWARD_AUTH_SECRET` | Cookie encryption key (64 hex chars) |
+| `API_CLIENT_SECRET` | API access secret (M2M) |
+| `FORWARD_AUTH_SECRET` | Cookie encryption key |
 
 ## Required External Credentials
-
-For cloud deployment with Google OAuth:
 
 | Variable | Description | Where to get |
 |----------|-------------|--------------|
@@ -66,23 +90,20 @@ For cloud deployment with Google OAuth:
 | `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | Same as above |
 | `ADMIN_EMAILS` | Admin email addresses | Your Google email(s) |
 
-## Bootstrap from Scratch
+## Directory Structure
 
-```bash
-# 1. Clone the repository
-git clone https://github.com/dmgiangi/calcifer.git
-cd calcifer/calcifer-cli
-
-# 2. Configure cloud environment
-./calcifer-cli.py env --target cloud
-
-# 3. SSH to server and start services
-ssh user@server "cd /opt/calcifer/infrastructure/cloud && docker compose up -d"
+```
+/opt/calcifer/                    # Repository
+/var/lib/calcifer/{target}/       # Data volumes
+  ├── prometheus/
+  ├── grafana/
+  ├── keycloak/
+  ├── loki/
+  └── tempo/
+/opt/certs/                       # SSL certificates (preserved on clean)
 ```
 
 ## Configuration
-
-SSH targets are configured in `utils/config.py`:
 
 | Target | Host | Deploy Directory |
 |--------|------|------------------|
