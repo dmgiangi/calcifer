@@ -82,16 +82,13 @@ services:
     image: quay.io/keycloak/keycloak:24.0
     container_name: calcifer_cloud_keycloak
     restart: unless-stopped
-    command: start-dev --import-realm
+    command: start-dev --import-realm --hostname-strict=false
     environment:
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      - KC_PROXY_HEADERS=xforwarded
-      - KC_HOSTNAME_URL=https://keycloak.${DOMAIN:-dmgiangi.dev}
-      - KC_HOSTNAME_ADMIN_URL=https://keycloak.${DOMAIN:-dmgiangi.dev}
-      - KC_HOSTNAME_STRICT=false
-      - KC_HOSTNAME_STRICT_BACKCHANNEL=false
+      - KC_PROXY_HEADERS=forwarded
       - KC_HTTP_ENABLED=true
+      - KC_HEALTH_ENABLED=true
     volumes:
       - ./keycloak/calcifer-realm.json:/opt/keycloak/data/import/calcifer-realm.json:ro
       - keycloak_data:/opt/keycloak/data
