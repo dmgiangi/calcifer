@@ -11,7 +11,7 @@ include:
 services:
   # ==================== METRICS ====================
   prometheus:
-    image: prom/prometheus:v2.48.1
+    image: prom/prometheus:v3
     container_name: calcifer_cloud_prometheus
     restart: unless-stopped
     volumes:
@@ -41,7 +41,7 @@ services:
 
   # ==================== VISUALIZATION ====================
   grafana:
-    image: grafana/grafana:10.2.3
+    image: grafana/grafana:main
     container_name: calcifer_cloud_grafana
     restart: unless-stopped
     env_file:
@@ -113,7 +113,7 @@ services:
 
   # ==================== EDGE ROUTER ====================
   traefik:
-    image: traefik:v3.3
+    image: traefik:v3.6
     container_name: calcifer_cloud_traefik
     restart: unless-stopped
     command:
