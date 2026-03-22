@@ -185,29 +185,62 @@ def cmd_bootstrap(args: List[str]) -> int:
             else:
                 print(f"      ❌ {line}")
 
+    # Step 6: Wait for Keycloak and run init (cloud only)
+    if opts.target == "cloud":
+        print_header("6. CONFIGURE KEYCLOAK")
+        print_step("⏳", "Waiting for Keycloak to be healthy...")
+
+        # Wait for Keycloak healthy
+        for i in range(30):
+            result = ssh_run(config,
+                "docker inspect calcifer_cloud_keycloak --format '{{.State.Health.Status}}' 2>/dev/null",
+                check=False)
+            status = result.stdout.strip()
+            if status == "healthy":
+                print_step("✅", "Keycloak is healthy")
+                break
+            print_step("⏳", f"Waiting... ({status})")
+            ssh_run(config, "sleep 5", check=False)
+
+        # Run keycloak-init
+        print_step("🔧", "Running keycloak-init (configure Google IDP)...")
+        ssh_run(config,
+            f"cd {target.deploy_dir}/infrastructure/{target.compose_dir} && docker compose up -d --force-recreate keycloak-init",
+            check=False)
+        ssh_run(config, "sleep 15", check=False)
+
+        # Show init logs
+        result = ssh_run(config, "docker logs calcifer_cloud_keycloak_init 2>&1 | tail -10", check=False)
+        for line in result.stdout.strip().split('\n'):
+            if '[INIT]' in line:
+                print(f"      {line}")
+
     print_header("BOOTSTRAP COMPLETE")
     print()
-    print(f"  🌐 Services available at:")
 
     if opts.target == "cloud":
         domain = "dmgiangi.dev"
+        print(f"  🌐 Services available at:")
         print(f"      https://home.{domain}")
         print(f"      https://grafana.{domain}")
         print(f"      https://prometheus.{domain}")
         print(f"      https://keycloak.{domain}")
         print(f"      https://traefik.{domain}")
+        print()
+        print("  🔐 ADMIN SETUP (one-time):")
+        print()
+        print("      1. Open: https://keycloak.dmgiangi.dev/admin/master/console/")
+        print("      2. Click 'Sign in with Google'")
+        print("      3. Login with your admin email")
+        print("      4. Run this command to assign admin role:")
+        print()
+        print(f"         ./calcifer-cli.py init-admin --target {opts.target}")
+        print()
     else:
+        print(f"  🌐 Services available at:")
         print(f"      http://192.168.8.180:3000  (Grafana)")
         print(f"      http://192.168.8.180:9090  (Prometheus)")
-
-    print()
-    print("  📋 Next steps:")
-    print("      1. Login to Keycloak admin console with Google")
-    print("      2. Re-run keycloak-init to assign admin role:")
-    print(f"         ssh {target.user}@{target.host}")
-    print(f"         cd {target.deploy_dir}/infrastructure/{target.compose_dir}")
-    print("         docker compose up -d --force-recreate keycloak-init")
-    print()
+        print()
 
     return 0
 

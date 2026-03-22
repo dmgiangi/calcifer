@@ -12,12 +12,14 @@ sys.path.insert(0, str(CLI_DIR))
 from commands.env import cmd_env
 from commands.bootstrap import cmd_bootstrap
 from commands.clean import cmd_clean
+from commands.init_admin import cmd_init_admin
 
 
 COMMANDS = {
     "env": (cmd_env, "Configure environment variables and secrets"),
     "bootstrap": (cmd_bootstrap, "Bootstrap remote server from scratch"),
     "clean": (cmd_clean, "Clean server (remove repo, volumes, secrets)"),
+    "init-admin": (cmd_init_admin, "Assign admin role after first Google login"),
 }
 
 
@@ -32,8 +34,9 @@ Usage:
     ./calcifer-cli.py <command> [--target home|cloud] [options]
 
 Commands:
-    env         Configure environment variables and secrets
     bootstrap   Bootstrap remote server from scratch
+    init-admin  Assign admin role after first Google login
+    env         Configure environment variables and secrets
     clean       Clean server (remove repo, volumes, secrets)
 
 Options:
@@ -41,21 +44,22 @@ Options:
     --help      Show help for a specific command
 
 Examples:
-    ./calcifer-cli.py env                        # Configure cloud env
     ./calcifer-cli.py bootstrap --target cloud   # Full server setup
+    ./calcifer-cli.py init-admin --target cloud  # Assign admin after login
     ./calcifer-cli.py clean --target cloud       # Wipe server (keep certs)
 
 Bootstrap workflow:
     1. ./calcifer-cli.py bootstrap --target cloud
        - Clones repo, creates folders, configures env
-       - Creates systemd service for auto-start
-       - Runs docker compose up
+       - Creates systemd service, starts services
+       - Configures Keycloak Google IDP
 
-    2. Login to Keycloak with Google to create admin user
+    2. Login to Keycloak admin with Google:
+       https://keycloak.dmgiangi.dev/admin/master/console/
 
-    3. Re-run keycloak-init to assign admin role:
-       ssh user@server "cd /opt/calcifer/infrastructure/cloud && \\
-         docker compose up -d --force-recreate keycloak-init"
+    3. ./calcifer-cli.py init-admin --target cloud
+       - Assigns admin role to your Google account
+       - Disables temporary bootstrap admin
 """)
 
 
