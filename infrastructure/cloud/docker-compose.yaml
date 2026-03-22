@@ -229,8 +229,8 @@ services:
       - "keycloak.${DOMAIN:-dmgiangi.dev}:host-gateway"
     labels:
       - "traefik.enable=true"
-      # OAuth callback route
-      - "traefik.http.routers.forward-auth.rule=Host(`auth.${DOMAIN:-dmgiangi.dev}`) && PathPrefix(`/_oauth`)"
+      # OAuth callback route - ALL requests to auth.dmgiangi.dev go to forward-auth
+      - "traefik.http.routers.forward-auth.rule=Host(`auth.${DOMAIN:-dmgiangi.dev}`)"
       - "traefik.http.routers.forward-auth.entrypoints=websecure"
       - "traefik.http.routers.forward-auth.tls.certresolver=letsencrypt"
       - "traefik.http.services.forward-auth.loadbalancer.server.port=4181"
