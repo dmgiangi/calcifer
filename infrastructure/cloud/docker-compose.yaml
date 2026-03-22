@@ -54,7 +54,6 @@ services:
       - GF_AUTH_PROXY_AUTO_SIGN_UP=true
     volumes:
       - ../common/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/provisioning:/etc/grafana/provisioning/override:ro
       - grafana_data:/var/lib/grafana
     depends_on:
       - prometheus

@@ -60,6 +60,7 @@ COMMANDS:
     test                Run health checks and smoke tests
     logs [service]      Show logs (optionally for specific service)
     rollback            Rollback to previous version
+    sync-env            Copy .env files to remote server
     help                Show this help message
 
 OPTIONS:
@@ -124,6 +125,10 @@ main() {
         logs)
             source "${DEPLOY_SCRIPTS_DIR}/logs.sh"
             cmd_logs "$@"
+            ;;
+        sync-env)
+            source "${DEPLOY_SCRIPTS_DIR}/sync-env.sh"
+            cmd_sync_env "$@"
             ;;
         rollback)
             source "${DEPLOY_SCRIPTS_DIR}/rollback.sh"
