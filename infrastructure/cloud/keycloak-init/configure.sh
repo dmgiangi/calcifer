@@ -123,23 +123,8 @@ configure_google_idp_for_realm() {
         -H "Authorization: Bearer ${token}" \
         "${KEYCLOAK_URL}/admin/realms/${target_realm}/identity-provider/instances/google")
 
-    local idp_config=$(cat <<EOF
-{
-    "alias": "google",
-    "displayName": "Google",
-    "providerId": "google",
-    "enabled": true,
-    "trustEmail": true,
-    "firstBrokerLoginFlowAlias": "first broker login",
-    "config": {
-        "clientId": "${GOOGLE_CLIENT_ID}",
-        "clientSecret": "${GOOGLE_CLIENT_SECRET}",
-        "defaultScope": "openid email profile",
-        "syncMode": "FORCE"
-    }
-}
-EOF
-)
+    # Build JSON without heredoc to avoid escaping issues
+    local idp_config="{\"alias\":\"google\",\"displayName\":\"Google\",\"providerId\":\"google\",\"enabled\":true,\"trustEmail\":true,\"firstBrokerLoginFlowAlias\":\"first broker login\",\"config\":{\"clientId\":\"${GOOGLE_CLIENT_ID}\",\"clientSecret\":\"${GOOGLE_CLIENT_SECRET}\",\"defaultScope\":\"openid email profile\",\"syncMode\":\"FORCE\"}}"
 
     if [ "$exists" = "200" ]; then
         log "Updating existing Google IDP in ${target_realm}..."
@@ -368,20 +353,12 @@ configure_gateway_client() {
 
     if [ -z "$client_uuid" ]; then
         log "Creating gateway client..."
+        local create_json="{\"clientId\":\"${KEYCLOAK_CLIENT_ID}\",\"name\":\"Calcifer Gateway\",\"enabled\":true,\"publicClient\":false,\"redirectUris\":[\"https://*.dmgiangi.dev/*\",\"https://auth.dmgiangi.dev/_oauth\"],\"webOrigins\":[\"https://*.dmgiangi.dev\"],\"standardFlowEnabled\":true,\"directAccessGrantsEnabled\":true,\"protocol\":\"openid-connect\"}"
+
         curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
             -H "Authorization: Bearer ${token}" \
             -H "Content-Type: application/json" \
-            -d "{
-                \"clientId\": \"${KEYCLOAK_CLIENT_ID}\",
-                \"name\": \"Calcifer Gateway\",
-                \"enabled\": true,
-                \"publicClient\": false,
-                \"redirectUris\": [\"https://*.dmgiangi.dev/*\", \"https://auth.dmgiangi.dev/_oauth\"],
-                \"webOrigins\": [\"https://*.dmgiangi.dev\"],
-                \"standardFlowEnabled\": true,
-                \"directAccessGrantsEnabled\": true,
-                \"protocol\": \"openid-connect\"
-            }" > /dev/null
+            -d "${create_json}" > /dev/null
 
         # Get the newly created client UUID
         client=$(curl -sf \
@@ -393,26 +370,14 @@ configure_gateway_client() {
     # Set the client secret explicitly
     if [ -n "$client_uuid" ]; then
         log "Setting gateway client secret..."
-        curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_uuid}/client-secret" \
-            -H "Authorization: Bearer ${token}" \
-            -H "Content-Type: application/json" > /dev/null
 
-        # Now update the client with the correct secret value
+        # Update the client with the correct secret value
+        local update_json="{\"id\":\"${client_uuid}\",\"clientId\":\"${KEYCLOAK_CLIENT_ID}\",\"secret\":\"${KEYCLOAK_CLIENT_SECRET}\",\"enabled\":true,\"publicClient\":false,\"clientAuthenticatorType\":\"client-secret\",\"redirectUris\":[\"https://*.dmgiangi.dev/*\",\"https://auth.dmgiangi.dev/_oauth\"],\"webOrigins\":[\"https://*.dmgiangi.dev\"],\"standardFlowEnabled\":true,\"directAccessGrantsEnabled\":true}"
+
         curl -s -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_uuid}" \
             -H "Authorization: Bearer ${token}" \
             -H "Content-Type: application/json" \
-            -d "{
-                \"id\": \"${client_uuid}\",
-                \"clientId\": \"${KEYCLOAK_CLIENT_ID}\",
-                \"secret\": \"${KEYCLOAK_CLIENT_SECRET}\",
-                \"enabled\": true,
-                \"publicClient\": false,
-                \"clientAuthenticatorType\": \"client-secret\",
-                \"redirectUris\": [\"https://*.dmgiangi.dev/*\", \"https://auth.dmgiangi.dev/_oauth\"],
-                \"webOrigins\": [\"https://*.dmgiangi.dev\"],
-                \"standardFlowEnabled\": true,
-                \"directAccessGrantsEnabled\": true
-            }" > /dev/null || warn "Failed to update gateway client"
+            -d "${update_json}" > /dev/null || warn "Failed to update gateway client"
 
         log "Gateway client configured!"
     else
@@ -440,21 +405,12 @@ configure_api_client() {
 
     if [ -z "$client_uuid" ]; then
         log "Creating API client..."
-        curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
+        local create_json="{\"clientId\":\"${API_CLIENT_ID}\",\"name\":\"Calcifer API Client\",\"description\":\"Service account for programmatic API access (M2M)\",\"enabled\":true,\"publicClient\":false,\"secret\":\"${API_CLIENT_SECRET}\",\"standardFlowEnabled\":false,\"directAccessGrantsEnabled\":false,\"serviceAccountsEnabled\":true,\"protocol\":\"openid-connect\"}"
+
+        curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
             -H "Authorization: Bearer ${token}" \
             -H "Content-Type: application/json" \
-            -d "{
-                \"clientId\": \"${API_CLIENT_ID}\",
-                \"name\": \"Calcifer API Client\",
-                \"description\": \"Service account for programmatic API access (M2M)\",
-                \"enabled\": true,
-                \"publicClient\": false,
-                \"secret\": \"${API_CLIENT_SECRET}\",
-                \"standardFlowEnabled\": false,
-                \"directAccessGrantsEnabled\": false,
-                \"serviceAccountsEnabled\": true,
-                \"protocol\": \"openid-connect\"
-            }"
+            -d "${create_json}" > /dev/null
 
         # Get the new client UUID
         client=$(curl -sf \
@@ -463,14 +419,12 @@ configure_api_client() {
         client_uuid=$(echo "$client" | jq -r '.[0].id // empty')
     else
         log "Updating API client secret..."
-        curl -sf -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_uuid}" \
+        local update_json="{\"clientId\":\"${API_CLIENT_ID}\",\"secret\":\"${API_CLIENT_SECRET}\",\"serviceAccountsEnabled\":true}"
+
+        curl -s -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_uuid}" \
             -H "Authorization: Bearer ${token}" \
             -H "Content-Type: application/json" \
-            -d "{
-                \"clientId\": \"${API_CLIENT_ID}\",
-                \"secret\": \"${API_CLIENT_SECRET}\",
-                \"serviceAccountsEnabled\": true
-            }" || true
+            -d "${update_json}" > /dev/null || true
     fi
 
     # Assign admin role to service account
