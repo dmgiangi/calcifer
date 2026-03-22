@@ -21,6 +21,8 @@ ENV_VARS = {
             "COMPOSE_PROJECT_NAME": ("calcifer-cloud", "Docker Compose project name"),
             "ENVIRONMENT": ("cloud", "Environment name"),
             "DOMAIN": ("dmgiangi.dev", "Domain for services"),
+            "DATA_DIR": ("/var/lib/calcifer/cloud", "Data directory for volumes"),
+            "CERTS_DIR": ("/opt/certs", "Certificates directory (separate for safety)"),
         },
         "grafana": {
             "GRAFANA_ADMIN_USER": ("admin", "Grafana admin username"),
