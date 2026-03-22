@@ -220,7 +220,7 @@ services:
       - AUTH_HOST=auth.${DOMAIN:-dmgiangi.dev}
       - COOKIE_DOMAIN=${DOMAIN:-dmgiangi.dev}
       - INSECURE_COOKIE=false
-      - LOG_LEVEL=info
+      - LOG_LEVEL=debug
       - URL_PATH=/_oauth
     networks:
       - calcifer_net
