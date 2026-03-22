@@ -132,6 +132,25 @@ services:
       - "homepage.description=Identity & Access Management"
       - "homepage.siteMonitor=http://calcifer_cloud_keycloak:9000/health/ready"
 
+  # Keycloak Init - Configures realm, users, and IDPs via REST API
+  keycloak-init:
+    build: ./keycloak-init
+    container_name: calcifer_cloud_keycloak_init
+    restart: "no"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    environment:
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - REALM=calcifer
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - ADMIN_EMAILS=${ADMIN_EMAILS:-}
+    networks:
+      - calcifer_net
+
   # ==================== EDGE ROUTER ====================
   traefik:
     image: traefik:v3.6
