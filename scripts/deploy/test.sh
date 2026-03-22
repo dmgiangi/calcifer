@@ -35,15 +35,28 @@ cmd_test() {
         base_url="http://localhost"
     fi
 
-    # Define health check endpoints
-    local -a checks=(
-        "core-server|${base_url}:8080/actuator/health|Core Server API"
-        "grafana|${base_url}:3000/api/health|Grafana Dashboard"
-        "prometheus|${base_url}:9090/-/healthy|Prometheus Metrics"
-        "rabbitmq|${base_url}:15672/api/health/checks/alarms|RabbitMQ Broker"
-        "loki|${base_url}:3100/ready|Loki Logs"
-        "tempo|${base_url}:3200/ready|Tempo Traces"
-    )
+    # Define health check endpoints based on target environment
+    local -a checks=()
+
+    if [[ "${DEPLOY_TARGET}" == "cloud" ]]; then
+        checks=(
+            "grafana|${base_url}:3000/api/health|Grafana Dashboard"
+            "prometheus|${base_url}:9090/-/healthy|Prometheus Metrics"
+            "loki|${base_url}:3100/ready|Loki Logs"
+            "tempo|${base_url}:3200/ready|Tempo Traces"
+            "keycloak|${base_url}:8080/health/ready|Keycloak Identity"
+            "traefik|${base_url}:8080/api/overview|Traefik Router"
+        )
+    else
+        checks=(
+            "core-server|${base_url}:8080/actuator/health|Core Server API"
+            "grafana|${base_url}:3000/api/health|Grafana Dashboard"
+            "prometheus|${base_url}:9090/-/healthy|Prometheus Metrics"
+            "rabbitmq|${base_url}:15672/api/health/checks/alarms|RabbitMQ Broker"
+            "loki|${base_url}:3100/ready|Loki Logs"
+            "tempo|${base_url}:3200/ready|Tempo Traces"
+        )
+    fi
 
     local results=()
     local all_passed=true
