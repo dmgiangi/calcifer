@@ -11,7 +11,8 @@
 # 5. Configures API client for M2M (machine-to-machine) access
 # =============================================================================
 
-set -e
+# Don't use set -e - we handle errors manually for better logging
+# set -e
 
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://keycloak:8080}"
 KEYCLOAK_ADMIN="${KEYCLOAK_ADMIN:-admin}"
