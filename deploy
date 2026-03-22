@@ -1,148 +1,20 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Calcifer Deploy CLI
+# Calcifer Deploy CLI - Python Wrapper
 # =============================================================================
 # LLM-friendly deployment script with JSON output
-# Usage: ./deploy <command> [options]
+# Delegates to Python CLI: calcifer-cli/calcifer-cli.py
 # =============================================================================
 
-set -euo pipefail
-
-# Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEPLOY_SCRIPTS_DIR="${SCRIPT_DIR}/calcifer-cli/deploy"
+CLI_PATH="${SCRIPT_DIR}/calcifer-cli/calcifer-cli.py"
 
-# Parse global options first (before loading config)
-for arg in "$@"; do
-    case "$arg" in
-        --target=*)
-            export DEPLOY_TARGET="${arg#*=}"
-            ;;
-        --target)
-            # Handle next arg
-            ;;
-        home|cloud)
-            # Positional target after --target
-            if [[ "${prev_arg:-}" == "--target" ]]; then
-                export DEPLOY_TARGET="$arg"
-            fi
-            ;;
-    esac
-    prev_arg="$arg"
-done
-
-# Default target
-: "${DEPLOY_TARGET:=home}"
-
-# Load configuration
-if [[ -f "${SCRIPT_DIR}/deploy.conf" ]]; then
-    source "${SCRIPT_DIR}/deploy.conf"
+# Check Python is available
+if ! command -v python3 &>/dev/null; then
+    echo '{"success": false, "errors": [{"message": "Python 3 not found"}]}'
+    exit 1
 fi
 
-# Load common functions
-source "${DEPLOY_SCRIPTS_DIR}/_common.sh"
-
-# =============================================================================
-# Help
-# =============================================================================
-show_help() {
-    cat << 'EOF'
-Calcifer Deploy CLI - LLM-friendly deployment tool
-
-USAGE:
-    ./deploy <command> [options]
-
-COMMANDS:
-    status              Show current state of all services (JSON)
-    build               Build Docker images locally
-    push                Push images to container registry
-    run                 Deploy to remote server
-    test                Run health checks and smoke tests
-    logs [service]      Show logs (optionally for specific service)
-    rollback            Rollback to previous version
-    sync-env            Copy .env files to remote server
-    help                Show this help message
-
-OPTIONS:
-    --target <target>   Target environment: home, cloud (default: home)
-    --env <name>        Environment: dev, staging, production (default: production)
-    --verbose           Show detailed output
-
-TARGETS:
-    home                LAN environment (Core Server + deps + monitoring)
-    cloud               Public environment (Monitoring + Keycloak + Traefik)
-
-EXAMPLES:
-    ./deploy status --target home
-    ./deploy status --target cloud
-    ./deploy build --target home
-    ./deploy run --target cloud
-    ./deploy test --target home
-    ./deploy logs core-server --target home
-    ./deploy rollback --target home
-
-OUTPUT:
-    All commands return JSON with structure:
-    {
-        "timestamp": "ISO8601",
-        "command": "command_name",
-        "success": true|false,
-        "data": { ... },
-        "errors": [],
-        "next_actions": ["suggested", "commands"]
-    }
-EOF
-}
-
-# =============================================================================
-# Main
-# =============================================================================
-main() {
-    local command="${1:-help}"
-    shift || true
-
-    case "${command}" in
-        status)
-            source "${DEPLOY_SCRIPTS_DIR}/status.sh"
-            cmd_status "$@"
-            ;;
-        build)
-            source "${DEPLOY_SCRIPTS_DIR}/build.sh"
-            cmd_build "$@"
-            ;;
-        push)
-            source "${DEPLOY_SCRIPTS_DIR}/push.sh"
-            cmd_push "$@"
-            ;;
-        run)
-            source "${DEPLOY_SCRIPTS_DIR}/run.sh"
-            cmd_run "$@"
-            ;;
-        test)
-            source "${DEPLOY_SCRIPTS_DIR}/test.sh"
-            cmd_test "$@"
-            ;;
-        logs)
-            source "${DEPLOY_SCRIPTS_DIR}/logs.sh"
-            cmd_logs "$@"
-            ;;
-        sync-env)
-            source "${DEPLOY_SCRIPTS_DIR}/sync-env.sh"
-            cmd_sync_env "$@"
-            ;;
-        rollback)
-            source "${DEPLOY_SCRIPTS_DIR}/rollback.sh"
-            cmd_rollback "$@"
-            ;;
-        help|--help|-h)
-            show_help
-            ;;
-        *)
-            json_error "Unknown command: ${command}" "Use './deploy help' for available commands"
-            exit 1
-            ;;
-    esac
-}
-
-main "$@"
+# Execute Python CLI with all arguments
+exec python3 "${CLI_PATH}" "$@"
 

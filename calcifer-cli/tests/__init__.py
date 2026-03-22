@@ -1,0 +1,2 @@
+"""Calcifer CLI tests."""
+

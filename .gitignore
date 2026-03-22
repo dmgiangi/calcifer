@@ -36,3 +36,4 @@ infrastructure/.env
 
 ### Generated documentation ###
 utils/docs-output/
+**/__pycache__/
