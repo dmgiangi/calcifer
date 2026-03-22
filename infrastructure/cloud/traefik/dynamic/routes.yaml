@@ -10,9 +10,10 @@ http:
   routers:
     # ==================== API ROUTES (Bearer token auth) ====================
     # Higher priority (100) - checked first
+    # Uses HeaderRegexp (not HeadersRegexp) for Traefik v3
 
     grafana-api:
-      rule: "Host(`grafana.dmgiangi.dev`) && HeadersRegexp(`Authorization`, `^Bearer .+`)"
+      rule: "Host(`grafana.dmgiangi.dev`) && HeaderRegexp(`Authorization`, `^Bearer .+`)"
       service: grafana
       middlewares:
         - token-auth
@@ -23,7 +24,7 @@ http:
       priority: 100
 
     prometheus-api:
-      rule: "Host(`prometheus.dmgiangi.dev`) && HeadersRegexp(`Authorization`, `^Bearer .+`)"
+      rule: "Host(`prometheus.dmgiangi.dev`) && HeaderRegexp(`Authorization`, `^Bearer .+`)"
       service: prometheus
       middlewares:
         - token-auth
@@ -34,7 +35,7 @@ http:
       priority: 100
 
     loki-api:
-      rule: "Host(`loki.dmgiangi.dev`) && HeadersRegexp(`Authorization`, `^Bearer .+`)"
+      rule: "Host(`loki.dmgiangi.dev`) && HeaderRegexp(`Authorization`, `^Bearer .+`)"
       service: loki
       middlewares:
         - token-auth
@@ -45,7 +46,7 @@ http:
       priority: 100
 
     tempo-api:
-      rule: "Host(`tempo.dmgiangi.dev`) && HeadersRegexp(`Authorization`, `^Bearer .+`)"
+      rule: "Host(`tempo.dmgiangi.dev`) && HeaderRegexp(`Authorization`, `^Bearer .+`)"
       service: tempo
       middlewares:
         - token-auth
@@ -56,7 +57,7 @@ http:
       priority: 100
 
     traefik-api:
-      rule: "Host(`traefik.dmgiangi.dev`) && HeadersRegexp(`Authorization`, `^Bearer .+`)"
+      rule: "Host(`traefik.dmgiangi.dev`) && HeaderRegexp(`Authorization`, `^Bearer .+`)"
       service: traefik-dashboard
       middlewares:
         - token-auth
@@ -67,7 +68,7 @@ http:
       priority: 100
 
     homepage-api:
-      rule: "Host(`home.dmgiangi.dev`) && HeadersRegexp(`Authorization`, `^Bearer .+`)"
+      rule: "Host(`home.dmgiangi.dev`) && HeaderRegexp(`Authorization`, `^Bearer .+`)"
       service: homepage
       middlewares:
         - token-auth
