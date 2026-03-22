@@ -10,7 +10,7 @@ set -euo pipefail
 
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEPLOY_SCRIPTS_DIR="${SCRIPT_DIR}/scripts/deploy"
+DEPLOY_SCRIPTS_DIR="${SCRIPT_DIR}/calcifer-cli/deploy"
 
 # Parse global options first (before loading config)
 for arg in "$@"; do
