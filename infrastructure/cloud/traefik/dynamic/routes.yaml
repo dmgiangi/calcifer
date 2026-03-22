@@ -1,13 +1,85 @@
 # =============================================================================
 # Traefik Dynamic Configuration - Routes
 # =============================================================================
-# Note: Most routes are now defined via Docker labels in docker-compose.yaml
-# This file contains additional routes for services without labels
+# Routes for services with two authentication methods:
+# 1. Browser (OAuth via forward-auth) - lower priority
+# 2. API (Bearer token via token-auth) - higher priority
 # =============================================================================
 
 http:
   routers:
-    # ==================== LOKI (Internal service) ====================
+    # ==================== API ROUTES (Bearer token auth) ====================
+    # Higher priority (100) - checked first
+
+    grafana-api:
+      rule: "Host(`grafana.dmgiangi.dev`) && HeadersRegexp(`Authorization`, `^Bearer .+`)"
+      service: grafana
+      middlewares:
+        - token-auth
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+
+    prometheus-api:
+      rule: "Host(`prometheus.dmgiangi.dev`) && HeadersRegexp(`Authorization`, `^Bearer .+`)"
+      service: prometheus
+      middlewares:
+        - token-auth
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+
+    loki-api:
+      rule: "Host(`loki.dmgiangi.dev`) && HeadersRegexp(`Authorization`, `^Bearer .+`)"
+      service: loki
+      middlewares:
+        - token-auth
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+
+    tempo-api:
+      rule: "Host(`tempo.dmgiangi.dev`) && HeadersRegexp(`Authorization`, `^Bearer .+`)"
+      service: tempo
+      middlewares:
+        - token-auth
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+
+    traefik-api:
+      rule: "Host(`traefik.dmgiangi.dev`) && HeadersRegexp(`Authorization`, `^Bearer .+`)"
+      service: traefik-dashboard
+      middlewares:
+        - token-auth
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+
+    homepage-api:
+      rule: "Host(`home.dmgiangi.dev`) && HeadersRegexp(`Authorization`, `^Bearer .+`)"
+      service: homepage
+      middlewares:
+        - token-auth
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+
+    # ==================== BROWSER ROUTES (OAuth auth) ====================
+    # Lower priority (default 0) - fallback when no Bearer token
+
     loki:
       rule: "Host(`loki.dmgiangi.dev`)"
       service: loki
@@ -18,7 +90,6 @@ http:
       tls:
         certResolver: letsencrypt
 
-    # ==================== TEMPO (Internal service) ====================
     tempo:
       rule: "Host(`tempo.dmgiangi.dev`)"
       service: tempo
@@ -33,10 +104,30 @@ http:
     loki:
       loadBalancer:
         servers:
-          - url: "http://calcifer-cloud_loki:3100"
+          - url: "http://loki:3100"
 
     tempo:
       loadBalancer:
         servers:
-          - url: "http://calcifer-cloud_tempo:3200"
+          - url: "http://tempo:3200"
+
+    grafana:
+      loadBalancer:
+        servers:
+          - url: "http://grafana:3000"
+
+    prometheus:
+      loadBalancer:
+        servers:
+          - url: "http://prometheus:9090"
+
+    traefik-dashboard:
+      loadBalancer:
+        servers:
+          - url: "http://traefik:8080"
+
+    homepage:
+      loadBalancer:
+        servers:
+          - url: "http://homepage:3000"
 

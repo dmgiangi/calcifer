@@ -5,6 +5,7 @@
 http:
   middlewares:
     # ==================== FORWARD AUTH ====================
+    # Browser-based OAuth authentication via Keycloak
     forward-auth:
       forwardAuth:
         address: "http://forward-auth:4181"
@@ -13,6 +14,15 @@ http:
           - "X-Forwarded-User"
           - "X-Forwarded-Email"
           - "X-Forwarded-Groups"
+
+    # ==================== TOKEN AUTH ====================
+    # API access via Bearer token (M2M / client credentials)
+    token-auth:
+      forwardAuth:
+        address: "http://token-validator:4182"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "X-Forwarded-User"
 
     # ==================== HEADERS ====================
     secure-headers:
