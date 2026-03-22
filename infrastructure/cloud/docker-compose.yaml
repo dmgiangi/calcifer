@@ -229,10 +229,12 @@ services:
       - "keycloak.${DOMAIN:-dmgiangi.dev}:host-gateway"
     labels:
       - "traefik.enable=true"
-      # OAuth callback route - ALL requests to auth.dmgiangi.dev go to forward-auth
+      # OAuth callback route - auth.dmgiangi.dev MUST use forward-auth middleware
+      # This allows forward-auth to receive callbacks via X-Forwarded-Uri header
       - "traefik.http.routers.forward-auth.rule=Host(`auth.${DOMAIN:-dmgiangi.dev}`)"
       - "traefik.http.routers.forward-auth.entrypoints=websecure"
       - "traefik.http.routers.forward-auth.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.forward-auth.middlewares=forward-auth@file"
       - "traefik.http.services.forward-auth.loadbalancer.server.port=4181"
 
   # ==================== HOMEPAGE DASHBOARD ====================
