@@ -156,26 +156,25 @@ ensure_admin_user() {
 
   if [ -n "$HAS_ADMIN" ]; then
     log "User ${email} already has admin role in ${realm}"
-    return 0
+  else
+    # Get admin role and assign it
+    ADMIN_ROLE=$(curl -sf -H "Authorization: Bearer $TOKEN" \
+      "${KEYCLOAK_URL}/admin/realms/${realm}/roles/admin")
+
+    if [ -z "$ADMIN_ROLE" ] || [ "$ADMIN_ROLE" = "null" ]; then
+      warn "Admin role not found in ${realm}"
+      return 1
+    fi
+
+    curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${realm}/users/${USER_ID}/role-mappings/realm" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "[${ADMIN_ROLE}]" > /dev/null
+
+    log "Admin role assigned to ${email} in ${realm}!"
   fi
 
-  # Get admin role and assign it
-  ADMIN_ROLE=$(curl -sf -H "Authorization: Bearer $TOKEN" \
-    "${KEYCLOAK_URL}/admin/realms/${realm}/roles/admin")
-
-  if [ -z "$ADMIN_ROLE" ] || [ "$ADMIN_ROLE" = "null" ]; then
-    warn "Admin role not found in ${realm}"
-    return 1
-  fi
-
-  curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${realm}/users/${USER_ID}/role-mappings/realm" \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "[${ADMIN_ROLE}]" > /dev/null
-
-  log "Admin role assigned to ${email} in ${realm}!"
-
-  # Assign to 'admins' group
+  # Always ensure user is in 'admins' group (idempotent)
   ADMINS_GROUP_ID=$(curl -sf -H "Authorization: Bearer $TOKEN" \
     "${KEYCLOAK_URL}/admin/realms/${realm}/groups?search=admins" | jq -r '.[0].id // empty')
 
