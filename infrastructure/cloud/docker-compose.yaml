@@ -357,7 +357,7 @@ services:
     networks:
       - calcifer_net
     healthcheck:
-      test: ["CMD-SHELL", "cat < /dev/null > /dev/tcp/127.0.0.1/12345"]
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/127.0.0.1/12345"]
       interval: 15s
       timeout: 5s
       retries: 3
