@@ -82,12 +82,19 @@ if [ "$FLOW_EXISTS" != "200" ]; then
   EXECUTIONS=$(curl -sf -H "Authorization: Bearer $TOKEN" \
     "${KEYCLOAK_URL}/admin/realms/master/authentication/flows/${FLOW_ALIAS}/executions")
 
-  echo "$EXECUTIONS" | jq -c '.[]' | while read -r exec; do
+  # Update each execution requirement via the flow executions endpoint
+  UPDATED=$(echo "$EXECUTIONS" | jq '[.[] | .requirement = "REQUIRED"]')
+
+  echo "$UPDATED" | jq -c '.[]' | while read -r exec; do
     EXEC_ID=$(echo "$exec" | jq -r '.id')
-    curl -s -X PUT "${KEYCLOAK_URL}/admin/realms/master/authentication/executions/${EXEC_ID}" \
+    PROVIDER=$(echo "$exec" | jq -r '.providerId')
+    RESP=$(curl -s -w "\n%{http_code}" -X PUT \
+      "${KEYCLOAK_URL}/admin/realms/master/authentication/flows/${FLOW_ALIAS}/executions" \
       -H "Authorization: Bearer $TOKEN" \
       -H "Content-Type: application/json" \
-      -d "$(echo "$exec" | jq '.requirement = "REQUIRED"')" > /dev/null
+      -d "$exec")
+    CODE=$(echo "$RESP" | tail -1)
+    log "Set ${PROVIDER} to REQUIRED: HTTP ${CODE}"
   done
 
   log "Auto-link flow created in master realm"
