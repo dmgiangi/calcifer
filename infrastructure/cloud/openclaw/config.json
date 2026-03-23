@@ -4,8 +4,7 @@
     "bind": "lan",
     "port": 18789,
     "auth": {
-      "mode": "token",
-      "tokenRef": { "env": "OPENCLAW_GATEWAY_TOKEN" }
+      "mode": "token"
     },
     "controlUi": {
       "allowedOrigins": ["https://claw.dmgiangi.dev"],
