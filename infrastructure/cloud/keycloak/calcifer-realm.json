@@ -9,6 +9,35 @@
   "resetPasswordAllowed": true,
   "editUsernameAllowed": false,
   "bruteForceProtected": true,
+  "identityProviders": [
+    {
+      "alias": "google",
+      "displayName": "Google",
+      "providerId": "google",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "${GOOGLE_CLIENT_ID}",
+        "clientSecret": "${GOOGLE_CLIENT_SECRET}",
+        "defaultScope": "openid email profile",
+        "syncMode": "INHERIT"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "email-to-username",
+      "identityProviderAlias": "google",
+      "identityProviderMapper": "oidc-username-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "template": "${CLAIM.email}"
+      }
+    }
+  ],
   "roles": {
     "realm": [
       {
@@ -45,78 +74,17 @@
       ]
     }
   ],
-  "users": [
-    {
-      "username": "admin",
-      "enabled": true,
-      "email": "admin@calcifer.local",
-      "firstName": "Admin",
-      "lastName": "User",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "admin",
-          "temporary": true
-        }
-      ],
-      "realmRoles": [
-        "admin"
-      ],
-      "groups": [
-        "admins"
-      ]
-    },
-    {
-      "username": "operator",
-      "enabled": true,
-      "email": "operator@calcifer.local",
-      "firstName": "Operator",
-      "lastName": "User",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "operator",
-          "temporary": true
-        }
-      ],
-      "realmRoles": [
-        "operator"
-      ],
-      "groups": [
-        "operators"
-      ]
-    },
-    {
-      "username": "viewer",
-      "enabled": true,
-      "email": "viewer@calcifer.local",
-      "firstName": "Viewer",
-      "lastName": "User",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "viewer",
-          "temporary": true
-        }
-      ],
-      "realmRoles": [
-        "viewer"
-      ],
-      "groups": [
-        "viewers"
-      ]
-    }
-  ],
   "clients": [
     {
-      "clientId": "calcifer-gateway",
+      "clientId": "${KEYCLOAK_CLIENT_ID}",
+      "name": "Calcifer Gateway",
       "enabled": true,
       "publicClient": false,
-      "secret": "change-me-in-production",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KEYCLOAK_CLIENT_SECRET}",
       "redirectUris": [
         "https://*.dmgiangi.dev/*",
-        "https://auth.dmgiangi.dev/_oauth",
-        "http://localhost/*"
+        "https://auth.dmgiangi.dev/_oauth"
       ],
       "webOrigins": [
         "https://*.dmgiangi.dev"
@@ -156,12 +124,13 @@
       ]
     },
     {
-      "clientId": "calcifer-api",
+      "clientId": "${API_CLIENT_ID}",
       "name": "Calcifer API Client",
       "description": "Service account for programmatic API access (M2M)",
       "enabled": true,
       "publicClient": false,
-      "secret": "change-me-api-secret",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${API_CLIENT_SECRET}",
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true,

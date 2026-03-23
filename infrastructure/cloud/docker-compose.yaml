@@ -96,19 +96,26 @@ services:
     image: quay.io/keycloak/keycloak:26.0
     container_name: calcifer_cloud_keycloak
     restart: unless-stopped
-    command: >
-      start-dev
-      --import-realm
-      --hostname=https://keycloak.${DOMAIN:-dmgiangi.dev}
-      --hostname-backchannel-dynamic=true
-      --http-enabled=true
-      --health-enabled=true
-      --proxy-headers=xforwarded
+    entrypoint: /opt/keycloak/custom-entrypoint.sh
     environment:
-      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
-      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KEYCLOAK_ADMIN:-admin}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      # Env vars substituted into realm template by entrypoint
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-calcifer-gateway}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-}
+      - API_CLIENT_ID=${API_CLIENT_ID:-calcifer-api}
+      - API_CLIENT_SECRET=${API_CLIENT_SECRET:-}
+    command:
+      - --hostname=https://keycloak.${DOMAIN:-dmgiangi.dev}
+      - --hostname-backchannel-dynamic=true
+      - --http-enabled=true
+      - --health-enabled=true
+      - --proxy-headers=xforwarded
     volumes:
-      - ./keycloak/calcifer-realm.json:/opt/keycloak/data/import/calcifer-realm.json:ro
+      - ./keycloak/docker-entrypoint.sh:/opt/keycloak/custom-entrypoint.sh:ro
+      - ./keycloak/calcifer-realm.json:/opt/keycloak/data/import-templates/calcifer-realm.json:ro
       - ${DATA_DIR:-/var/lib/calcifer/cloud}/keycloak:/opt/keycloak/data
     healthcheck:
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080;echo -e 'GET /health/ready HTTP/1.1\r\nhost: localhost\r\nConnection: close\r\n\r\n' >&3;if [ $? -eq 0 ]; then echo 'Healthcheck Successful';exit 0;else echo 'Healthcheck Failed';exit 1;fi;"]
@@ -131,30 +138,6 @@ services:
       - "homepage.href=https://keycloak.${DOMAIN:-dmgiangi.dev}"
       - "homepage.description=Identity & Access Management"
       - "homepage.siteMonitor=http://calcifer_cloud_keycloak:9000/health/ready"
-
-  # Keycloak Init - Configures realm, users, and IDPs via REST API
-  keycloak-init:
-    build: ./keycloak-init
-    container_name: calcifer_cloud_keycloak_init
-    restart: "no"
-    depends_on:
-      keycloak:
-        condition: service_healthy
-    environment:
-      - KEYCLOAK_URL=http://keycloak:8080
-      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
-      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      - REALM=calcifer
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
-      - ADMIN_EMAILS=${ADMIN_EMAILS:-}
-      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-calcifer-gateway}
-      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-}
-      - API_CLIENT_ID=${API_CLIENT_ID:-calcifer-api}
-      - API_CLIENT_SECRET=${API_CLIENT_SECRET:-}
-      - INIT_CLIENT_SECRET=${INIT_CLIENT_SECRET:-}
-    networks:
-      - calcifer_net
 
   # ==================== EDGE ROUTER ====================
   traefik:

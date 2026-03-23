@@ -194,12 +194,13 @@ def cmd_bootstrap(args: List[str]) -> int:
             else:
                 print(f"      ❌ {line}")
 
-    # Step 6: Wait for Keycloak and run init (cloud only)
+    # Step 6: Wait for Keycloak to be healthy (cloud only)
     if opts.target == "cloud":
-        print_header("6. CONFIGURE KEYCLOAK")
+        print_header("6. VERIFY KEYCLOAK")
         print_step("⏳", "Waiting for Keycloak to be healthy...")
 
         # Wait for Keycloak healthy
+        keycloak_ok = False
         for i in range(30):
             result = ssh_run(config,
                 "docker inspect calcifer_cloud_keycloak --format '{{.State.Health.Status}}' 2>/dev/null",
@@ -207,22 +208,21 @@ def cmd_bootstrap(args: List[str]) -> int:
             status = result.stdout.strip()
             if status == "healthy":
                 print_step("✅", "Keycloak is healthy")
+                keycloak_ok = True
                 break
             print_step("⏳", f"Waiting... ({status})")
             ssh_run(config, "sleep 5", check=False)
 
-        # Run keycloak-init
-        print_step("🔧", "Running keycloak-init (configure Google IDP)...")
-        ssh_run(config,
-            f"cd {target.deploy_dir}/infrastructure/{target.compose_dir} && docker compose up -d --force-recreate keycloak-init",
-            check=False)
-        ssh_run(config, "sleep 15", check=False)
-
-        # Show init logs
-        result = ssh_run(config, "docker logs calcifer_cloud_keycloak_init 2>&1 | tail -10", check=False)
-        for line in result.stdout.strip().split('\n'):
-            if '[INIT]' in line:
-                print(f"      {line}")
+        if keycloak_ok:
+            # Verify realm was imported
+            result = ssh_run(config,
+                "docker logs calcifer_cloud_keycloak 2>&1 | grep -i 'import\\|realm' | tail -5",
+                check=False)
+            for line in result.stdout.strip().split('\n'):
+                if line.strip():
+                    print_step("📝", line.strip())
+        else:
+            print_step("⚠️ ", "Keycloak did not become healthy in time")
 
     print_header("BOOTSTRAP COMPLETE")
     print()

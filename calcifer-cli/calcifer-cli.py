@@ -12,14 +12,12 @@ sys.path.insert(0, str(CLI_DIR))
 from commands.env import cmd_env
 from commands.bootstrap import cmd_bootstrap
 from commands.clean import cmd_clean
-from commands.init_admin import cmd_init_admin
 
 
 COMMANDS = {
     "env": (cmd_env, "Configure environment variables and secrets"),
     "bootstrap": (cmd_bootstrap, "Bootstrap remote server from scratch"),
     "clean": (cmd_clean, "Clean server (remove repo, volumes, secrets)"),
-    "init-admin": (cmd_init_admin, "Assign admin role after first Google login"),
 }
 
 
@@ -35,7 +33,6 @@ Usage:
 
 Commands:
     bootstrap   Bootstrap remote server from scratch
-    init-admin  Assign admin role after first Google login
     env         Configure environment variables and secrets
     clean       Clean server (remove repo, volumes, secrets)
 
@@ -44,22 +41,19 @@ Options:
     --help      Show help for a specific command
 
 Examples:
-    ./calcifer-cli.py bootstrap --target cloud   # Full server setup
-    ./calcifer-cli.py init-admin --target cloud  # Assign admin after login
-    ./calcifer-cli.py clean --target cloud       # Wipe server (keep certs)
+    ./calcifer-cli.py bootstrap --target cloud            # Full setup (prompts for secrets)
+    ./calcifer-cli.py bootstrap --target cloud --use-current-env  # Use existing .env
+    ./calcifer-cli.py clean --target cloud                # Wipe server (keep certs)
 
 Bootstrap workflow:
     1. ./calcifer-cli.py bootstrap --target cloud
        - Clones repo, creates folders, configures env
        - Creates systemd service, starts services
-       - Configures Keycloak Google IDP
+       - Keycloak imports realm config with Google IDP at startup
 
-    2. Login to Keycloak admin with Google:
-       https://keycloak.dmgiangi.dev/admin/master/console/
-
-    3. ./calcifer-cli.py init-admin --target cloud
-       - Assigns admin role to your Google account
-       - Disables temporary bootstrap admin
+    2. Access services:
+       - Keycloak Admin: https://keycloak.dmgiangi.dev/admin/
+       - App services: login with Google via forward-auth
 """)
 
 
