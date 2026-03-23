@@ -411,7 +411,7 @@ services:
     volumes:
       - ${DATA_DIR:-/var/lib/calcifer/cloud}/openclaw/config:/home/node/.openclaw
       - ${DATA_DIR:-/var/lib/calcifer/cloud}/openclaw/workspace:/home/node/.openclaw/workspace
-      - ./openclaw/config.json:/home/node/.openclaw/config.json:ro
+      - ./openclaw/config.json:/home/node/.openclaw/openclaw.json:ro
     networks:
       - calcifer_net
     healthcheck:
