@@ -39,6 +39,8 @@ func NewOIDCAuth(cfg *Config) (*OIDCAuth, error) {
 	discoveryURL := cfg.IssuerURL
 	if cfg.InternalIssuer != "" {
 		discoveryURL = cfg.InternalIssuer
+		// Skip issuer validation during discovery (internal URL != public issuer)
+		ctx = oidc.InsecureIssuerURLContext(ctx, discoveryURL)
 	}
 
 	provider, err := oidc.NewProvider(ctx, discoveryURL)
