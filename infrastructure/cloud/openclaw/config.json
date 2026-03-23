@@ -1,7 +1,20 @@
 {
   "gateway": {
+    "mode": "local",
+    "bind": "lan",
+    "port": 18789,
+    "auth": {
+      "mode": "token"
+    },
     "controlUi": {
       "allowedOrigins": ["https://claw.dmgiangi.dev"]
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "google/gemini-2.5-flash"
+      }
     }
   },
   "plugins": {

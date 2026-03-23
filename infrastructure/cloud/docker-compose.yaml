@@ -420,15 +420,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-    command:
-      - "node"
-      - "dist/index.js"
-      - "gateway"
-      - "--bind"
-      - "lan"
-      - "--port"
-      - "18789"
-      - "--allow-unconfigured"
+    command: ["node", "dist/index.js", "gateway"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.openclaw.rule=Host(`claw.${DOMAIN:-dmgiangi.dev}`)"
