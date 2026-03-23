@@ -38,3 +38,4 @@ infrastructure/.env
 utils/docs-output/
 **/__pycache__/
 *.har
+*.iml
