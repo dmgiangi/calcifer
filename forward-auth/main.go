@@ -22,9 +22,18 @@ func main() {
 		log.Fatalf("Config error: %v", err)
 	}
 
-	auth, err := NewOIDCAuth(cfg)
-	if err != nil {
-		log.Fatalf("OIDC init error: %v", err)
+	var auth *OIDCAuth
+	for attempt := 1; ; attempt++ {
+		auth, err = NewOIDCAuth(cfg)
+		if err == nil {
+			break
+		}
+		if attempt >= 30 {
+			log.Fatalf("OIDC init failed after %d attempts: %v", attempt, err)
+		}
+		wait := time.Duration(min(attempt*2, 30)) * time.Second
+		log.Printf("OIDC init attempt %d failed: %v (retrying in %s)", attempt, err, wait)
+		time.Sleep(wait)
 	}
 
 	// Initialize OpenTelemetry
