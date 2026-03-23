@@ -112,6 +112,7 @@ services:
       - --hostname-backchannel-dynamic=true
       - --http-enabled=true
       - --health-enabled=true
+      - --metrics-enabled=true
       - --proxy-headers=xforwarded
     volumes:
       - ./keycloak/docker-entrypoint.sh:/opt/keycloak/custom-entrypoint.sh:ro
@@ -188,6 +189,11 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
       # Health
       - "--ping=true"
+      # Metrics
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.addEntryPointsLabels=true"
+      - "--metrics.prometheus.addRoutersLabels=true"
+      - "--metrics.prometheus.addServicesLabels=true"
       # Logging
       - "--log.level=INFO"
       - "--accesslog=true"

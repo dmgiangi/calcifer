@@ -24,7 +24,7 @@ scrape_configs:
           service: 'prometheus'
           env: 'cloud'
 
-  # Grafana
+  # Grafana (built-in /metrics on :3000)
   - job_name: 'grafana'
     static_configs:
       - targets: [ 'grafana:3000' ]
@@ -32,7 +32,7 @@ scrape_configs:
           service: 'grafana'
           env: 'cloud'
 
-  # Loki
+  # Loki (built-in /metrics on :3100)
   - job_name: 'loki'
     static_configs:
       - targets: [ 'loki:3100' ]
@@ -40,7 +40,7 @@ scrape_configs:
           service: 'loki'
           env: 'cloud'
 
-  # Tempo
+  # Tempo (built-in /metrics on :3200)
   - job_name: 'tempo'
     static_configs:
       - targets: [ 'tempo:3200' ]
@@ -48,21 +48,37 @@ scrape_configs:
           service: 'tempo'
           env: 'cloud'
 
-  # Keycloak
+  # Keycloak (--metrics-enabled=true, management port 9000)
   - job_name: 'keycloak'
     metrics_path: '/metrics'
     static_configs:
-      - targets: [ 'keycloak:8080' ]
+      - targets: [ 'keycloak:9000' ]
         labels:
           service: 'keycloak'
           env: 'cloud'
 
-  # Traefik
+  # Traefik (--metrics.prometheus=true, API port 8080)
   - job_name: 'traefik'
     static_configs:
       - targets: [ 'traefik:8080' ]
         labels:
           service: 'traefik'
+          env: 'cloud'
+
+  # Promtail (built-in /metrics on :9080)
+  - job_name: 'promtail'
+    static_configs:
+      - targets: [ 'promtail:9080' ]
+        labels:
+          service: 'promtail'
+          env: 'cloud'
+
+  # Token Validator (custom /metrics on :4182)
+  - job_name: 'token-validator'
+    static_configs:
+      - targets: [ 'token-validator:4182' ]
+        labels:
+          service: 'token-validator'
           env: 'cloud'
 
   # =============================================================================

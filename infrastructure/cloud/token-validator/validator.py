@@ -23,6 +23,31 @@ PORT = int(os.environ.get('PORT', '4182'))
 
 INTROSPECT_URL = f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/token/introspect"
 
+# Prometheus metrics counters
+import threading
+_metrics_lock = threading.Lock()
+_metrics = {
+    'requests_total': 0,
+    'requests_authorized': 0,
+    'requests_unauthorized': 0,
+    'validation_errors': 0,
+}
+
+
+def inc_metric(name: str):
+    with _metrics_lock:
+        _metrics[name] = _metrics.get(name, 0) + 1
+
+
+def get_metrics_text() -> str:
+    with _metrics_lock:
+        lines = []
+        for k, v in _metrics.items():
+            prom_name = f"token_validator_{k}"
+            lines.append(f"# TYPE {prom_name} counter")
+            lines.append(f"{prom_name} {v}")
+        return "\n".join(lines) + "\n"
+
 
 def validate_token(token: str) -> bool:
     """Validate token against Keycloak introspection endpoint."""
@@ -40,6 +65,7 @@ def validate_token(token: str) -> bool:
             print(f"Token validation: active={active}")
             return active
     except Exception as e:
+        inc_metric('validation_errors')
         print(f"Token validation error: {e}")
         return False
 
@@ -49,8 +75,17 @@ class TokenValidatorHandler(BaseHTTPRequestHandler):
         print(f"[{self.address_string()}] {format % args}")
 
     def do_GET(self):
+        # Prometheus metrics endpoint
+        if self.path == '/metrics':
+            body = get_metrics_text().encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/plain; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
+        inc_metric('requests_total')
         print(f"Received request: {self.path}")
-        print(f"Headers: {dict(self.headers)}")
 
         # Get Authorization header (Traefik forwards original headers)
         auth = self.headers.get('Authorization', '')
@@ -64,6 +99,7 @@ class TokenValidatorHandler(BaseHTTPRequestHandler):
         if auth.startswith('Bearer '):
             token = auth[7:]
             if validate_token(token):
+                inc_metric('requests_authorized')
                 print("-> 200 OK")
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/plain')
@@ -72,6 +108,7 @@ class TokenValidatorHandler(BaseHTTPRequestHandler):
                 return
 
         # No valid token
+        inc_metric('requests_unauthorized')
         print("-> 401 Unauthorized")
         self.send_response(401)
         self.send_header('Content-Type', 'text/plain')
