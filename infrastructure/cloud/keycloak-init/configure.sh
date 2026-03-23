@@ -91,9 +91,10 @@ get_token() {
 # Check if realm exists
 realm_exists() {
     local token=$1
-    curl -sf -o /dev/null -w "%{http_code}" \
+    local http_code=$(curl -s -o /dev/null -w "%{http_code}" \
         -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}" | grep -q "200"
+        "${KEYCLOAK_URL}/admin/realms/${REALM}")
+    [ "$http_code" = "200" ]
 }
 
 # Create realm if not exists
@@ -129,7 +130,7 @@ configure_google_idp_for_realm() {
     log "Configuring Google IDP in realm: ${target_realm}..."
 
     # Check if IDP exists
-    local exists=$(curl -sf -o /dev/null -w "%{http_code}" \
+    local exists=$(curl -s -o /dev/null -w "%{http_code}" \
         -H "Authorization: Bearer ${token}" \
         "${KEYCLOAK_URL}/admin/realms/${target_realm}/identity-provider/instances/google")
 
