@@ -357,7 +357,7 @@ services:
     networks:
       - calcifer_net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:12345/-/ready || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:12345/-/ready || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
