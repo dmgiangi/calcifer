@@ -10,15 +10,16 @@ import (
 // Config holds all configuration for the service.
 type Config struct {
 	// OIDC / OAuth2
-	IssuerURL    string
-	ClientID     string
-	ClientSecret string
-	Secret       string // encryption key for session cookie
-	AuthHost     string // e.g. auth.dmgiangi.dev
-	CookieDomain string // e.g. dmgiangi.dev
-	CookieName   string
-	CallbackPath string
-	Port         int
+	IssuerURL       string
+	InternalIssuer  string // optional: internal URL for OIDC discovery (avoids TLS hairpin)
+	ClientID        string
+	ClientSecret    string
+	Secret          string // encryption key for session cookie
+	AuthHost        string // e.g. auth.dmgiangi.dev
+	CookieDomain    string // e.g. dmgiangi.dev
+	CookieName      string
+	CallbackPath    string
+	Port            int
 
 	// Authorization rules
 	Rules AuthzRules
@@ -45,8 +46,9 @@ func envOrDefault(key, def string) string {
 
 func LoadConfig() (*Config, error) {
 	cfg := &Config{
-		IssuerURL:    envOrDefault("OIDC_ISSUER_URL", ""),
-		ClientID:     envOrDefault("OIDC_CLIENT_ID", "calcifer-gateway"),
+		IssuerURL:      envOrDefault("OIDC_ISSUER_URL", ""),
+		InternalIssuer: envOrDefault("OIDC_INTERNAL_ISSUER_URL", ""),
+		ClientID:       envOrDefault("OIDC_CLIENT_ID", "calcifer-gateway"),
 		ClientSecret: envOrDefault("OIDC_CLIENT_SECRET", ""),
 		Secret:       envOrDefault("SECRET", ""),
 		AuthHost:     envOrDefault("AUTH_HOST", ""),

@@ -241,6 +241,7 @@ services:
         condition: service_healthy
     environment:
       - OIDC_ISSUER_URL=https://keycloak.${DOMAIN:-dmgiangi.dev}/realms/calcifer
+      - OIDC_INTERNAL_ISSUER_URL=http://keycloak:8080/realms/calcifer
       - OIDC_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-calcifer-gateway}
       - OIDC_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me-in-production}
       - SECRET=${FORWARD_AUTH_SECRET:-a-random-secret-change-me}
@@ -252,8 +253,6 @@ services:
       - ./group-auth/auth-config.yaml:/etc/calcifer-auth/auth-config.yaml:ro
     networks:
       - calcifer_net
-    extra_hosts:
-      - "keycloak.${DOMAIN:-dmgiangi.dev}:host-gateway"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.forward-auth.rule=Host(`auth.${DOMAIN:-dmgiangi.dev}`)"
