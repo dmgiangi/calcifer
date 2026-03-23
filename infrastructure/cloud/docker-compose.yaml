@@ -140,6 +140,28 @@ services:
       - "homepage.description=Identity & Access Management"
       - "homepage.siteMonitor=http://calcifer_cloud_keycloak:9000/health/ready"
 
+
+  # Adds Google IDP to master realm (one-shot, idempotent)
+  keycloak-master-idp:
+    image: alpine:3.19
+    container_name: calcifer_cloud_keycloak_master_idp
+    restart: "no"
+    entrypoint: /bin/sh
+    command: ["/init.sh"]
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    environment:
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KEYCLOAK_ADMIN:-admin}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+    volumes:
+      - ./keycloak/master-idp-init.sh:/init.sh:ro
+    networks:
+      - calcifer_net
+
   # ==================== EDGE ROUTER ====================
   traefik:
     image: traefik:v3.6
@@ -163,6 +185,8 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@dmgiangi.dev}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      # Health
+      - "--ping=true"
       # Logging
       - "--log.level=INFO"
       - "--accesslog=true"
@@ -266,6 +290,12 @@ services:
       retries: 3
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.loki.rule=Host(`loki.${DOMAIN:-dmgiangi.dev}`)"
+      - "traefik.http.routers.loki.entrypoints=websecure"
+      - "traefik.http.routers.loki.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.loki.middlewares=forward-auth@file"
+      - "traefik.http.services.loki.loadbalancer.server.port=3100"
+      # Homepage
       - "homepage.group=Monitoring"
       - "homepage.name=Loki"
       - "homepage.icon=loki.png"
@@ -291,6 +321,12 @@ services:
       retries: 3
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.tempo.rule=Host(`tempo.${DOMAIN:-dmgiangi.dev}`)"
+      - "traefik.http.routers.tempo.entrypoints=websecure"
+      - "traefik.http.routers.tempo.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.tempo.middlewares=forward-auth@file"
+      - "traefik.http.services.tempo.loadbalancer.server.port=3200"
+      # Homepage
       - "homepage.group=Monitoring"
       - "homepage.name=Tempo"
       - "homepage.icon=tempo.png"
