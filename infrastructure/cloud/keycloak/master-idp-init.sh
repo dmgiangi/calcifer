@@ -68,80 +68,71 @@ case "$CODE" in
   *)           warn "Failed (HTTP $CODE): $(echo "$RESPONSE" | head -n -1)" ;;
 esac
 
-# ===== Assign admin role to ADMIN_EMAILS users in master realm =====
-if [ -n "${ADMIN_EMAILS}" ]; then
-  # Process each email (comma-separated)
-  echo "${ADMIN_EMAILS}" | tr ',' '\n' | while read -r email; do
-    email=$(echo "$email" | xargs)  # trim whitespace
-    [ -z "$email" ] && continue
+# ===== Ensure admin users exist with admin role in both realms =====
+# Pre-creates users so that on first Google login, Keycloak links the
+# Google identity to the existing account (trustEmail=true).
 
-    log "Checking master realm user: ${email}"
+ensure_admin_user() {
+  local realm=$1
+  local email=$2
 
-    # Find user by email
-    USER_ID=$(curl -sf -H "Authorization: Bearer $TOKEN" \
-      "${KEYCLOAK_URL}/admin/realms/master/users?email=${email}&exact=true" | jq -r '.[0].id // empty')
+  log "Ensuring admin user ${email} in realm ${realm}..."
 
-    if [ -z "$USER_ID" ]; then
-      log "User ${email} not found in master realm (will be created on first Google login)"
-      continue
-    fi
+  # Check if user exists
+  USER_ID=$(curl -sf -H "Authorization: Bearer $TOKEN" \
+    "${KEYCLOAK_URL}/admin/realms/${realm}/users?email=${email}&exact=true" | jq -r '.[0].id // empty')
 
-    # Check if already has admin role
-    HAS_ADMIN=$(curl -sf -H "Authorization: Bearer $TOKEN" \
-      "${KEYCLOAK_URL}/admin/realms/master/users/${USER_ID}/role-mappings/realm" | jq -r '[.[].name] | index("admin") // empty')
-
-    if [ -n "$HAS_ADMIN" ]; then
-      log "User ${email} already has admin role in master realm"
-      continue
-    fi
-
-    # Get admin role definition
-    ADMIN_ROLE=$(curl -sf -H "Authorization: Bearer $TOKEN" \
-      "${KEYCLOAK_URL}/admin/realms/master/roles/admin")
-
-    # Assign admin role
-    curl -s -X POST "${KEYCLOAK_URL}/admin/realms/master/users/${USER_ID}/role-mappings/realm" \
+  # Create user if not found
+  if [ -z "$USER_ID" ]; then
+    log "Creating user ${email} in ${realm}..."
+    local username=$(echo "$email" | cut -d@ -f1)
+    curl -s -w "\n" -X POST "${KEYCLOAK_URL}/admin/realms/${realm}/users" \
       -H "Authorization: Bearer $TOKEN" \
       -H "Content-Type: application/json" \
-      -d "[${ADMIN_ROLE}]" > /dev/null
+      -d "{\"username\":\"${email}\",\"email\":\"${email}\",\"enabled\":true,\"emailVerified\":true,\"firstName\":\"${username}\"}" > /dev/null
 
-    log "Admin role assigned to ${email} in master realm!"
-  done
-fi
+    USER_ID=$(curl -sf -H "Authorization: Bearer $TOKEN" \
+      "${KEYCLOAK_URL}/admin/realms/${realm}/users?email=${email}&exact=true" | jq -r '.[0].id // empty')
 
-# ===== Assign admin role to ADMIN_EMAILS users in calcifer realm =====
+    if [ -z "$USER_ID" ]; then
+      warn "Failed to create user ${email} in ${realm}"
+      return 1
+    fi
+    log "User ${email} created in ${realm} (id: ${USER_ID})"
+  fi
+
+  # Check if already has admin role
+  HAS_ADMIN=$(curl -sf -H "Authorization: Bearer $TOKEN" \
+    "${KEYCLOAK_URL}/admin/realms/${realm}/users/${USER_ID}/role-mappings/realm" | jq -r '[.[].name] | index("admin") // empty')
+
+  if [ -n "$HAS_ADMIN" ]; then
+    log "User ${email} already has admin role in ${realm}"
+    return 0
+  fi
+
+  # Get admin role and assign it
+  ADMIN_ROLE=$(curl -sf -H "Authorization: Bearer $TOKEN" \
+    "${KEYCLOAK_URL}/admin/realms/${realm}/roles/admin")
+
+  if [ -z "$ADMIN_ROLE" ] || [ "$ADMIN_ROLE" = "null" ]; then
+    warn "Admin role not found in ${realm}"
+    return 1
+  fi
+
+  curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${realm}/users/${USER_ID}/role-mappings/realm" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "[${ADMIN_ROLE}]" > /dev/null
+
+  log "Admin role assigned to ${email} in ${realm}!"
+}
+
 if [ -n "${ADMIN_EMAILS}" ]; then
   echo "${ADMIN_EMAILS}" | tr ',' '\n' | while read -r email; do
     email=$(echo "$email" | xargs)
     [ -z "$email" ] && continue
-
-    log "Checking calcifer realm user: ${email}"
-
-    USER_ID=$(curl -sf -H "Authorization: Bearer $TOKEN" \
-      "${KEYCLOAK_URL}/admin/realms/calcifer/users?email=${email}&exact=true" | jq -r '.[0].id // empty')
-
-    if [ -z "$USER_ID" ]; then
-      log "User ${email} not found in calcifer realm (will be created on first Google login)"
-      continue
-    fi
-
-    HAS_ADMIN=$(curl -sf -H "Authorization: Bearer $TOKEN" \
-      "${KEYCLOAK_URL}/admin/realms/calcifer/users/${USER_ID}/role-mappings/realm" | jq -r '[.[].name] | index("admin") // empty')
-
-    if [ -n "$HAS_ADMIN" ]; then
-      log "User ${email} already has admin role in calcifer realm"
-      continue
-    fi
-
-    ADMIN_ROLE=$(curl -sf -H "Authorization: Bearer $TOKEN" \
-      "${KEYCLOAK_URL}/admin/realms/calcifer/roles/admin")
-
-    curl -s -X POST "${KEYCLOAK_URL}/admin/realms/calcifer/users/${USER_ID}/role-mappings/realm" \
-      -H "Authorization: Bearer $TOKEN" \
-      -H "Content-Type: application/json" \
-      -d "[${ADMIN_ROLE}]" > /dev/null
-
-    log "Admin role assigned to ${email} in calcifer realm!"
+    ensure_admin_user "master" "$email"
+    ensure_admin_user "calcifer" "$email"
   done
 fi
 
