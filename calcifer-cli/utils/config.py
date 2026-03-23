@@ -65,8 +65,8 @@ class Config:
         """Load configuration from file and environment."""
         config = cls()
         
-        # Load from deploy.conf if exists
-        conf_path = Path(__file__).parent.parent.parent / "deploy.conf"
+        # Load from deploy.conf if exists (in calcifer-cli/)
+        conf_path = Path(__file__).parent.parent / "deploy.conf"
         if conf_path.exists():
             config._load_conf_file(conf_path)
         
