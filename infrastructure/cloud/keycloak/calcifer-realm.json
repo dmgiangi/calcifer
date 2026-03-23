@@ -9,6 +9,29 @@
   "resetPasswordAllowed": true,
   "editUsernameAllowed": false,
   "bruteForceProtected": true,
+  "authenticationFlows": [
+    {
+      "alias": "auto-link-first-broker-login",
+      "description": "Auto-link Google account to existing user by email, or create new user",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "idp-create-user-if-unique",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 10
+        },
+        {
+          "authenticator": "idp-auto-link",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 20
+        }
+      ]
+    }
+  ],
   "identityProviders": [
     {
       "alias": "google",
@@ -18,7 +41,7 @@
       "trustEmail": true,
       "storeToken": false,
       "addReadTokenRoleOnCreate": false,
-      "firstBrokerLoginFlowAlias": "first broker login",
+      "firstBrokerLoginFlowAlias": "auto-link-first-broker-login",
       "config": {
         "clientId": "${GOOGLE_CLIENT_ID}",
         "clientSecret": "${GOOGLE_CLIENT_SECRET}",

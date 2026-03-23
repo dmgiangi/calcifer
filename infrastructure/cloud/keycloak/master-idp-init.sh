@@ -54,7 +54,49 @@ else
   URL="${KEYCLOAK_URL}/admin/realms/master/identity-provider/instances"
 fi
 
-IDP_JSON="{\"alias\":\"google\",\"displayName\":\"Google\",\"providerId\":\"google\",\"enabled\":true,\"trustEmail\":true,\"storeToken\":false,\"addReadTokenRoleOnCreate\":false,\"firstBrokerLoginFlowAlias\":\"first broker login\",\"config\":{\"clientId\":\"${GOOGLE_CLIENT_ID}\",\"clientSecret\":\"${GOOGLE_CLIENT_SECRET}\",\"defaultScope\":\"openid email profile\",\"syncMode\":\"FORCE\"}}"
+# ===== Create auto-link authentication flow in master realm =====
+FLOW_ALIAS="auto-link-first-broker-login"
+FLOW_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
+  -H "Authorization: Bearer $TOKEN" \
+  "${KEYCLOAK_URL}/admin/realms/master/authentication/flows/${FLOW_ALIAS}")
+
+if [ "$FLOW_EXISTS" != "200" ]; then
+  log "Creating auto-link authentication flow in master realm..."
+  curl -s -X POST "${KEYCLOAK_URL}/admin/realms/master/authentication/flows" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"alias\":\"${FLOW_ALIAS}\",\"description\":\"Auto-link Google account by email\",\"providerId\":\"basic-flow\",\"topLevel\":true,\"builtIn\":false}" > /dev/null
+
+  # Add executions: idp-create-user-if-unique + idp-auto-link
+  curl -s -X POST "${KEYCLOAK_URL}/admin/realms/master/authentication/flows/${FLOW_ALIAS}/executions/execution" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"provider\":\"idp-create-user-if-unique\"}" > /dev/null
+
+  curl -s -X POST "${KEYCLOAK_URL}/admin/realms/master/authentication/flows/${FLOW_ALIAS}/executions/execution" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"provider\":\"idp-auto-link\"}" > /dev/null
+
+  # Set both executions to ALTERNATIVE
+  EXECUTIONS=$(curl -sf -H "Authorization: Bearer $TOKEN" \
+    "${KEYCLOAK_URL}/admin/realms/master/authentication/flows/${FLOW_ALIAS}/executions")
+
+  echo "$EXECUTIONS" | jq -c '.[]' | while read -r exec; do
+    EXEC_ID=$(echo "$exec" | jq -r '.id')
+    curl -s -X PUT "${KEYCLOAK_URL}/admin/realms/master/authentication/executions/${EXEC_ID}" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "$(echo "$exec" | jq '.requirement = "ALTERNATIVE"')" > /dev/null
+  done
+
+  log "Auto-link flow created in master realm"
+else
+  log "Auto-link flow already exists in master realm"
+fi
+
+# ===== Create/update Google IDP in master realm =====
+IDP_JSON="{\"alias\":\"google\",\"displayName\":\"Google\",\"providerId\":\"google\",\"enabled\":true,\"trustEmail\":true,\"storeToken\":false,\"addReadTokenRoleOnCreate\":false,\"firstBrokerLoginFlowAlias\":\"${FLOW_ALIAS}\",\"config\":{\"clientId\":\"${GOOGLE_CLIENT_ID}\",\"clientSecret\":\"${GOOGLE_CLIENT_SECRET}\",\"defaultScope\":\"openid email profile\",\"syncMode\":\"FORCE\"}}"
 
 RESPONSE=$(curl -s -w "\n%{http_code}" -X "$METHOD" "$URL" \
   -H "Authorization: Bearer $TOKEN" \
