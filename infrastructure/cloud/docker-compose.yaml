@@ -291,16 +291,17 @@ services:
       retries: 3
     labels:
       - "traefik.enable=true"
+      # API route (for programmatic access with Bearer token)
       - "traefik.http.routers.loki.rule=Host(`loki.${DOMAIN:-dmgiangi.dev}`)"
       - "traefik.http.routers.loki.entrypoints=websecure"
       - "traefik.http.routers.loki.tls.certresolver=letsencrypt"
       - "traefik.http.routers.loki.middlewares=forward-auth@file"
       - "traefik.http.services.loki.loadbalancer.server.port=3100"
-      # Homepage
+      # Homepage - link to Grafana Explore (Loki has no web UI)
       - "homepage.group=Monitoring"
       - "homepage.name=Loki"
       - "homepage.icon=loki.png"
-      - "homepage.href=https://loki.${DOMAIN:-dmgiangi.dev}"
+      - "homepage.href=https://grafana.${DOMAIN:-dmgiangi.dev}/explore?orgId=1&left=%7B%22datasource%22:%22loki%22%7D"
       - "homepage.description=Log Aggregation"
       - "homepage.siteMonitor=http://calcifer_cloud_loki:3100/ready"
 
@@ -322,16 +323,17 @@ services:
       retries: 3
     labels:
       - "traefik.enable=true"
+      # API route (for programmatic access with Bearer token)
       - "traefik.http.routers.tempo.rule=Host(`tempo.${DOMAIN:-dmgiangi.dev}`)"
       - "traefik.http.routers.tempo.entrypoints=websecure"
       - "traefik.http.routers.tempo.tls.certresolver=letsencrypt"
       - "traefik.http.routers.tempo.middlewares=forward-auth@file"
       - "traefik.http.services.tempo.loadbalancer.server.port=3200"
-      # Homepage
+      # Homepage - link to Grafana Explore (Tempo has no web UI)
       - "homepage.group=Monitoring"
       - "homepage.name=Tempo"
       - "homepage.icon=tempo.png"
-      - "homepage.href=https://tempo.${DOMAIN:-dmgiangi.dev}"
+      - "homepage.href=https://grafana.${DOMAIN:-dmgiangi.dev}/explore?orgId=1&left=%7B%22datasource%22:%22tempo%22%7D"
       - "homepage.description=Distributed Tracing"
       - "homepage.siteMonitor=http://calcifer_cloud_tempo:3200/ready"
 
