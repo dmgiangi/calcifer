@@ -390,6 +390,60 @@ services:
       - "homepage.description=Dashboard"
       - "homepage.siteMonitor=http://calcifer_cloud_homepage:3000"
 
+  # ==================== OPENCLAW ====================
+  openclaw:
+    image: openclaw/openclaw:latest
+    container_name: calcifer_cloud_openclaw
+    restart: unless-stopped
+    depends_on:
+      alloy:
+        condition: service_healthy
+    environment:
+      - HOME=/home/node
+      - NODE_ENV=production
+      - TERM=xterm-256color
+      - OPENCLAW_GATEWAY_BIND=lan
+      - OPENCLAW_GATEWAY_PORT=18789
+      - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN}
+      - GOG_KEYRING_PASSWORD=${GOG_KEYRING_PASSWORD}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - XDG_CONFIG_HOME=/home/node/.openclaw
+    volumes:
+      - ${DATA_DIR:-/var/lib/calcifer/cloud}/openclaw/config:/home/node/.openclaw
+      - ${DATA_DIR:-/var/lib/calcifer/cloud}/openclaw/workspace:/home/node/.openclaw/workspace
+      - ./openclaw/config.json:/home/node/.openclaw/config.json:ro
+    networks:
+      - calcifer_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:18789/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    command:
+      - "node"
+      - "dist/index.js"
+      - "gateway"
+      - "--bind"
+      - "lan"
+      - "--port"
+      - "18789"
+      - "--allow-unconfigured"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openclaw.rule=Host(`claw.${DOMAIN:-dmgiangi.dev}`)"
+      - "traefik.http.routers.openclaw.entrypoints=websecure"
+      - "traefik.http.routers.openclaw.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.openclaw.middlewares=forward-auth@file"
+      - "traefik.http.services.openclaw.loadbalancer.server.port=18789"
+      # Homepage integration
+      - "homepage.group=AI"
+      - "homepage.name=OpenClaw"
+      - "homepage.icon=mdi-robot"
+      - "homepage.href=https://claw.${DOMAIN:-dmgiangi.dev}"
+      - "homepage.description=AI Assistant Gateway"
+      - "homepage.siteMonitor=http://calcifer_cloud_openclaw:18789/health"
+
 networks:
   calcifer_net:
     driver: bridge

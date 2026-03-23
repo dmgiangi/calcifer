@@ -45,6 +45,11 @@ ENV_VARS = {
             "GOOGLE_CLIENT_SECRET": ("external", "Google OAuth Client Secret"),
             "ADMIN_EMAILS": ("external", "Admin email addresses (comma-separated)"),
         },
+        "openclaw": {
+            "OPENCLAW_GATEWAY_TOKEN": ("auto", "OpenClaw gateway auth token"),
+            "GOG_KEYRING_PASSWORD": ("auto", "OpenClaw keyring encryption password"),
+            "GEMINI_API_KEY": ("external", "Google Gemini API key (from https://aistudio.google.com/apikey)"),
+        },
         "federation": {
             "HOME_PROMETHEUS_HOST": ("192.168.8.180", "Home Prometheus IP for federation"),
         },

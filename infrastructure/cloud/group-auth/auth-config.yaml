@@ -42,3 +42,6 @@ rules:
   tempo.dmgiangi.dev:
     allowed_groups: [admins]
 
+  claw.dmgiangi.dev:
+    allowed_groups: [admins]
+
