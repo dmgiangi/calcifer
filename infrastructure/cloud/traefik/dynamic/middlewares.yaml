@@ -13,8 +13,8 @@ http:
         maxResponseBodySize: 1048576  # 1MB
         authResponseHeaders:
           - "X-Forwarded-User"
-          - "X-Forwarded-Email"
           - "X-Forwarded-Groups"
+          - "X-Grafana-Role"
 
     # ==================== TOKEN AUTH ====================
     # API access via Bearer token (M2M / client credentials)

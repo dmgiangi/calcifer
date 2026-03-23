@@ -174,6 +174,19 @@ ensure_admin_user() {
     -d "[${ADMIN_ROLE}]" > /dev/null
 
   log "Admin role assigned to ${email} in ${realm}!"
+
+  # Assign to 'admins' group
+  ADMINS_GROUP_ID=$(curl -sf -H "Authorization: Bearer $TOKEN" \
+    "${KEYCLOAK_URL}/admin/realms/${realm}/groups?search=admins" | jq -r '.[0].id // empty')
+
+  if [ -n "$ADMINS_GROUP_ID" ]; then
+    curl -s -X PUT "${KEYCLOAK_URL}/admin/realms/${realm}/users/${USER_ID}/groups/${ADMINS_GROUP_ID}" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" > /dev/null
+    log "User ${email} added to 'admins' group in ${realm}"
+  else
+    warn "Group 'admins' not found in ${realm}"
+  fi
 }
 
 if [ -n "${ADMIN_EMAILS}" ]; then

@@ -1,0 +1,44 @@
+# =============================================================================
+# Group Authorization Configuration
+# =============================================================================
+# Maps hosts to allowed Keycloak groups.
+# If a user's groups (from X-Forwarded-Groups) don't match, access is denied.
+#
+# To add a new service: add a new entry under "rules" with the host and
+# the list of allowed groups.
+#
+# Optional "headers" section: injects extra headers into the request based
+# on the user's group. Useful for downstream role mapping (e.g., Grafana).
+# =============================================================================
+
+# Default policy when a host has no matching rule.
+# "allow" = let through (open by default)
+# "deny"  = block unless explicitly listed
+default_policy: deny
+
+rules:
+  grafana.dmgiangi.dev:
+    allowed_groups: [admins, operators, viewers]
+    headers:
+      admins:
+        X-Grafana-Role: Admin
+      operators:
+        X-Grafana-Role: Editor
+      viewers:
+        X-Grafana-Role: Viewer
+
+  prometheus.dmgiangi.dev:
+    allowed_groups: [admins]
+
+  traefik.dmgiangi.dev:
+    allowed_groups: [admins]
+
+  home.dmgiangi.dev:
+    allowed_groups: [admins, operators, viewers]
+
+  loki.dmgiangi.dev:
+    allowed_groups: [admins]
+
+  tempo.dmgiangi.dev:
+    allowed_groups: [admins]
+

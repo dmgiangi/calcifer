@@ -57,11 +57,12 @@ services:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
       - GF_SERVER_ROOT_URL=https://grafana.${DOMAIN:-dmgiangi.dev}
-      # Auth proxy for Traefik/Keycloak
+      # Auth proxy for Traefik/Keycloak + group-auth role mapping
       - GF_AUTH_PROXY_ENABLED=true
       - GF_AUTH_PROXY_HEADER_NAME=X-Forwarded-User
       - GF_AUTH_PROXY_HEADER_PROPERTY=username
       - GF_AUTH_PROXY_AUTO_SIGN_UP=true
+      - GF_AUTH_PROXY_HEADERS=Role:X-Grafana-Role
     volumes:
       - ../common/grafana/provisioning:/etc/grafana/provisioning:ro
       - ${DATA_DIR:-/var/lib/calcifer/cloud}/grafana:/var/lib/grafana
@@ -228,40 +229,38 @@ services:
       - "homepage.description=Edge Router & Load Balancer"
       - "homepage.siteMonitor=http://calcifer_cloud_traefik:8080/ping"
 
-  # ==================== FORWARD AUTH ====================
+  # ==================== CALCIFER AUTH ====================
+  # OAuth2/OIDC authentication + group-based authorization (replaces forward-auth + group-auth)
   forward-auth:
-    image: thomseddon/traefik-forward-auth:2
+    build:
+      context: ../../forward-auth
     container_name: calcifer_cloud_forward_auth
     restart: unless-stopped
     depends_on:
       keycloak:
         condition: service_healthy
     environment:
-      - DEFAULT_PROVIDER=oidc
-      # Use public URL - issuer must match what Keycloak returns
-      - PROVIDERS_OIDC_ISSUER_URL=https://keycloak.${DOMAIN:-dmgiangi.dev}/realms/calcifer
-      - PROVIDERS_OIDC_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-calcifer-gateway}
-      - PROVIDERS_OIDC_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me-in-production}
+      - OIDC_ISSUER_URL=https://keycloak.${DOMAIN:-dmgiangi.dev}/realms/calcifer
+      - OIDC_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-calcifer-gateway}
+      - OIDC_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me-in-production}
       - SECRET=${FORWARD_AUTH_SECRET:-a-random-secret-change-me}
       - AUTH_HOST=auth.${DOMAIN:-dmgiangi.dev}
       - COOKIE_DOMAIN=${DOMAIN:-dmgiangi.dev}
-      - INSECURE_COOKIE=false
-      - LOG_LEVEL=debug
-      - URL_PATH=/_oauth
+      - RULES_PATH=/etc/calcifer-auth/auth-config.yaml
+    volumes:
+      - ./group-auth/auth-config.yaml:/etc/calcifer-auth/auth-config.yaml:ro
     networks:
       - calcifer_net
-    # Add host entry to resolve keycloak.dmgiangi.dev to traefik inside Docker network
     extra_hosts:
       - "keycloak.${DOMAIN:-dmgiangi.dev}:host-gateway"
     labels:
       - "traefik.enable=true"
-      # OAuth callback route - auth.dmgiangi.dev MUST use forward-auth middleware
-      # This allows forward-auth to receive callbacks via X-Forwarded-Uri header
       - "traefik.http.routers.forward-auth.rule=Host(`auth.${DOMAIN:-dmgiangi.dev}`)"
       - "traefik.http.routers.forward-auth.entrypoints=websecure"
       - "traefik.http.routers.forward-auth.tls.certresolver=letsencrypt"
       - "traefik.http.routers.forward-auth.middlewares=forward-auth@file"
       - "traefik.http.services.forward-auth.loadbalancer.server.port=4181"
+
 
   # ==================== TOKEN VALIDATOR ====================
   # Validates JWT Bearer tokens for API access (M2M)
