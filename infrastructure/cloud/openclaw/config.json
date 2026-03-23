@@ -10,7 +10,8 @@
     "trustedProxies": ["172.16.0.0/12"],
     "controlUi": {
       "allowedOrigins": ["https://claw.dmgiangi.dev"],
-      "dangerouslyDisableDeviceAuth": true
+      "dangerouslyDisableDeviceAuth": true,
+      "allowInsecureAuth": true
     }
   },
   "agents": {
