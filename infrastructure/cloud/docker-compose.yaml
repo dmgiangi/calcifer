@@ -297,13 +297,7 @@ services:
       - "traefik.http.routers.loki.tls.certresolver=letsencrypt"
       - "traefik.http.routers.loki.middlewares=forward-auth@file"
       - "traefik.http.services.loki.loadbalancer.server.port=3100"
-      # Homepage - link to Grafana Explore (Loki has no web UI)
-      - "homepage.group=Monitoring"
-      - "homepage.name=Loki"
-      - "homepage.icon=loki.png"
-      - "homepage.href=https://grafana.${DOMAIN:-dmgiangi.dev}/explore?orgId=1&left=%7B%22datasource%22:%22loki%22%7D"
-      - "homepage.description=Log Aggregation"
-      - "homepage.siteMonitor=http://calcifer_cloud_loki:3100/ready"
+      # No homepage entry - Loki is API-only, accessed via Grafana Explore
 
   # ==================== TEMPO ====================
   tempo:
@@ -329,13 +323,7 @@ services:
       - "traefik.http.routers.tempo.tls.certresolver=letsencrypt"
       - "traefik.http.routers.tempo.middlewares=forward-auth@file"
       - "traefik.http.services.tempo.loadbalancer.server.port=3200"
-      # Homepage - link to Grafana Explore (Tempo has no web UI)
-      - "homepage.group=Monitoring"
-      - "homepage.name=Tempo"
-      - "homepage.icon=tempo.png"
-      - "homepage.href=https://grafana.${DOMAIN:-dmgiangi.dev}/explore?orgId=1&left=%7B%22datasource%22:%22tempo%22%7D"
-      - "homepage.description=Distributed Tracing"
-      - "homepage.siteMonitor=http://calcifer_cloud_tempo:3200/ready"
+      # No homepage entry - Tempo is API-only, accessed via Grafana Explore
 
   # ==================== HOMEPAGE ====================
   homepage:
