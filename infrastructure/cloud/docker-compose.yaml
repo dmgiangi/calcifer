@@ -93,7 +93,7 @@ services:
 
   # ==================== IDENTITY PROVIDER ====================
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0
+    image: quay.io/keycloak/keycloak:26.5.6
     container_name: calcifer_cloud_keycloak
     restart: unless-stopped
     entrypoint: /opt/keycloak/custom-entrypoint.sh
@@ -113,6 +113,9 @@ services:
       - --http-enabled=true
       - --health-enabled=true
       - --metrics-enabled=true
+      # OpenTelemetry - metrics + traces via OTLP to Alloy
+      - --tracing-enabled=true
+      - --tracing-endpoint=http://alloy:4317
       - --proxy-headers=xforwarded
     volumes:
       - ./keycloak/docker-entrypoint.sh:/opt/keycloak/custom-entrypoint.sh:ro
@@ -189,11 +192,14 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
       # Health
       - "--ping=true"
-      # Metrics
-      - "--metrics.prometheus=true"
-      - "--metrics.prometheus.addEntryPointsLabels=true"
-      - "--metrics.prometheus.addRoutersLabels=true"
-      - "--metrics.prometheus.addServicesLabels=true"
+      # OpenTelemetry - metrics + traces via OTLP to Alloy
+      - "--metrics.otlp=true"
+      - "--metrics.otlp.http.endpoint=http://alloy:4318/v1/metrics"
+      - "--metrics.otlp.addEntryPointsLabels=true"
+      - "--metrics.otlp.addRoutersLabels=true"
+      - "--metrics.otlp.addServicesLabels=true"
+      - "--tracing.otlp=true"
+      - "--tracing.otlp.http.endpoint=http://alloy:4318/v1/traces"
       # Logging
       - "--log.level=INFO"
       - "--accesslog=true"
@@ -272,6 +278,7 @@ services:
       - CLIENT_ID=${API_CLIENT_ID:-calcifer-api}
       - CLIENT_SECRET=${API_CLIENT_SECRET:-}
       - PORT=4182
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4317
     networks:
       - calcifer_net
     labels:
@@ -330,6 +337,32 @@ services:
       - "traefik.http.routers.tempo.middlewares=forward-auth@file"
       - "traefik.http.services.tempo.loadbalancer.server.port=3200"
       # No homepage entry - Tempo is API-only, accessed via Grafana Explore
+
+  # ==================== ALLOY (OTel Collector + Log Collection) ====================
+  alloy:
+    image: grafana/alloy:latest
+    container_name: calcifer_cloud_alloy
+    restart: unless-stopped
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --stability.level=generally-available
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - calcifer_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:12345/-/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "traefik.enable=false"
 
   # ==================== HOMEPAGE ====================
   homepage:

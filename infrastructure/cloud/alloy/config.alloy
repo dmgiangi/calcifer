@@ -1,0 +1,86 @@
+// =============================================================================
+// Grafana Alloy - OpenTelemetry Collector + Docker Log Collection
+// =============================================================================
+
+// ==================== OTLP RECEIVER ====================
+// Receives OTLP data (metrics, traces, logs) from Traefik, Keycloak, token-validator
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    metrics = [otelcol.exporter.prometheus.default.input]
+    traces  = [otelcol.exporter.otlphttp.tempo.input]
+    logs    = [otelcol.exporter.loki.default.input]
+  }
+}
+
+// ==================== EXPORTERS ====================
+
+// Metrics -> Prometheus (remote write)
+otelcol.exporter.prometheus "default" {
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}
+
+// Traces -> Tempo (OTLP HTTP)
+otelcol.exporter.otlphttp "tempo" {
+  client {
+    endpoint = "http://tempo:4318"
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// Logs (from OTLP) -> Loki
+otelcol.exporter.loki "default" {
+  forward_to = [loki.write.default.receiver]
+}
+
+// ==================== DOCKER LOG COLLECTION ====================
+// Replaces Promtail
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  forward_to = [loki.process.docker.receiver]
+}
+
+loki.process "docker" {
+  // Parse Docker JSON log format
+  stage.docker {}
+
+  forward_to = [loki.write.default.receiver]
+}
+
+// Loki write endpoint (shared by OTLP logs and Docker logs)
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+

@@ -1,27 +1,10 @@
 # =============================================================================
 # Calcifer Common - Monitoring Stack
 # =============================================================================
-# Shared monitoring services: Loki, Tempo, Promtail
-# Extended by cloud/ and home/ docker-compose files
+# Shared network definition. Services defined per-environment.
 # =============================================================================
 
-services:
-  # ==================== LOG AGGREGATION ====================
-  # ==================== LOG COLLECTION ====================
-  promtail:
-    image: grafana/promtail:2.9.3
-    container_name: ${COMPOSE_PROJECT_NAME:-calcifer}_promtail
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - ../common/promtail/promtail-config.yaml:/etc/promtail/config.yml:ro
-    command: -config.file=/etc/promtail/config.yml
-    depends_on:
-      loki:
-        condition: service_healthy
-    networks:
-      - calcifer_net
+services: {}
 
 networks:
   calcifer_net:

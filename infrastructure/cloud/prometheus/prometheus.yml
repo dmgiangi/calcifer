@@ -1,7 +1,8 @@
 # =============================================================================
 # Prometheus Configuration - Cloud Environment
 # =============================================================================
-# Federated metrics from home + local monitoring stack
+# Scraping for services without OTLP support.
+# Traefik, Keycloak, token-validator push metrics via OTLP -> Alloy -> remote_write.
 # =============================================================================
 
 global:
@@ -14,7 +15,7 @@ global:
 # Rule files
 rule_files: [ ]
 
-# Scrape configs
+# Scrape configs - only services that don't support OTLP push
 scrape_configs:
   # Prometheus self-monitoring
   - job_name: 'prometheus'
@@ -24,7 +25,7 @@ scrape_configs:
           service: 'prometheus'
           env: 'cloud'
 
-  # Grafana (built-in /metrics on :3000)
+  # Grafana (built-in /metrics on :3000, no OTLP push support)
   - job_name: 'grafana'
     static_configs:
       - targets: [ 'grafana:3000' ]
@@ -32,7 +33,7 @@ scrape_configs:
           service: 'grafana'
           env: 'cloud'
 
-  # Loki (built-in /metrics on :3100)
+  # Loki (built-in /metrics on :3100, no OTLP push support)
   - job_name: 'loki'
     static_configs:
       - targets: [ 'loki:3100' ]
@@ -40,7 +41,7 @@ scrape_configs:
           service: 'loki'
           env: 'cloud'
 
-  # Tempo (built-in /metrics on :3200)
+  # Tempo (built-in /metrics on :3200, no OTLP push support)
   - job_name: 'tempo'
     static_configs:
       - targets: [ 'tempo:3200' ]
@@ -48,37 +49,21 @@ scrape_configs:
           service: 'tempo'
           env: 'cloud'
 
-  # Keycloak (--metrics-enabled=true, management port 9000)
+  # Alloy (built-in /metrics on :12345)
+  - job_name: 'alloy'
+    static_configs:
+      - targets: [ 'alloy:12345' ]
+        labels:
+          service: 'alloy'
+          env: 'cloud'
+
+  # Keycloak (scrape as fallback - also sends traces via OTLP)
   - job_name: 'keycloak'
     metrics_path: '/metrics'
     static_configs:
       - targets: [ 'keycloak:9000' ]
         labels:
           service: 'keycloak'
-          env: 'cloud'
-
-  # Traefik (--metrics.prometheus=true, API port 8080)
-  - job_name: 'traefik'
-    static_configs:
-      - targets: [ 'traefik:8080' ]
-        labels:
-          service: 'traefik'
-          env: 'cloud'
-
-  # Promtail (built-in /metrics on :9080)
-  - job_name: 'promtail'
-    static_configs:
-      - targets: [ 'promtail:9080' ]
-        labels:
-          service: 'promtail'
-          env: 'cloud'
-
-  # Token Validator (custom /metrics on :4182)
-  - job_name: 'token-validator'
-    static_configs:
-      - targets: [ 'token-validator:4182' ]
-        labels:
-          service: 'token-validator'
           env: 'cloud'
 
   # =============================================================================
