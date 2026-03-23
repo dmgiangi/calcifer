@@ -7,6 +7,7 @@
       "mode": "token",
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     },
+    "trustedProxies": ["172.16.0.0/12"],
     "controlUi": {
       "allowedOrigins": ["https://claw.dmgiangi.dev"],
       "dangerouslyDisableDeviceAuth": true
