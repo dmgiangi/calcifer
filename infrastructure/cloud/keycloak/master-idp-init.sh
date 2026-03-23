@@ -13,9 +13,17 @@ KC_PASS="${KC_BOOTSTRAP_ADMIN_PASSWORD:-admin}"
 log()  { echo "[MASTER-IDP] $*"; }
 warn() { echo "[MASTER-IDP] WARN: $*"; }
 
-# Wait for Keycloak
-log "Waiting for Keycloak..."
-until curl -sf "${KEYCLOAK_URL}/health/ready" > /dev/null 2>&1; do sleep 3; done
+# Wait for Keycloak (depends_on healthy should handle this, but just in case)
+log "Checking Keycloak readiness..."
+RETRIES=0
+until curl -sf "${KEYCLOAK_URL}/realms/master" > /dev/null 2>&1; do
+  RETRIES=$((RETRIES + 1))
+  if [ "$RETRIES" -ge 60 ]; then
+    warn "Keycloak not ready after 3 minutes, giving up"
+    exit 1
+  fi
+  sleep 3
+done
 log "Keycloak is ready"
 
 # Get admin token
