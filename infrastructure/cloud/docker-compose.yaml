@@ -402,16 +402,12 @@ services:
       - HOME=/home/node
       - NODE_ENV=production
       - TERM=xterm-256color
-      - OPENCLAW_GATEWAY_BIND=lan
-      - OPENCLAW_GATEWAY_PORT=18789
-      - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN}
-      - GOG_KEYRING_PASSWORD=${GOG_KEYRING_PASSWORD}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - XDG_CONFIG_HOME=/home/node/.openclaw
+      - GOG_KEYRING_PASSWORD=${GOG_KEYRING_PASSWORD}
     volumes:
       - ${DATA_DIR:-/var/lib/calcifer/cloud}/openclaw/config:/home/node/.openclaw
       - ${DATA_DIR:-/var/lib/calcifer/cloud}/openclaw/workspace:/home/node/.openclaw/workspace
-      - ./openclaw/config.json:/home/node/.openclaw/openclaw.template.json:ro
+      - ./openclaw/config.json:/home/node/.openclaw/openclaw.json:ro
     networks:
       - calcifer_net
     healthcheck:
@@ -420,8 +416,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-    entrypoint: ["/bin/sh", "-c", "sed \"s/\\$${OPENCLAW_GATEWAY_TOKEN}/$OPENCLAW_GATEWAY_TOKEN/g\" /home/node/.openclaw/openclaw.template.json > /home/node/.openclaw/openclaw.json && exec node dist/index.js gateway"]
-    user: "0:0"
+    command: ["node", "dist/index.js", "gateway"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.openclaw.rule=Host(`claw.${DOMAIN:-dmgiangi.dev}`)"

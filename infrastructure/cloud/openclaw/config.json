@@ -3,15 +3,15 @@
     "mode": "local",
     "bind": "lan",
     "port": 18789,
-    "auth": {
-      "mode": "token",
-      "token": "${OPENCLAW_GATEWAY_TOKEN}"
-    },
     "trustedProxies": ["172.16.0.0/12"],
+    "auth": {
+      "mode": "trusted-proxy",
+      "trustedProxy": {
+        "userHeader": "X-Forwarded-User"
+      }
+    },
     "controlUi": {
-      "allowedOrigins": ["https://claw.dmgiangi.dev"],
-      "dangerouslyDisableDeviceAuth": true,
-      "allowInsecureAuth": true
+      "allowedOrigins": ["https://claw.dmgiangi.dev"]
     }
   },
   "agents": {
