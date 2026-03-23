@@ -1,1 +1,17 @@
-forward-auth/forward-auth
+# Compiled binary
+calcifer-auth
+forward-auth
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test / coverage
+*.test
+*.out
+coverage.html

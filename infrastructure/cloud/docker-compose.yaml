@@ -247,6 +247,7 @@ services:
       - AUTH_HOST=auth.${DOMAIN:-dmgiangi.dev}
       - COOKIE_DOMAIN=${DOMAIN:-dmgiangi.dev}
       - RULES_PATH=/etc/calcifer-auth/auth-config.yaml
+      - OTEL_EXPORTER_OTLP_ENDPOINT=alloy:4317
     volumes:
       - ./group-auth/auth-config.yaml:/etc/calcifer-auth/auth-config.yaml:ro
     networks:
