@@ -55,11 +55,9 @@ def cmd_clean(args: List[str]) -> int:
     print("  ⚠️  This will remove:")
     print("      - Repository clone")
     print("      - Environment secrets (.env)")
-    print("      - All data volumes")
+    print("      - All data volumes (including certs)")
+    print("      - Orphan Docker volumes")
     print("      - Systemd service")
-    print()
-    print("  ✅ This will KEEP:")
-    print("      - SSL Certificates (/opt/certs)")
     print()
 
     if not opts.confirm:
@@ -80,10 +78,13 @@ def cmd_clean(args: List[str]) -> int:
     
     print_step("🗑️ ", f"Removing volumes: {data_dir}")
     ssh_run(config, f"sudo rm -rf {data_dir}", check=False)
-    
+
+    print_step("🗑️ ", "Removing orphan Docker volumes...")
+    ssh_run(config, "docker volume prune -f 2>/dev/null || true", check=False)
+
     print_step("🗑️ ", f"Removing .env secrets")
     ssh_run(config, f"rm -f {target.deploy_dir}/infrastructure/{target.compose_dir}/.env", check=False)
-    
+
     print_step("🗑️ ", f"Removing repository: {target.deploy_dir}")
     ssh_run(config, f"sudo rm -rf {target.deploy_dir}", check=False)
 
@@ -97,8 +98,7 @@ def cmd_clean(args: List[str]) -> int:
     print_header("DONE")
     print_step("✅", "Server cleaned!")
     print()
-    print("  Preserved:")
-    print("    - /opt/certs (SSL certificates)")
+    print("  All stateful data removed (certs will be re-issued on bootstrap).")
     print()
     print("  To re-bootstrap:")
     print(f"    ./calcifer-cli.py bootstrap --target {opts.target}")

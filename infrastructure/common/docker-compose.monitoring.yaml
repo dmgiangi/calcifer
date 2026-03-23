@@ -7,22 +7,6 @@
 
 services:
   # ==================== LOG AGGREGATION ====================
-  loki:
-    image: grafana/loki:2.9.3
-    container_name: ${COMPOSE_PROJECT_NAME:-calcifer}_loki
-    restart: unless-stopped
-    volumes:
-      - ../common/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
-      - ${DATA_DIR:-/var/lib/calcifer}/loki:/loki
-    command: -config.file=/etc/loki/local-config.yaml
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:3100/ready" ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    networks:
-      - calcifer_net
-
   # ==================== LOG COLLECTION ====================
   promtail:
     image: grafana/promtail:2.9.3
@@ -36,23 +20,6 @@ services:
     depends_on:
       loki:
         condition: service_healthy
-    networks:
-      - calcifer_net
-
-  # ==================== DISTRIBUTED TRACING ====================
-  tempo:
-    image: grafana/tempo:2.3.1
-    container_name: ${COMPOSE_PROJECT_NAME:-calcifer}_tempo
-    restart: unless-stopped
-    volumes:
-      - ../common/tempo/tempo-config.yaml:/etc/tempo/config.yaml:ro
-      - ${DATA_DIR:-/var/lib/calcifer}/tempo:/tmp/tempo
-    command: [ "-config.file=/etc/tempo/config.yaml" ]
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=-", "http://localhost:3200/ready" ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
     networks:
       - calcifer_net
 

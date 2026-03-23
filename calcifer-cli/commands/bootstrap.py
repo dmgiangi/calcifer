@@ -101,23 +101,27 @@ def cmd_bootstrap(args: List[str]) -> int:
 
     # Step 2: Setup volume folders
     print_header("2. SETUP VOLUME FOLDERS")
-    
+
     data_dir = f"/var/lib/calcifer/{opts.target}"
-    certs_dir = "/opt/certs"
-    
+
     folders = [
         f"{data_dir}/prometheus",
         f"{data_dir}/grafana",
         f"{data_dir}/keycloak",
         f"{data_dir}/loki",
         f"{data_dir}/tempo",
-        certs_dir,
+        f"{data_dir}/traefik/certs",
     ]
-    
+
     for folder in folders:
         print_step("📁", f"Creating {folder}")
         ssh_run(config, f"sudo mkdir -p {folder}")
-    
+
+    # Migrate certs from old location if present
+    ssh_run(config,
+        f"test -f /opt/certs/acme.json && sudo mv /opt/certs/acme.json {data_dir}/traefik/certs/acme.json 2>/dev/null || true",
+        check=False)
+
     # Set permissions
     print_step("🔒", "Setting permissions...")
     ssh_run(config, f"sudo chown -R 65534:65534 {data_dir}/prometheus")  # nobody
@@ -125,7 +129,7 @@ def cmd_bootstrap(args: List[str]) -> int:
     ssh_run(config, f"sudo chown -R 1000:1000 {data_dir}/keycloak")  # keycloak
     ssh_run(config, f"sudo chown -R 10001:10001 {data_dir}/loki")
     ssh_run(config, f"sudo chown -R 10001:10001 {data_dir}/tempo")
-    ssh_run(config, f"sudo chmod 700 {certs_dir}")
+    ssh_run(config, f"sudo chmod 700 {data_dir}/traefik/certs")
     print_step("✅", "Folders ready")
 
     # Step 3: Generate environment

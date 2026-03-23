@@ -197,7 +197,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/dynamic:/etc/traefik/dynamic:ro
-      - ${CERTS_DIR:-/opt/certs}:/letsencrypt
+      - ${DATA_DIR:-/var/lib/calcifer/cloud}/traefik/certs:/letsencrypt
     networks:
       - calcifer_net
     labels:
