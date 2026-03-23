@@ -18,15 +18,15 @@
       "builtIn": false,
       "authenticationExecutions": [
         {
-          "authenticator": "idp-create-user-if-unique",
+          "authenticator": "idp-detect-existing-broker-user",
           "authenticatorFlow": false,
-          "requirement": "ALTERNATIVE",
+          "requirement": "REQUIRED",
           "priority": 10
         },
         {
           "authenticator": "idp-auto-link",
           "authenticatorFlow": false,
-          "requirement": "ALTERNATIVE",
+          "requirement": "REQUIRED",
           "priority": 20
         }
       ]

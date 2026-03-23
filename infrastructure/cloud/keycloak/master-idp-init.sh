@@ -67,18 +67,18 @@ if [ "$FLOW_EXISTS" != "200" ]; then
     -H "Content-Type: application/json" \
     -d "{\"alias\":\"${FLOW_ALIAS}\",\"description\":\"Auto-link Google account by email\",\"providerId\":\"basic-flow\",\"topLevel\":true,\"builtIn\":false}" > /dev/null
 
-  # Add executions: idp-create-user-if-unique + idp-auto-link
+  # Add executions: idp-detect-existing-broker-user (REQUIRED) + idp-auto-link (REQUIRED)
   curl -s -X POST "${KEYCLOAK_URL}/admin/realms/master/authentication/flows/${FLOW_ALIAS}/executions/execution" \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"provider\":\"idp-create-user-if-unique\"}" > /dev/null
+    -d "{\"provider\":\"idp-detect-existing-broker-user\"}" > /dev/null
 
   curl -s -X POST "${KEYCLOAK_URL}/admin/realms/master/authentication/flows/${FLOW_ALIAS}/executions/execution" \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d "{\"provider\":\"idp-auto-link\"}" > /dev/null
 
-  # Set both executions to ALTERNATIVE
+  # Set both executions to REQUIRED
   EXECUTIONS=$(curl -sf -H "Authorization: Bearer $TOKEN" \
     "${KEYCLOAK_URL}/admin/realms/master/authentication/flows/${FLOW_ALIAS}/executions")
 
@@ -87,7 +87,7 @@ if [ "$FLOW_EXISTS" != "200" ]; then
     curl -s -X PUT "${KEYCLOAK_URL}/admin/realms/master/authentication/executions/${EXEC_ID}" \
       -H "Authorization: Bearer $TOKEN" \
       -H "Content-Type: application/json" \
-      -d "$(echo "$exec" | jq '.requirement = "ALTERNATIVE"')" > /dev/null
+      -d "$(echo "$exec" | jq '.requirement = "REQUIRED"')" > /dev/null
   done
 
   log "Auto-link flow created in master realm"
