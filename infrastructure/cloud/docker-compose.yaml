@@ -411,7 +411,7 @@ services:
     volumes:
       - ${DATA_DIR:-/var/lib/calcifer/cloud}/openclaw/config:/home/node/.openclaw
       - ${DATA_DIR:-/var/lib/calcifer/cloud}/openclaw/workspace:/home/node/.openclaw/workspace
-      - ./openclaw/config.json:/home/node/.openclaw/openclaw.json:ro
+      - ./openclaw/config.json:/home/node/.openclaw/openclaw.template.json:ro
     networks:
       - calcifer_net
     healthcheck:
@@ -420,7 +420,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-    command: ["node", "dist/index.js", "gateway"]
+    entrypoint: ["/bin/sh", "-c", "sed \"s/\\$${OPENCLAW_GATEWAY_TOKEN}/$OPENCLAW_GATEWAY_TOKEN/g\" /home/node/.openclaw/openclaw.template.json > /home/node/.openclaw/openclaw.json && exec node dist/index.js gateway"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.openclaw.rule=Host(`claw.${DOMAIN:-dmgiangi.dev}`)"
