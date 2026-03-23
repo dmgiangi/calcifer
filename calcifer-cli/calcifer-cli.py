@@ -12,11 +12,13 @@ sys.path.insert(0, str(CLI_DIR))
 from commands.env import cmd_env
 from commands.bootstrap import cmd_bootstrap
 from commands.clean import cmd_clean
+from commands.deploy import cmd_deploy
 
 
 COMMANDS = {
     "env": (cmd_env, "Configure environment variables and secrets"),
     "bootstrap": (cmd_bootstrap, "Bootstrap remote server from scratch"),
+    "deploy": (cmd_deploy, "Deploy changes without full clean+bootstrap"),
     "clean": (cmd_clean, "Clean server (remove repo, volumes, secrets)"),
 }
 
@@ -33,6 +35,7 @@ Usage:
 
 Commands:
     bootstrap   Bootstrap remote server from scratch
+    deploy      Deploy changes without full clean+bootstrap
     env         Configure environment variables and secrets
     clean       Clean server (remove repo, volumes, secrets)
 
@@ -42,7 +45,10 @@ Options:
 
 Examples:
     ./calcifer-cli.py bootstrap --target cloud            # Full setup (prompts for secrets)
-    ./calcifer-cli.py bootstrap --target cloud --use-current-env  # Use existing .env
+    ./calcifer-cli.py deploy --target cloud               # Push + pull + restart all
+    ./calcifer-cli.py deploy --restart traefik grafana     # Restart specific services
+    ./calcifer-cli.py deploy --sync-env                   # Also sync .env
+    ./calcifer-cli.py deploy --no-restart                 # Only pull code
     ./calcifer-cli.py clean --target cloud                # Wipe server (keep certs)
 
 Bootstrap workflow:
