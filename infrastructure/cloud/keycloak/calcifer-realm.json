@@ -152,10 +152,6 @@
       ]
     }
   ],
-  "defaultDefaultClientScopes": [
-    "profile",
-    "email",
-    "roles"
-  ]
+  "defaultDefaultClientScopes": []
 }
 
