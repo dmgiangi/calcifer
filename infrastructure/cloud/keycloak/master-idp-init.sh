@@ -67,26 +67,25 @@ if [ "$FLOW_EXISTS" != "200" ]; then
     -H "Content-Type: application/json" \
     -d "{\"alias\":\"${FLOW_ALIAS}\",\"description\":\"Auto-link Google account by email\",\"providerId\":\"basic-flow\",\"topLevel\":true,\"builtIn\":false}" > /dev/null
 
-  # Add executions: idp-detect-existing-broker-user (REQUIRED) + idp-auto-link (REQUIRED)
+  # Add executions: idp-create-user-if-unique (ALTERNATIVE) + idp-auto-link (ALTERNATIVE)
+  # Per Keycloak docs: https://www.keycloak.org/docs/latest/server_admin/#automatically-link-existing-first-login-flow
   curl -s -X POST "${KEYCLOAK_URL}/admin/realms/master/authentication/flows/${FLOW_ALIAS}/executions/execution" \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"provider\":\"idp-detect-existing-broker-user\"}" > /dev/null
+    -d "{\"provider\":\"idp-create-user-if-unique\"}" > /dev/null
 
   curl -s -X POST "${KEYCLOAK_URL}/admin/realms/master/authentication/flows/${FLOW_ALIAS}/executions/execution" \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d "{\"provider\":\"idp-auto-link\"}" > /dev/null
 
-  # Set both executions to REQUIRED
+  # Set both executions to ALTERNATIVE
   EXECUTIONS=$(curl -sf -H "Authorization: Bearer $TOKEN" \
     "${KEYCLOAK_URL}/admin/realms/master/authentication/flows/${FLOW_ALIAS}/executions")
 
-  # Update each execution requirement via the flow executions endpoint
-  UPDATED=$(echo "$EXECUTIONS" | jq '[.[] | .requirement = "REQUIRED"]')
+  UPDATED=$(echo "$EXECUTIONS" | jq '[.[] | .requirement = "ALTERNATIVE"]')
 
   echo "$UPDATED" | jq -c '.[]' | while read -r exec; do
-    EXEC_ID=$(echo "$exec" | jq -r '.id')
     PROVIDER=$(echo "$exec" | jq -r '.providerId')
     RESP=$(curl -s -w "\n%{http_code}" -X PUT \
       "${KEYCLOAK_URL}/admin/realms/master/authentication/flows/${FLOW_ALIAS}/executions" \
@@ -94,7 +93,7 @@ if [ "$FLOW_EXISTS" != "200" ]; then
       -H "Content-Type: application/json" \
       -d "$exec")
     CODE=$(echo "$RESP" | tail -1)
-    log "Set ${PROVIDER} to REQUIRED: HTTP ${CODE}"
+    log "Set ${PROVIDER} to ALTERNATIVE: HTTP ${CODE}"
   done
 
   log "Auto-link flow created in master realm"
