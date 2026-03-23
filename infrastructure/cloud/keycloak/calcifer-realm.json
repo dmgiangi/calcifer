@@ -23,7 +23,7 @@
         "clientId": "${GOOGLE_CLIENT_ID}",
         "clientSecret": "${GOOGLE_CLIENT_SECRET}",
         "defaultScope": "openid email profile",
-        "syncMode": "INHERIT"
+        "syncMode": "FORCE"
       }
     }
   ],
@@ -33,7 +33,7 @@
       "identityProviderAlias": "google",
       "identityProviderMapper": "oidc-username-idp-mapper",
       "config": {
-        "syncMode": "INHERIT",
+        "syncMode": "FORCE",
         "template": "${CLAIM.email}"
       }
     }
