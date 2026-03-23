@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -98,7 +99,11 @@ func main() {
 		}
 
 		// Handle callback forwarded via Traefik
+		// Query params (code, state) are in X-Forwarded-Uri, not in r.URL
 		if fwdHost == cfg.AuthHost && strings.HasPrefix(fwdUri, cfg.CallbackPath) {
+			if parsed, err := url.Parse(fwdUri); err == nil {
+				r.URL.RawQuery = parsed.RawQuery
+			}
 			auth.HandleCallback(w, r.WithContext(ctx))
 			return
 		}
