@@ -434,7 +434,7 @@ services:
 
   # ==================== PORTFOLIO ====================
   portfolio:
-    image: ghcr.io/dmgiangi/portfolio:7d6e89e92245e5bc6cdcb25813c6baf862ab0877
+    image: ghcr.io/dmgiangi/portfolio:60a876562f45636630441947ea95b3069406ca02
     container_name: calcifer_cloud_portfolio
     restart: unless-stopped
     networks:
