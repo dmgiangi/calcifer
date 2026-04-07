@@ -37,7 +37,7 @@ jobs:
           git commit -m "deploy: portfolio ${{ github.event.client_payload.tag }}"
           git push
 
-      - name: Test SSH connection
+      - name: Setup SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_KEY }}
         run: |
@@ -45,5 +45,22 @@ jobs:
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H dmgiangi.dev >> ~/.ssh/known_hosts 2>/dev/null
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no dmgiangi@dmgiangi.dev 'echo "SSH connection OK - $(hostname) - $(date)"'
+
+      - name: Deploy to server
+        run: |
+          ssh -i ~/.ssh/id_ed25519 dmgiangi@dmgiangi.dev '
+            cd /opt/calcifer && git pull
+            cd infrastructure/cloud
+            docker compose pull portfolio
+            docker compose up -d portfolio
+          '
+
+      - name: Verify deployment
+        run: |
+          sleep 15
+          ssh -i ~/.ssh/id_ed25519 dmgiangi@dmgiangi.dev '
+            status=$(docker inspect calcifer_cloud_portfolio --format "{{.State.Health.Status}}" 2>/dev/null || echo "unknown")
+            echo "Portfolio status: $status"
+            [ "$status" = "healthy" ] && echo "✅ Deploy successful" || echo "::warning::Container not healthy yet: $status"
+          '
 
