@@ -4,6 +4,9 @@ on:
   repository_dispatch:
     types: [image-published]
 
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
