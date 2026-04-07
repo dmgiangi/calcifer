@@ -57,10 +57,14 @@ jobs:
 
       - name: Verify deployment
         run: |
-          sleep 15
           ssh -i ~/.ssh/id_ed25519 dmgiangi@dmgiangi.dev '
-            status=$(docker inspect calcifer_cloud_portfolio --format "{{.State.Health.Status}}" 2>/dev/null || echo "unknown")
-            echo "Portfolio status: $status"
-            [ "$status" = "healthy" ] && echo "✅ Deploy successful" || echo "::warning::Container not healthy yet: $status"
+            for i in $(seq 1 12); do
+              status=$(docker inspect calcifer_cloud_portfolio --format "{{.State.Health.Status}}" 2>/dev/null || echo "unknown")
+              echo "Attempt $i/12: $status"
+              [ "$status" = "healthy" ] && echo "✅ Deploy successful" && exit 0
+              sleep 10
+            done
+            echo "❌ Container not healthy after 2 minutes"
+            exit 1
           '
 
