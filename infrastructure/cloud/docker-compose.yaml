@@ -472,7 +472,7 @@ services:
       - GENERIC_TIMEZONE=Europe/Rome
       - TZ=Europe/Rome
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
-      - N8N_RUNNERS_ENABLED=true
+      - N8N_USER_MANAGEMENT_DISABLED=true
     volumes:
       - ${DATA_DIR:-/var/lib/calcifer/cloud}/n8n:/home/node/.n8n
     networks:
