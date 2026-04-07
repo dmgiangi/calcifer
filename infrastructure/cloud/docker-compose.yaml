@@ -457,6 +457,47 @@ services:
       - "homepage.href=https://${DOMAIN:-dmgiangi.dev}"
       - "homepage.description=Personal Portfolio"
 
+  # ==================== N8N ====================
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: calcifer_cloud_n8n
+    restart: unless-stopped
+    environment:
+      - N8N_HOST=n8n.${DOMAIN:-dmgiangi.dev}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - NODE_ENV=production
+      - WEBHOOK_URL=https://n8n.${DOMAIN:-dmgiangi.dev}/
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - GENERIC_TIMEZONE=Europe/Rome
+      - TZ=Europe/Rome
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_RUNNERS_ENABLED=true
+    volumes:
+      - ${DATA_DIR:-/var/lib/calcifer/cloud}/n8n:/home/node/.n8n
+    networks:
+      - calcifer_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`n8n.${DOMAIN:-dmgiangi.dev}`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.n8n.middlewares=forward-auth@file"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+      # Homepage integration
+      - "homepage.group=Automation"
+      - "homepage.name=n8n"
+      - "homepage.icon=n8n"
+      - "homepage.href=https://n8n.${DOMAIN:-dmgiangi.dev}"
+      - "homepage.description=Workflow Automation"
+      - "homepage.siteMonitor=http://calcifer_cloud_n8n:5678/healthz"
+
 
 networks:
   calcifer_net:

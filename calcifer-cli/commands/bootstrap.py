@@ -111,6 +111,7 @@ def cmd_bootstrap(args: List[str]) -> int:
         f"{data_dir}/loki",
         f"{data_dir}/tempo",
         f"{data_dir}/traefik/certs",
+        f"{data_dir}/n8n",
     ]
 
     for folder in folders:
@@ -130,6 +131,7 @@ def cmd_bootstrap(args: List[str]) -> int:
     ssh_run(config, f"sudo chown -R 10001:10001 {data_dir}/loki")
     ssh_run(config, f"sudo chown -R 10001:10001 {data_dir}/tempo")
     ssh_run(config, f"sudo chmod 700 {data_dir}/traefik/certs")
+    ssh_run(config, f"sudo chown -R 1000:1000 {data_dir}/n8n")  # node
     print_step("✅", "Folders ready")
 
     # Step 3: Generate environment

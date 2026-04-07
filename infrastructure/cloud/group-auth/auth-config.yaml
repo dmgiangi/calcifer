@@ -45,3 +45,6 @@ rules:
   claw.dmgiangi.dev:
     allowed_groups: [admins]
 
+  n8n.dmgiangi.dev:
+    allowed_groups: [admins]
+

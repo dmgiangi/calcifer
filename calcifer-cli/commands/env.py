@@ -50,6 +50,9 @@ ENV_VARS = {
             "GOG_KEYRING_PASSWORD": ("auto", "OpenClaw keyring encryption password"),
             "GEMINI_API_KEY": ("external", "Google Gemini API key (from https://aistudio.google.com/apikey)"),
         },
+        "n8n": {
+            "N8N_ENCRYPTION_KEY": ("auto", "n8n credential encryption key (DO NOT LOSE)"),
+        },
         "federation": {
             "HOME_PROMETHEUS_HOST": ("192.168.8.180", "Home Prometheus IP for federation"),
         },
