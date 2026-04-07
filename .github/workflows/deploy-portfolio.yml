@@ -1,0 +1,36 @@
+name: Deploy Portfolio
+
+on:
+  repository_dispatch:
+    types: [image-published]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event.client_payload.image == 'ghcr.io/dmgiangi/portfolio'
+    steps:
+      - name: Log payload
+        run: |
+          echo "Image: ${{ github.event.client_payload.image }}"
+          echo "Tag:   ${{ github.event.client_payload.tag }}"
+          echo "SHA:   ${{ github.event.client_payload.sha }}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update portfolio image tag
+        run: |
+          sed -i "s|ghcr.io/dmgiangi/portfolio:[a-zA-Z0-9._-]*|ghcr.io/dmgiangi/portfolio:${{ github.event.client_payload.tag }}|g" \
+            infrastructure/cloud/docker-compose.yaml
+          echo "=== Updated line ==="
+          grep "ghcr.io/dmgiangi/portfolio" infrastructure/cloud/docker-compose.yaml
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add infrastructure/cloud/docker-compose.yaml
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "deploy: portfolio ${{ github.event.client_payload.tag }}"
+          git push
+
