@@ -432,6 +432,32 @@ services:
       - "homepage.description=AI Assistant Gateway"
       - "homepage.siteMonitor=http://calcifer_cloud_openclaw:18789/health"
 
+  # ==================== PORTFOLIO ====================
+  portfolio:
+    image: ghcr.io/dmgiangi/portfolio:8abf62f1d087d0feb6c392b75d299ab0aede5a37
+    container_name: calcifer_cloud_portfolio
+    restart: unless-stopped
+    networks:
+      - calcifer_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portfolio.rule=Host(`${DOMAIN:-dmgiangi.dev}`)"
+      - "traefik.http.routers.portfolio.entrypoints=websecure"
+      - "traefik.http.routers.portfolio.tls.certresolver=letsencrypt"
+      - "traefik.http.services.portfolio.loadbalancer.server.port=80"
+      # Homepage integration
+      - "homepage.group=Web"
+      - "homepage.name=Portfolio"
+      - "homepage.icon=mdi-account"
+      - "homepage.href=https://${DOMAIN:-dmgiangi.dev}"
+      - "homepage.description=Personal Portfolio"
+
+
 networks:
   calcifer_net:
     driver: bridge
