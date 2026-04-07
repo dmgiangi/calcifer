@@ -37,3 +37,13 @@ jobs:
           git commit -m "deploy: portfolio ${{ github.event.client_payload.tag }}"
           git push
 
+      - name: Test SSH connection
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H dmgiangi.dev >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no dmgiangi@dmgiangi.dev 'echo "SSH connection OK - $(hostname) - $(date)"'
+
