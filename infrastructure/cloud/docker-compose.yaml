@@ -403,7 +403,6 @@ services:
       - NODE_ENV=production
       - TERM=xterm-256color
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - GOG_KEYRING_PASSWORD=${GOG_KEYRING_PASSWORD}
     volumes:
       - ${DATA_DIR:-/var/lib/calcifer/cloud}/openclaw/config:/home/node/.openclaw
       - ${DATA_DIR:-/var/lib/calcifer/cloud}/openclaw/workspace:/home/node/.openclaw/workspace

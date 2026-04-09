@@ -46,8 +46,6 @@ ENV_VARS = {
             "ADMIN_EMAILS": ("external", "Admin email addresses (comma-separated)"),
         },
         "openclaw": {
-            "OPENCLAW_GATEWAY_TOKEN": ("auto", "OpenClaw gateway auth token"),
-            "GOG_KEYRING_PASSWORD": ("auto", "OpenClaw keyring encryption password"),
             "GEMINI_API_KEY": ("external", "Google Gemini API key (from https://aistudio.google.com/apikey)"),
         },
         "n8n": {
