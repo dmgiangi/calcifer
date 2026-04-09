@@ -1,6 +1,11 @@
 I need a deep-research analysis for a LinkedIn outreach and visibility campaign.
 
 Context:
+
+My current LinkedIn headline:
+- Senior Software Engineer | Backend, Platform Systems, Observability, AI-Assisted Engineering
+
+My current profile posi
 - I am a software engineer/architect with a full-time job.
 - I am building an early-stage side project called Aegis-SRE on weekends.
 - Aegis-SRE is not yet a fully implemented product. It is currently a rigorous architecture + early repository + implementation effort at the intersection of:
