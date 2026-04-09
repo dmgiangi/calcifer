@@ -112,6 +112,8 @@ def cmd_bootstrap(args: List[str]) -> int:
         f"{data_dir}/tempo",
         f"{data_dir}/traefik/certs",
         f"{data_dir}/n8n",
+        f"{data_dir}/openclaw/config",
+        f"{data_dir}/openclaw/workspace",
     ]
 
     for folder in folders:
