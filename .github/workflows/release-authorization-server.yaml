@@ -52,7 +52,7 @@ jobs:
           tags: ${{ env.IMAGE }}:${{ inputs.version }}
       - name: Promote immutable digest to Flux
         run: |
-          DIGEST="$(docker buildx imagetools inspect "${IMAGE}:${{ inputs.version }}" --format '{{json .Manifest.Digest}}')"
+          DIGEST="$(docker buildx imagetools inspect "${IMAGE}:${{ inputs.version }}" --format '{{.Manifest.Digest}}')"
           test -n "$DIGEST"
           sed -i -E "s|image: ghcr.io/.+|image: ${IMAGE}@${DIGEST}|" apps/authorization-server/overlays/cloud/image-patch.yaml
           git config user.name "github-actions[bot]"
