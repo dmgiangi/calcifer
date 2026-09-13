@@ -35,8 +35,6 @@ spec:
                   cpu: 400m
                   memory: 768Mi
   persistentVolumeClaim:
-    metadata:
-      name: grafana-data
     spec:
       storageClassName: local-path
       accessModes:
