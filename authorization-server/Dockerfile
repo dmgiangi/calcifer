@@ -1,4 +1,4 @@
-FROM gcr.io/distroless/base-debian12:nonroot
+FROM gcr.io/distroless/cc-debian12:nonroot
 WORKDIR /app
 COPY --chown=nonroot:nonroot target/authorization-server /app/authorization-server
 EXPOSE 8080
