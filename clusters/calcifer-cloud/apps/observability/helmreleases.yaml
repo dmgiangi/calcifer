@@ -364,6 +364,7 @@ spec:
         split_queries_by_interval: 15m
       compactor:
         retention_enabled: true
+        delete_request_store: azure
         retention_delete_delay: 2h
         retention_delete_worker_count: 1
       storage_config:
