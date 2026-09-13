@@ -32,6 +32,8 @@ import org.springframework.security.oauth2.server.authorization.settings.Authori
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -56,9 +58,10 @@ class AuthorizationServerConfiguration {
   @Bean
   SecurityFilterChain applicationSecurityFilterChain(HttpSecurity http, IdentityProperties properties, GoogleAdminOidcUserService googleUserService) throws Exception {
     http.authorizeHttpRequests(authorize -> authorize
-            .requestMatchers("/actuator/health/**", "/actuator/prometheus", "/internal/traefik/forward-auth").permitAll()
+        .requestMatchers("/actuator/health/**", "/actuator/prometheus", "/internal/traefik/forward-auth").permitAll()
             .anyRequest().authenticated())
-        .oauth2Login(login -> login.userInfoEndpoint(endpoint -> endpoint.oidcUserService(googleUserService)));
+        .oauth2Login(login -> login.userInfoEndpoint(endpoint -> endpoint.oidcUserService(googleUserService)))
+        .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()));
     if (properties.localLogin().enabled()) {
       http.formLogin(Customizer.withDefaults());
     }
@@ -122,6 +125,10 @@ class AuthorizationServerConfiguration {
       if (context.getTokenType().getValue().equals("access_token")) {
         context.getClaims().audience(List.of("grafana"));
         context.getClaims().claim("roles", Set.of("admin"));
+        if (context.getPrincipal() instanceof OAuth2AuthenticationToken authentication
+            && authentication.getPrincipal() instanceof OidcUser user) {
+          context.getClaims().claim("email", user.getEmail());
+        }
       }
     };
   }
