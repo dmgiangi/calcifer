@@ -13,10 +13,12 @@ Deployment settings:
 - Azure lifecycle deletion is intentionally not configured; Thanos Compactor
   and Loki retention own deletion for their respective data.
 
-The Grafana Operator, Alloy, and Loki charts are pinned to the versions in
-`helmrepositories.yaml`/`helmreleases.yaml`. The local dashboards are
-version-matched operational fallbacks: upstream Loki/Thanos mixin dashboards
-were not vendored because their recording rules and component panels assume
+The Grafana Operator, Alloy, Loki, and Thanos Community charts are pinned to
+the versions in `helmrepositories.yaml`/`helmreleases.yaml`. The local
+dashboards are version-matched operational fallbacks: the Thanos dashboard
+targets Thanos v0.42.4, while the Loki dashboard targets Loki v3.7.7.
+Upstream Loki/Thanos mixin dashboards were not vendored because their
+recording rules and component panels assume
 components not deployed on this single-node cluster. The fallback dashboards
 use only metrics and labels collected here and are provisioned in the
 `Observability` folder.

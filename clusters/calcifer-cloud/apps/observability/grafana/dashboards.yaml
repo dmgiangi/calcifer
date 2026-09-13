@@ -92,8 +92,8 @@ metadata:
 data:
   json: |
     {
-      "uid": "thanos-operational-v0-39-2",
-      "title": "Thanos Operational (v0.39.2)",
+      "uid": "thanos-operational-v0-42-4",
+      "title": "Thanos Operational (v0.42.4)",
       "tags": ["thanos", "version-matched", "calcifer-cloud"],
       "timezone": "browser",
       "schemaVersion": 39,

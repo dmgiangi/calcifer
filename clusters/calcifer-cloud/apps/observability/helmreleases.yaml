@@ -68,26 +68,40 @@ spec:
   chart:
     spec:
       chart: thanos
-      version: 17.3.1
+      version: 0.43.0
       sourceRef:
         kind: HelmRepository
-        name: bitnami
+        name: thanos-community
         namespace: monitoring
   values:
     fullnameOverride: thanos
-    existingObjstoreSecret: thanos-objstore
+    global:
+      objstore:
+        createSecret: false
+        secretName: thanos-objstore
+        secretKey: objstore.yml
+      resources:
+        requests:
+          cpu: 25m
+          memory: 96Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
+      storageClass: local-path
+    bucket:
+      enabled: false
     query:
       enabled: true
       replicaCount: 1
-      stores:
-        - thanos-receive.monitoring.svc.cluster.local:10901
-        - thanos-storegateway.monitoring.svc.cluster.local:10901
+      endpoints:
+        autogen:
+          enabled: true
       service:
         type: ClusterIP
         annotations:
           prometheus.io/scrape: "true"
           prometheus.io/path: /metrics
-          prometheus.io/port: "10902"
+          prometheus.io/port: "9090"
       resources:
         requests:
           cpu: 50m
@@ -99,22 +113,18 @@ spec:
       enabled: true
       mode: standalone
       replicaCount: 1
-      tsdbRetention: 48h
-      replicationFactor: 1
-      config:
-        - endpoints:
-            - thanos-receive.monitoring.svc.cluster.local:10901
-      tsdbPath: /var/thanos/receive
+      tsdb:
+        retention: 48h
+      persistence:
+        enabled: true
+        size: 8Gi
+        storageClass: local-path
       service:
         type: ClusterIP
         annotations:
           prometheus.io/scrape: "true"
           prometheus.io/path: /metrics
           prometheus.io/port: "10902"
-      persistence:
-        enabled: true
-        storageClass: local-path
-        size: 8Gi
       resources:
         requests:
           cpu: 50m
@@ -144,11 +154,14 @@ spec:
           memory: 384Mi
     compactor:
       enabled: true
-      retentionResolutionRaw: 30d
-      retentionResolution5m: 30d
-      retentionResolution1h: 365d
-      concurrency: 1
-      consistencyDelay: 30m
+      retention:
+        resolutionRaw: 30d
+        resolution5m: 30d
+        resolution1h: 365d
+      extraArgs:
+        - --log.level=info
+        - --log.format=logfmt
+        - --consistency-delay=30m
       service:
         type: ClusterIP
         annotations:
@@ -166,13 +179,13 @@ spec:
         limits:
           cpu: 250m
           memory: 384Mi
-    bucketweb:
-      enabled: false
     queryFrontend:
       enabled: false
     ruler:
       enabled: false
-    minio:
+    rustfs:
+      enabled: false
+    kube-prometheus-stack:
       enabled: false
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -603,7 +616,7 @@ spec:
               cluster = "calcifer-cloud",
             }
             endpoint {
-              url = "http://thanos-receive.monitoring.svc.cluster.local:10902/api/v1/receive"
+              url = "http://thanos-receive.monitoring.svc.cluster.local:10908/api/v1/receive"
             }
           }
 

@@ -29,12 +29,11 @@ spec:
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
-  name: bitnami
+  name: thanos-community
   namespace: monitoring
 spec:
   interval: 1h
-  type: oci
-  url: oci://registry-1.docker.io/bitnamicharts
+  url: https://thanos-community.github.io/helm-charts
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
