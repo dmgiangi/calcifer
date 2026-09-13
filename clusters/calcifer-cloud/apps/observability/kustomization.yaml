@@ -7,3 +7,4 @@ resources:
   - thanos-objstore.sops.yaml
   - loki-objstore.sops.yaml
   - grafana-admin.sops.yaml
+  - thanos-receive-network-policy.yaml
