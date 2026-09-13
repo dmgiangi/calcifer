@@ -4,6 +4,7 @@ metadata:
   name: observability
   namespace: monitoring
 spec:
+  resyncPeriod: 5m
   uid: observability
   title: Observability
   instanceSelector:

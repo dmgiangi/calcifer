@@ -5,6 +5,7 @@ metadata:
   namespace: monitoring
 spec:
   uid: thanos
+  resyncPeriod: 5m
   instanceSelector:
     matchLabels:
       dashboards: grafana
@@ -27,6 +28,7 @@ metadata:
   namespace: monitoring
 spec:
   uid: loki
+  resyncPeriod: 5m
   instanceSelector:
     matchLabels:
       dashboards: grafana
