@@ -21,7 +21,7 @@
 - [x] 3.3 Deploy the lightweight Kubernetes state and node metric sources required for node, workload, pod, and container visibility.
 - [x] 3.4 Configure Alloy discovery, RBAC, scraping, relabeling, and remote write to Thanos Receive; expose Alloy delivery and scrape-failure metrics.
 - [x] 3.5 Configure Thanos block retention from the agreed metrics retention value and ensure Azure lifecycle deletion is not enabled.
-- [ ] 3.6 Configure Alloy to scrape Grafana, Grafana Operator, Alloy, Thanos, and Loki metrics endpoints; verify that component scrape failures are queryable in Thanos.
+- [x] 3.6 Configure Alloy to scrape Grafana, Grafana Operator, Alloy, Thanos, and Loki metrics endpoints; verify that component scrape failures are queryable in Thanos.
 
 ## 4. Logs platform
 
@@ -31,7 +31,7 @@
 
 ## 5. Grafana management and access
 
-- [ ] 5.1 Deploy Grafana Operator and wait for its CRDs and controller to become ready before applying Grafana custom resources.
+- [x] 5.1 Deploy Grafana Operator and wait for its CRDs and controller to become ready before applying Grafana custom resources.
 - [x] 5.2 Declare the Grafana instance with a local-path PVC and the SOPS-encrypted administrator credential.
 - [x] 5.3 Declare GrafanaDatasource resources for Thanos Query and Loki, using ClusterIP service URLs.
 - [x] 5.4 Declare a baseline dashboard with cluster metrics and workload-log navigation.
@@ -44,12 +44,12 @@
 ## 6. Validation and rollout
 
 - [x] 6.1 Verify every SOPS Secret is encrypted, no raw Azure credential is tracked by Git, and all Kustomizations render successfully.
-- [ ] 6.2 Reconcile the observability resources with Flux CLI and require the observability Kustomization and every related HelmRelease to report Ready.
-- [ ] 6.3 Use kubectl to verify required Pods, Services, PVCs, and the Grafana certificate are ready; diagnose and resolve every failed readiness condition.
+- [x] 6.2 Reconcile the observability resources with Flux CLI and require the observability Kustomization and every related HelmRelease to report Ready.
+- [x] 6.3 Use kubectl to verify required Pods, Services, PVCs, and the Grafana certificate are ready; diagnose and resolve every failed readiness condition.
 - [ ] 6.4 Verify Azure Blob receives Thanos blocks and Loki data using the two intended private containers.
-- [ ] 6.5 Emit a uniquely identifiable test log line from a Kubernetes workload and wait until Alloy has delivered it to Loki.
-- [ ] 6.6 Use the operator-generated Grafana service-account token, without printing it, to verify Grafana HTTPS API health and submit PromQL and LogQL requests through `POST /api/ds/query`.
-- [ ] 6.7 Require the Grafana API response to contain Thanos PromQL data and the emitted Loki log line; treat empty, error, or direct-backend-only results as a failed acceptance test.
-- [ ] 6.8 Verify the provisioned Loki and Thanos dashboard UIDs/titles through the Grafana API and run representative dashboard queries through Grafana; fail validation for broken datasource references or empty/error panel queries.
-- [ ] 6.9 Confirm the service token is absent from Git-tracked files and inspect node CPU and memory; tune limits or pause additional observability features if the single node enters memory pressure.
+- [x] 6.5 Emit a uniquely identifiable test log line from a Kubernetes workload and wait until Alloy has delivered it to Loki.
+- [x] 6.6 Use the operator-generated Grafana service-account token, without printing it, to verify Grafana HTTPS API health and submit PromQL and LogQL requests through `POST /api/ds/query`.
+- [x] 6.7 Require the Grafana API response to contain Thanos PromQL data and the emitted Loki log line; treat empty, error, or direct-backend-only results as a failed acceptance test.
+- [x] 6.8 Verify the provisioned Loki and Thanos dashboard UIDs/titles through the Grafana API and run representative dashboard queries through Grafana; fail validation for broken datasource references or empty/error panel queries.
+- [x] 6.9 Confirm the service token is absent from Git-tracked files and inspect node CPU and memory; tune limits or pause additional observability features if the single node enters memory pressure.
 - [ ] 6.10 Mark the change complete only after every preceding task has passed against the live cluster and the end-to-end Grafana API acceptance test succeeds.
