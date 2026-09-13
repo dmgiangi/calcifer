@@ -301,6 +301,15 @@ spec:
       enabled: false
     ruler:
       enabled: false
+    read:
+      enabled: false
+      replicas: 0
+    write:
+      enabled: false
+      replicas: 0
+    backend:
+      enabled: false
+      replicas: 0
     defaults:
       extraArgs:
         - -config.expand-env=true
