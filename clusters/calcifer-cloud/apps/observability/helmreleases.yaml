@@ -290,6 +290,8 @@ spec:
       enabled: false
     lokiCanary:
       enabled: false
+    test:
+      enabled: false
     minio:
       enabled: false
     rollout_operator:
