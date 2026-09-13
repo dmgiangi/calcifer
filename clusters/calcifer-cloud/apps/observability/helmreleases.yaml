@@ -647,3 +647,10 @@ spec:
           memory: 384Mi
     rbac:
       create: true
+      clusterRules:
+        - apiGroups:
+            - ""
+          resources:
+            - nodes/proxy
+          verbs:
+            - get
