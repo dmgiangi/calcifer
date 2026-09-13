@@ -46,10 +46,10 @@
 - [x] 6.1 Verify every SOPS Secret is encrypted, no raw Azure credential is tracked by Git, and all Kustomizations render successfully.
 - [x] 6.2 Reconcile the observability resources with Flux CLI and require the observability Kustomization and every related HelmRelease to report Ready.
 - [x] 6.3 Use kubectl to verify required Pods, Services, PVCs, and the Grafana certificate are ready; diagnose and resolve every failed readiness condition.
-- [ ] 6.4 Verify Azure Blob receives Thanos blocks and Loki data using the two intended private containers.
+- [x] 6.4 Verify Azure Blob receives Thanos blocks and Loki data using the two intended private containers.
 - [x] 6.5 Emit a uniquely identifiable test log line from a Kubernetes workload and wait until Alloy has delivered it to Loki.
 - [x] 6.6 Use the operator-generated Grafana service-account token, without printing it, to verify Grafana HTTPS API health and submit PromQL and LogQL requests through `POST /api/ds/query`.
 - [x] 6.7 Require the Grafana API response to contain Thanos PromQL data and the emitted Loki log line; treat empty, error, or direct-backend-only results as a failed acceptance test.
 - [x] 6.8 Verify the provisioned Loki and Thanos dashboard UIDs/titles through the Grafana API and run representative dashboard queries through Grafana; fail validation for broken datasource references or empty/error panel queries.
 - [x] 6.9 Confirm the service token is absent from Git-tracked files and inspect node CPU and memory; tune limits or pause additional observability features if the single node enters memory pressure.
-- [ ] 6.10 Mark the change complete only after every preceding task has passed against the live cluster and the end-to-end Grafana API acceptance test succeeds.
+- [x] 6.10 Mark the change complete only after every preceding task has passed against the live cluster and the end-to-end Grafana API acceptance test succeeds.
