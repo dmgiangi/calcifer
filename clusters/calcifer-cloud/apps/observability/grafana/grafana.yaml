@@ -35,10 +35,6 @@ spec:
                     secretKeyRef:
                       name: grafana-admin-credentials
                       key: GF_SECURITY_ADMIN_PASSWORD
-          volumes:
-            - name: grafana-data
-              persistentVolumeClaim:
-                claimName: grafana-pvc
               resources:
                 requests:
                   cpu: 75m
@@ -46,6 +42,10 @@ spec:
                 limits:
                   cpu: 400m
                   memory: 768Mi
+          volumes:
+            - name: grafana-data
+              persistentVolumeClaim:
+                claimName: grafana-pvc
   persistentVolumeClaim:
     spec:
       storageClassName: local-path
