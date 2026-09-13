@@ -29,6 +29,9 @@ metadata:
 spec:
   uid: loki
   resyncPeriod: 5m
+  plugins:
+    - name: loki
+      version: 13.1.0
   instanceSelector:
     matchLabels:
       dashboards: grafana
