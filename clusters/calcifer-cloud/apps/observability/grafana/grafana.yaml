@@ -24,9 +24,17 @@ spec:
         spec:
           containers:
             - name: grafana
-              envFrom:
-                - secretRef:
-                    name: grafana-admin-credentials
+              env:
+                - name: GF_SECURITY_ADMIN_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: grafana-admin-credentials
+                      key: GF_SECURITY_ADMIN_USER
+                - name: GF_SECURITY_ADMIN_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: grafana-admin-credentials
+                      key: GF_SECURITY_ADMIN_PASSWORD
               resources:
                 requests:
                   cpu: 75m
