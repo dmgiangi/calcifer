@@ -8,4 +8,4 @@ spec:
     spec:
       containers:
         - name: authorization-server
-          image: ghcr.io/dmgiangi/calcifer-authorization-server@sha256:f2ca142f21df34bfa6248cfd75cf0b7887966d09066a47f357870e9b9ec50ab2
+          image: ghcr.io/dmgiangi/calcifer-authorization-server@sha256:80c1fde6d20909a406986aa44e4514fb3696f2dd285480197ffb303542000598
