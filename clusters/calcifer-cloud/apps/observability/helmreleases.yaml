@@ -1,0 +1,616 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: grafana-operator
+  namespace: monitoring
+spec:
+  interval: 30m
+  timeout: 10m
+  install:
+    createNamespace: false
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  rollback:
+    cleanupOnFail: true
+    recreate: true
+  chart:
+    spec:
+      chart: grafana-operator
+      version: 5.25.0
+      sourceRef:
+        kind: HelmRepository
+        name: grafana-operator
+        namespace: monitoring
+  values:
+    namespaceScope: false
+    replicas: 1
+    leaderElect: true
+    enforceCacheLabels: safe
+    resources:
+      requests:
+        cpu: 25m
+        memory: 96Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    serviceMonitor:
+      enabled: false
+    metricsService:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "9090"
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: thanos
+  namespace: monitoring
+spec:
+  interval: 30m
+  timeout: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  rollback:
+    cleanupOnFail: true
+    recreate: true
+  chart:
+    spec:
+      chart: thanos
+      version: 17.6.0
+      sourceRef:
+        kind: HelmRepository
+        name: bitnami
+        namespace: monitoring
+  values:
+    fullnameOverride: thanos
+    existingObjstoreSecret: thanos-objstore
+    query:
+      enabled: true
+      replicaCount: 1
+      stores:
+        - thanos-receive.monitoring.svc.cluster.local:10901
+        - thanos-storegateway.monitoring.svc.cluster.local:10901
+      service:
+        type: ClusterIP
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/path: /metrics
+          prometheus.io/port: "10902"
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 300m
+          memory: 384Mi
+    receive:
+      enabled: true
+      mode: standalone
+      replicaCount: 1
+      tsdbRetention: 48h
+      replicationFactor: 1
+      config:
+        - endpoints:
+            - thanos-receive.monitoring.svc.cluster.local:10901
+      tsdbPath: /var/thanos/receive
+      service:
+        type: ClusterIP
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/path: /metrics
+          prometheus.io/port: "10902"
+      persistence:
+        enabled: true
+        storageClass: local-path
+        size: 8Gi
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 300m
+          memory: 512Mi
+    storegateway:
+      enabled: true
+      replicaCount: 1
+      service:
+        type: ClusterIP
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/path: /metrics
+          prometheus.io/port: "10902"
+      persistence:
+        enabled: true
+        storageClass: local-path
+        size: 4Gi
+      resources:
+        requests:
+          cpu: 25m
+          memory: 128Mi
+        limits:
+          cpu: 250m
+          memory: 384Mi
+    compactor:
+      enabled: true
+      retentionResolutionRaw: 30d
+      retentionResolution5m: 30d
+      retentionResolution1h: 365d
+      concurrency: 1
+      consistencyDelay: 30m
+      service:
+        type: ClusterIP
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/path: /metrics
+          prometheus.io/port: "10902"
+      persistence:
+        enabled: true
+        storageClass: local-path
+        size: 4Gi
+      resources:
+        requests:
+          cpu: 25m
+          memory: 128Mi
+        limits:
+          cpu: 250m
+          memory: 384Mi
+    bucketweb:
+      enabled: false
+    queryFrontend:
+      enabled: false
+    ruler:
+      enabled: false
+    minio:
+      enabled: false
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-state-metrics
+  namespace: monitoring
+spec:
+  interval: 30m
+  timeout: 10m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  chart:
+    spec:
+      chart: kube-state-metrics
+      version: 8.2.0
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: monitoring
+  values:
+    fullnameOverride: kube-state-metrics
+    replicas: 1
+    prometheusScrape: true
+    service:
+      type: ClusterIP
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8080"
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        cpu: 150m
+        memory: 192Mi
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: prometheus-node-exporter
+  namespace: monitoring
+spec:
+  interval: 30m
+  timeout: 10m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  chart:
+    spec:
+      chart: prometheus-node-exporter
+      version: 4.56.3
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: monitoring
+  values:
+    fullnameOverride: node-exporter
+    prometheus:
+      monitor:
+        enabled: false
+    service:
+      type: ClusterIP
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "9100"
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: loki
+  namespace: monitoring
+spec:
+  interval: 30m
+  timeout: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  rollback:
+    cleanupOnFail: true
+    recreate: true
+  chart:
+    spec:
+      chart: loki
+      version: 18.13.0
+      sourceRef:
+        kind: HelmRepository
+        name: grafana-community
+        namespace: monitoring
+  values:
+    deploymentMode: Monolithic
+    gateway:
+      enabled: false
+    lokiCanary:
+      enabled: false
+    minio:
+      enabled: false
+    rollout_operator:
+      enabled: false
+    chunksCache:
+      enabled: false
+    resultsCache:
+      enabled: false
+    ruler:
+      enabled: false
+    defaults:
+      extraArgs:
+        - -config.expand-env=true
+      extraEnvFrom:
+        - secretRef:
+            name: loki-objstore
+    loki:
+      auth_enabled: false
+      commonConfig:
+        replication_factor: 1
+      server:
+        log_level: info
+        http_listen_port: 3100
+      schemaConfig:
+        configs:
+          - from: "2024-04-01"
+            store: tsdb
+            object_store: azure
+            schema: v13
+            index:
+              prefix: loki_index_
+              period: 24h
+      storage:
+        type: azure
+        bucketNames:
+          chunks: loki
+          ruler: loki
+        azure:
+          accountName: calciferobs
+          connectionString: ${AZURE_CONNECTION_STRING}
+      limits_config:
+        retention_period: 720h
+        reject_old_samples: true
+        reject_old_samples_max_age: 168h
+        max_cache_freshness_per_query: 10m
+        split_queries_by_interval: 15m
+      compactor:
+        retention_enabled: true
+        retention_delete_delay: 2h
+        retention_delete_worker_count: 1
+      storage_config:
+        tsdb_shipper:
+          active_index_directory: /var/loki/tsdb-shipper-active
+          cache_location: /var/loki/tsdb-shipper-cache
+      service:
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/path: /metrics
+          prometheus.io/port: "3100"
+      extraArgs:
+        - -config.expand-env=true
+    singleBinary:
+      enabled: true
+      replicas: 1
+      persistence:
+        enabled: true
+        storageClass: local-path
+        size: 8Gi
+      service:
+        type: ClusterIP
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/path: /metrics
+          prometheus.io/port: "3100"
+      resources:
+        requests:
+          cpu: 75m
+          memory: 256Mi
+        limits:
+          cpu: 400m
+          memory: 768Mi
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: alloy
+  namespace: monitoring
+spec:
+  interval: 30m
+  timeout: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  chart:
+    spec:
+      chart: alloy
+      version: 1.12.1
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: monitoring
+  values:
+    crds:
+      create: true
+    controller:
+      type: daemonset
+      replicas: 1
+      podDisruptionBudget:
+        enabled: false
+    alloy:
+      enableReporting: false
+      storagePath: /tmp/alloy
+      configMap:
+        content: |-
+          logging {
+            level  = "info"
+            format = "logfmt"
+          }
+
+          discovery.kubernetes "pods" {
+            role = "pod"
+          }
+
+          discovery.relabel "pod_metrics" {
+            targets = discovery.kubernetes.pods.targets
+
+            rule {
+              source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_scrape"]
+              regex         = "true"
+              action         = "keep"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_path"]
+              target_label  = "__metrics_path__"
+              regex         = "(.+)"
+              action         = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_port", "__meta_kubernetes_pod_ip"]
+              regex         = "([0-9]+);(.+)"
+              replacement   = "$2:$1"
+              target_label  = "__address__"
+              action         = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_namespace"]
+              target_label  = "namespace"
+              action         = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_pod_name"]
+              target_label  = "pod"
+              action         = "replace"
+            }
+          }
+
+          prometheus.scrape "pod_metrics" {
+            targets    = discovery.relabel.pod_metrics.output
+            forward_to = [prometheus.remote_write.thanos.receiver]
+          }
+
+          discovery.kubernetes "services" {
+            role = "service"
+          }
+
+          discovery.relabel "service_metrics" {
+            targets = discovery.kubernetes.services.targets
+
+            rule {
+              source_labels = ["__meta_kubernetes_service_annotation_prometheus_io_scrape"]
+              regex         = "true"
+              action         = "keep"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_service_annotation_prometheus_io_path"]
+              target_label  = "__metrics_path__"
+              regex         = "(.+)"
+              action         = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_service_annotation_prometheus_io_port"]
+              target_label  = "__meta_kubernetes_service_port_number"
+              regex         = "(.+)"
+              action         = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_service_name", "__meta_kubernetes_namespace", "__meta_kubernetes_service_port_number"]
+              regex         = "(.+);(.+);(.+)"
+              replacement   = "$1.$2.svc.cluster.local:$3"
+              target_label  = "__address__"
+              action         = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_namespace"]
+              target_label  = "namespace"
+              action         = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_service_name"]
+              target_label  = "service"
+              action         = "replace"
+            }
+          }
+
+          prometheus.scrape "service_metrics" {
+            targets    = discovery.relabel.service_metrics.output
+            forward_to = [prometheus.remote_write.thanos.receiver]
+          }
+
+          discovery.kubernetes "nodes" {
+            role = "node"
+          }
+
+          discovery.relabel "kubelet" {
+            targets = discovery.kubernetes.nodes.targets
+
+            rule {
+              source_labels = ["__meta_kubernetes_node_name"]
+              target_label  = "node"
+              action         = "replace"
+            }
+            rule {
+              target_label = "__address__"
+              replacement  = "kubernetes.default.svc.cluster.local:443"
+              action        = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_node_name"]
+              regex         = "(.+)"
+              replacement   = "/api/v1/nodes/$1/proxy/metrics"
+              target_label  = "__metrics_path__"
+              action         = "replace"
+            }
+          }
+
+          prometheus.scrape "kubelet" {
+            targets           = discovery.relabel.kubelet.output
+            scheme             = "https"
+            bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+            tls_config {
+              insecure_skip_verify = true
+            }
+            forward_to = [prometheus.remote_write.thanos.receiver]
+          }
+
+          discovery.relabel "cadvisor" {
+            targets = discovery.kubernetes.nodes.targets
+
+            rule {
+              source_labels = ["__meta_kubernetes_node_name"]
+              target_label  = "node"
+              action         = "replace"
+            }
+            rule {
+              target_label = "__address__"
+              replacement  = "kubernetes.default.svc.cluster.local:443"
+              action        = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_node_name"]
+              regex         = "(.+)"
+              replacement   = "/api/v1/nodes/$1/proxy/metrics/cadvisor"
+              target_label  = "__metrics_path__"
+              action        = "replace"
+            }
+          }
+
+          prometheus.scrape "cadvisor" {
+            targets           = discovery.relabel.cadvisor.output
+            scheme             = "https"
+            bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+            tls_config {
+              insecure_skip_verify = true
+            }
+            forward_to = [prometheus.remote_write.thanos.receiver]
+          }
+
+          loki.process "pod_logs" {
+            stage.labels {
+              values = {
+                cluster   = "cluster",
+                namespace = "namespace",
+                pod       = "pod",
+                container = "container",
+              }
+            }
+            forward_to = [loki.write.loki.receiver]
+          }
+
+          loki.source.kubernetes "pod_logs" {
+            targets    = discovery.kubernetes.pods.targets
+            forward_to = [loki.process.pod_logs.receiver]
+          }
+
+          prometheus.remote_write "thanos" {
+            external_labels = {
+              cluster = "calcifer-cloud",
+            }
+            endpoint {
+              url = "http://thanos-receive.monitoring.svc.cluster.local:10902/api/v1/receive"
+            }
+          }
+
+          loki.write "loki" {
+            external_labels = {
+              cluster = "calcifer-cloud",
+            }
+            endpoint {
+              url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+            }
+          }
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 300m
+          memory: 384Mi
+    rbac:
+      create: true

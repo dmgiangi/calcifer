@@ -1,0 +1,41 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: thanos
+  namespace: monitoring
+spec:
+  uid: thanos
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  datasource:
+    name: Thanos
+    type: prometheus
+    access: proxy
+    url: http://thanos-query.monitoring.svc.cluster.local:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s
+      queryTimeout: 60s
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: loki
+  namespace: monitoring
+spec:
+  uid: loki
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  datasource:
+    name: Loki
+    type: loki
+    access: proxy
+    url: http://loki.monitoring.svc.cluster.local:3100
+    editable: false
+    jsonData:
+      maxLines: 1000
+      timeout: 60

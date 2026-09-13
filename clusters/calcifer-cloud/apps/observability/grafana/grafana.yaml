@@ -1,0 +1,77 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: Grafana
+metadata:
+  name: grafana
+  namespace: monitoring
+  labels:
+    dashboards: grafana
+spec:
+  version: 13.2.1
+  disableDefaultAdminSecret: true
+  config:
+    log:
+      mode: console
+    metrics:
+      enabled: "true"
+    server:
+      root_url: https://grafana.calcifer.tech
+  deployment:
+    spec:
+      replicas: 1
+      strategy:
+        type: Recreate
+      template:
+        spec:
+          containers:
+            - name: grafana
+              envFrom:
+                - secretRef:
+                    name: grafana-admin-credentials
+              resources:
+                requests:
+                  cpu: 75m
+                  memory: 256Mi
+                limits:
+                  cpu: 400m
+                  memory: 768Mi
+  persistentVolumeClaim:
+    metadata:
+      name: grafana-data
+    spec:
+      storageClassName: local-path
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+  service:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "3000"
+    spec:
+      type: ClusterIP
+  ingress:
+    metadata:
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-production-azure
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        traefik.ingress.kubernetes.io/router.tls: "true"
+    spec:
+      ingressClassName: traefik
+      rules:
+        - host: grafana.calcifer.tech
+          http:
+            paths:
+              - path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: grafana-service
+                    port:
+                      number: 3000
+      tls:
+        - hosts:
+            - grafana.calcifer.tech
+          secretName: grafana-tls

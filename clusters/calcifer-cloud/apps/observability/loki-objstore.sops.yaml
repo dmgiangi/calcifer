@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: loki-objstore
+    namespace: monitoring
+type: Opaque
+stringData:
+    AZURE_CONNECTION_STRING: ENC[AES256_GCM,data:nk1cmDOczr3TwbE7XxE0OEIw0foFVbGKqdloi95ti8PTmstAyfAwkqxjTvZMBxUzrT/SN4cjtqhh7yGGm2Ju6PyqwwITPwlth1X5y66dESt0soLYhRYtWpQE0MI6Mm7oL0s9VkkbFFwYtWoY+Ia/qAdDKTkJCa7p+CUz8Gu+npwSeFNmvmNSJc8MiLH+K/BjRhLaNdwHs3gBhnq5e16bX8ambmlVzQsoLHO0CCStpZML69ltRUMOxDd8CFJ28FCekGIyCnhX3f6iWmBNcowE1YfdTKZBOawJDc/5UBiU+o7IGa7+TLC4V0BFDdRCeuLj2Ax6gQ==,iv:14Du4toC5oDZNxfO+PGFO0be/Oe65Jgf4MbhFSJeEiM=,tag:9Phd5E4PdYtn4GLMDIIszg==,type:str]
+sops:
+    age:
+        - recipient: age1zrcssj5duesp5x4pnp5rxk96dy378fg68ntpvlyxdhwzcchrvsgqcc9uqn
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBnNEpSV0F6WDRjWU5UZ3hx
+            RjBmN3poQjdDYUx3RDQrNDBKZWZ1RmkwTGlzCnd4K09sZ1plaEVaTUZ6OU5wV3d2
+            MWIrNTRNRmtUVzZscVpFWGVabXkrSUkKLS0tIDF3cEdiVnB5TWJTQ01qTUFvSHd2
+            VEs4dXVZSmJTZWYxZU5oK3BuUDBZdkUK4YWTWrIRbThjnTkCjQgFpzgQ4IMeQkRy
+            k2Niom2tO7HJsi0G0a1Gq/MuiQFvwcIt++cKO0stSgB6zFZu8J1yeA==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-09-12T22:19:37Z"
+    mac: ENC[AES256_GCM,data:fcn8nC4aZb7S2IiqrYr9r9j1ntplTQVi4DactyIimESGOIvVenWdCTWklLSsOcUN3diHOD6rFPTnLpoYZTBYioycT2Pf4zMGoJPcr4iQyj/bBny3cmFcOYh8KmSXbbuSviFE3OL/Nn7JYc9d7SFbpm7AMvK+dn84jiB9MGaF2OA=,iv:rFH5GICsd8JNRsBFQR7BmWL2+vHEU7m/fP82zWDxNLc=,tag:RqI0bEKKxmA2ZXG1RjPpeQ==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.12.2

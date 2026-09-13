@@ -1,0 +1,11 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaFolder
+metadata:
+  name: observability
+  namespace: monitoring
+spec:
+  uid: observability
+  title: Observability
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana

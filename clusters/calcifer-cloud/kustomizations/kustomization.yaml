@@ -4,3 +4,4 @@ resources:
   - cert-manager-install.yaml
   - cert-manager-config.yaml
   - cloud-apps.yaml
+  - observability-grafana.yaml
