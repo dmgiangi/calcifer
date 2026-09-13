@@ -13,6 +13,7 @@ import java.util.UUID;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.http.MediaType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -35,6 +36,8 @@ import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
 @Configuration
 class AuthorizationServerConfiguration {
@@ -43,7 +46,10 @@ class AuthorizationServerConfiguration {
     OAuth2AuthorizationServerConfigurer authorizationServer = new OAuth2AuthorizationServerConfigurer();
     http.securityMatcher(authorizationServer.getEndpointsMatcher())
         .with(authorizationServer, configurer -> configurer.oidc(Customizer.withDefaults()))
-        .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()));
+        .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()))
+        .exceptionHandling(exceptions -> exceptions.defaultAuthenticationEntryPointFor(
+            new LoginUrlAuthenticationEntryPoint("/oauth2/authorization/google"),
+            new MediaTypeRequestMatcher(MediaType.TEXT_HTML)));
     return http.build();
   }
 
