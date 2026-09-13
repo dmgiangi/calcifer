@@ -12,6 +12,10 @@ Deployment settings:
 - Azure containers: private `thanos` and `loki` containers in `calciferobs`.
 - Azure lifecycle deletion is intentionally not configured; Thanos Compactor
   and Loki retention own deletion for their respective data.
+- Thanos uses its container-scoped SAS credential. Loki uses a dedicated Azure
+  service principal with `Storage Blob Data Contributor` scoped to only the
+  `loki` container because the pinned Loki Azure client has an upstream SAS
+  connection-string bug; all identity credentials remain SOPS-encrypted.
 
 The Grafana Operator, Alloy, Loki, and Thanos Community charts are pinned to
 the versions in `helmrepositories.yaml`/`helmreleases.yaml`. The local

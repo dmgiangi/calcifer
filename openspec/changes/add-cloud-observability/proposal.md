@@ -12,7 +12,7 @@
 - Collect and display health, resource, ingestion, and query metrics for Grafana, Grafana Operator, Alloy, Thanos, and Loki through the same metrics platform.
 - Provision a Grafana service-account token for authenticated HTTP API automation and a local `admin` user with a randomly generated password stored only in SOPS.
 - Require a live CLI-driven acceptance test through Flux, kubectl, and Grafana's HTTP API before the change can be considered complete.
-- Store the Azure Blob SAS connection string only in a SOPS-encrypted Kubernetes Secret; do not expose any observability backend publicly.
+- Store Azure Blob credentials only in SOPS-encrypted Kubernetes Secrets; use the Thanos container-scoped SAS and a Loki-only container-scoped Azure service principal required by the pinned Loki client, without exposing any observability backend publicly.
 - Exclude Redpanda, Tempo, Mimir, multi-node replication, and high availability from this first deployment.
 
 ## Capabilities

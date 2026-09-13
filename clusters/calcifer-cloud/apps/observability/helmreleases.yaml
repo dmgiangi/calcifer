@@ -333,6 +333,59 @@ spec:
         - secretRef:
             name: loki-objstore
     loki:
+      structuredConfig:
+        auth_enabled: false
+        server:
+          http_listen_port: 3100
+          grpc_listen_port: 9095
+          log_level: info
+        common:
+          path_prefix: /var/loki
+          compactor_grpc_address: loki.monitoring.svc.cluster.local:9095
+          replication_factor: 1
+          storage:
+            azure:
+              account_name: calciferobs
+              container_name: loki
+              use_service_principal: true
+              tenant_id: ${AZURE_TENANT_ID}
+              client_id: ${AZURE_CLIENT_ID}
+              client_secret: ${AZURE_CLIENT_SECRET}
+        schema_config:
+          configs:
+            - from: "2024-04-01"
+              store: tsdb
+              object_store: azure
+              schema: v13
+              index:
+                prefix: loki_index_
+                period: 24h
+        limits_config:
+          retention_period: 720h
+          reject_old_samples: true
+          reject_old_samples_max_age: 168h
+          max_cache_freshness_per_query: 10m
+          split_queries_by_interval: 15m
+        runtime_config:
+          file: /etc/loki/runtime-config/runtime-config.yaml
+        compactor:
+          retention_enabled: true
+          delete_request_store: filesystem
+          retention_delete_delay: 2h
+          retention_delete_worker_count: 1
+        storage_config:
+          azure:
+            account_name: calciferobs
+            container_name: loki
+            use_service_principal: true
+            tenant_id: ${AZURE_TENANT_ID}
+            client_id: ${AZURE_CLIENT_ID}
+            client_secret: ${AZURE_CLIENT_SECRET}
+            request_timeout: 0
+          tsdb_shipper:
+            active_index_directory: /var/loki/tsdb-shipper-active
+            cache_location: /var/loki/tsdb-shipper-cache
+          use_thanos_objstore: false
       auth_enabled: false
       commonConfig:
         replication_factor: 1
@@ -355,7 +408,6 @@ spec:
           ruler: loki
         azure:
           accountName: calciferobs
-          connectionString: ${AZURE_CONNECTION_STRING}
       limits_config:
         retention_period: 720h
         reject_old_samples: true

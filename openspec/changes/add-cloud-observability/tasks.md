@@ -2,8 +2,8 @@
 
 - [x] 1.1 Rotate both `calciferobs` storage account access keys and confirm no workload uses the previously exposed key.
 - [x] 1.2 Create the private `thanos` and `loki` Blob containers in `calciferobs`; retain the Hot tier and the `136.144.222.128` data-plane allowlist.
-- [x] 1.3 Generate separate HTTPS-only, container-scoped SAS tokens with read, add, create, write, delete, and list permissions for `thanos` and `loki`.
-- [x] 1.4 Update `thanos-objstore.sops.yaml` with the Thanos SAS connection string and create an equivalent SOPS-encrypted Loki object-store Secret without committing raw credentials.
+- [x] 1.3 Generate separate HTTPS-only, least-privilege credentials for the `thanos` and `loki` containers: a container-scoped SAS for Thanos and a container-scoped Azure service principal for Loki because the pinned Loki Azure client rejects SAS connection strings.
+- [x] 1.4 Update `thanos-objstore.sops.yaml` with the Thanos SAS connection string and create the SOPS-encrypted Loki service-principal credential Secret without committing raw credentials.
 - [x] 1.5 Generate a cryptographically random Grafana `admin` password locally without printing it, then create a SOPS-encrypted administrator credential Secret with username `admin`.
 - [x] 1.6 Record the chosen Grafana hostname and initial metric/log retention periods.
 

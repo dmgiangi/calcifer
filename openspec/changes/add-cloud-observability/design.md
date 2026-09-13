@@ -35,11 +35,13 @@ Alloy will run as a DaemonSet to read pod logs and forward them to one monolithi
 
 The distributed and simple-scalable Loki modes are excluded because the cluster has only one node. Monolithic Loki is sufficient for the expected small log volume and can later be migrated to a distributed layout using the same object-store data.
 
-### Use separate private containers and scoped SAS credentials
+### Use separate private containers and least-privilege credentials
 
-Thanos will use the existing private `thanos` container with `calcifer-cloud` as its object prefix. Loki will use a separate private `loki` container. Each backend will receive a separate container-scoped SAS connection string through its own SOPS-encrypted Secret.
+Thanos will use the existing private `thanos` container with `calcifer-cloud` as its object prefix. Loki will use a separate private `loki` container. Each backend will receive a separate least-privilege credential through its own SOPS-encrypted Secret.
 
-Using one account-wide key or one shared container would reduce setup work but would widen blast radius. Azure account keys and raw SAS tokens MUST NOT be committed or sent in chat. Azure Blob retains the Hot tier initially; lifecycle tiering is deferred until compaction and access patterns are measured.
+The pinned Loki Azure client has an upstream bug when SAS is supplied through a connection string: it adds an invalid shared-key authorization header and constructs requests at the account root. Thanos retains its working container-scoped SAS; Loki therefore uses a dedicated Azure service principal whose `Storage Blob Data Contributor` role is scoped only to the `loki` container. Both credentials remain in dedicated SOPS-encrypted Secrets.
+
+Using one account-wide key or one shared container would reduce setup work but would widen blast radius. Azure account keys, raw SAS tokens, and service-principal secrets MUST NOT be committed or sent in chat. Azure Blob retains the Hot tier initially; lifecycle tiering is deferred until compaction and access patterns are measured.
 
 ### Manage components through Flux and Helm; manage Grafana resources through Grafana Operator
 
@@ -79,7 +81,7 @@ Every workload will define CPU and memory requests and limits sized for the sing
 
 - [Single node failure makes recent metrics and logs temporarily unavailable] → Use Azure Blob for historical blocks, keep local PVC requests explicit, and document the non-HA service level.
 - [Combined observability workloads exceed node memory] → Set conservative limits, deploy incrementally, inspect `kubectl top` after each release, and halt rollout if the node approaches memory pressure.
-- [A leaked SAS exposes telemetry] → Use separate container-scoped SAS tokens, IP restriction, expiry/rotation, SOPS encryption, and no plaintext secrets in Git.
+- [A leaked storage credential exposes telemetry] → Use separate container-scoped credentials, IP restriction, finite service-principal credential lifetime, SOPS encryption, and no plaintext secrets in Git.
 - [Incorrect Loki labels cause high cardinality] → Restrict labels to stable Kubernetes identity fields and avoid arbitrary pod annotations or log attributes.
 - [Azure lifecycle policy conflicts with compaction or retention] → Keep the Hot tier and no automatic tier/delete policy until telemetry volume is known.
 - [A chart upgrade changes values or CRDs] → Pin chart versions, render manifests before commit, and use HelmRelease remediation settings.
@@ -88,7 +90,7 @@ Every workload will define CPU and memory requests and limits sized for the sing
 
 ## Migration Plan
 
-1. Create the private `thanos` and `loki` containers and generate scoped SAS tokens after rotating any previously exposed storage account keys.
+1. Create the private `thanos` and `loki` containers and generate the Thanos scoped SAS plus the Loki container-scoped service principal after rotating any previously exposed storage account keys.
 2. Update the encrypted object-store Secrets locally with SOPS; do not commit a raw credential.
 3. Add Flux manifests and deploy the namespace, operator, metrics path, logs path, and Grafana in dependency order.
 4. Reconcile with Flux, inspect live state through kubectl, then validate Grafana HTTPS and PromQL/LogQL results via the Grafana service-account API without writing the token to terminal output.
