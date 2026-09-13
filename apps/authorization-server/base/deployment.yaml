@@ -61,6 +61,8 @@ spec:
             - name: signing-key
               mountPath: /var/run/secrets/authorization-server
               readOnly: true
+            - name: tmp
+              mountPath: /tmp
       volumes:
         - name: signing-key
           secret:
@@ -68,3 +70,6 @@ spec:
             items:
               - key: jwt-private-key.pem
                 path: jwt-private-key.pem
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
