@@ -28,7 +28,7 @@ metadata:
   namespace: monitoring
 spec:
   uid: loki
-  resyncPeriod: 5m
+  resyncPeriod: 1m
   plugins:
     - name: loki
       version: 13.1.0
