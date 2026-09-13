@@ -1,8 +1,10 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+  - grafana-authorization-server-oauth.sops.yaml
   - grafana.yaml
   - grafana-folder.yaml
   - grafana-datasources.yaml
   - grafana-service-account.yaml
   - dashboards.yaml
+  - grafana-traefik.yaml

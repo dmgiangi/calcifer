@@ -1,0 +1,22 @@
+apiVersion: v1
+data:
+    GRAFANA_OIDC_CLIENT_SECRET: ENC[AES256_GCM,data:YKzK4RDvJKu1RmNFD/CBNsJuNx3B6y0ueNI1tPoYnWrqyhYcW9op5Jb51x7wKOld5+L+4YkbjeeV1mnCSlKBWy21y09ZbjVbg711nytivBbTEChYQLK1mA==,iv:L+4TZtCyzxgCS54/uphk0p88CsbZnL0xKWJ8AaDCxrw=,tag:oixE6Lieslr90axbzw3Sgg==,type:str]
+kind: Secret
+metadata:
+    name: grafana-authorization-server-oauth
+    namespace: monitoring
+sops:
+    age:
+        - recipient: age1zrcssj5duesp5x4pnp5rxk96dy378fg68ntpvlyxdhwzcchrvsgqcc9uqn
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBNUDI4RElPRUZLU1JScEFt
+            bEVZSjRVZkVMbW1HQzN0Tk1kVkVmOHNRY20wCmk4THhRL1M2a2VaT0lHckRpb0F4
+            SnZySGdvaXRwV3dKUExNRmljWUhJUkkKLS0tIHppUmJqL3ZqRlR2QlJIR2RUeVlH
+            Zlo5cGpFS2xGQVlYbCtNR1RJU2ZBbzQK4X9/ELPNdw/IziNXy2BLEZrnVR99Igdd
+            uRiBFhUMm3wuofyXiGxmlso+S0iF79CAbSsc00FioBvRCyZYZifH9w==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-09-13T14:20:23Z"
+    mac: ENC[AES256_GCM,data:zTEQoYeW8+2nrSQ+uw19/ssVqfuqB/bj5cQIloF9k/ijNErm8jv2cpnQpXQ+UbhNk19rFZ06Zc9gpQKO65nRZY3V8VjmLH/dBXRLibt0LFlsOGeNX3H9wAZ5B6FALflV1biRxsBwalfBD93uGgEYkgY3KJjNpNL8KbfjGOwKb64=,iv:6LfaFKXRcSLXVKsCnX7MpYgkfXgvH8G2FgUEVUxIEE8=,tag:HScacqRXopaVAldG9AAVXw==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.12.2

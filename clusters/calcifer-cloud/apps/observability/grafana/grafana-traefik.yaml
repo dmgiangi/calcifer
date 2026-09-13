@@ -1,0 +1,53 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: grafana-strip-auth-headers
+  namespace: monitoring
+spec:
+  headers:
+    customRequestHeaders:
+      X-WEBAUTH-USER: ""
+      X-WEBAUTH-ROLE: ""
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: grafana-forward-auth
+  namespace: monitoring
+spec:
+  forwardAuth:
+    address: http://authorization-server.authorization.svc.cluster.local:8080/internal/traefik/forward-auth
+    authResponseHeaders:
+      - X-WEBAUTH-USER
+      - X-WEBAUTH-ROLE
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: grafana-api-auth
+  namespace: monitoring
+spec:
+  chain:
+    middlewares:
+      - name: grafana-strip-auth-headers
+      - name: grafana-forward-auth
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: grafana-api
+  namespace: monitoring
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`grafana.calcifer.tech`) && PathPrefix(`/api`)
+      kind: Rule
+      priority: 100
+      middlewares:
+        - name: grafana-api-auth
+      services:
+        - name: grafana-service
+          port: 3000
+  tls:
+    secretName: grafana-tls

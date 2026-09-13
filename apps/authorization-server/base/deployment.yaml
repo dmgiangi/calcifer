@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authorization-server
+  namespace: authorization
+  labels:
+    app.kubernetes.io/name: authorization-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: authorization-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: authorization-server
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8080"
+    spec:
+      serviceAccountName: authorization-server
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: authorization-server
+          image: ghcr.io/dmgiangi/calcifer-authorization-server:unreleased
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: authorization-server-config
+            - secretRef:
+                name: authorization-server-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10001
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          startupProbe:
+            httpGet: {path: /actuator/health/liveness, port: http}
+            failureThreshold: 30
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /actuator/health/liveness, port: http}
+          readinessProbe:
+            httpGet: {path: /actuator/health/readiness, port: http}
+          volumeMounts:
+            - name: signing-key
+              mountPath: /var/run/secrets/authorization-server
+              readOnly: true
+      volumes:
+        - name: signing-key
+          secret:
+            secretName: authorization-server-secrets
+            items:
+              - key: jwt-private-key.pem
+                path: jwt-private-key.pem

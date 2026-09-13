@@ -1,0 +1,39 @@
+server:
+  forward-headers-strategy: framework
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: authorization-server
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:}
+            client-secret: ${GOOGLE_CLIENT_SECRET:}
+            scope: openid,profile,email
+identity:
+  issuer: ${AUTH_ISSUER:}
+  allowed-google-email: ${AUTH_ALLOWED_GOOGLE_EMAIL:dem.gianluigi@gmail.com}
+  signing-key-location: ${AUTH_SIGNING_KEY_LOCATION:file:/var/run/secrets/authorization-server/jwt-private-key.pem}
+  grafana:
+    id: ${GRAFANA_OIDC_CLIENT_ID:grafana}
+    secret: ${GRAFANA_OIDC_CLIENT_SECRET:}
+    redirect-uri: ${GRAFANA_OIDC_REDIRECT_URI:https://grafana.calcifer.tech/login/generic_oauth}
+  grafana-api:
+    id: ${GRAFANA_API_CLIENT_ID:grafana-api}
+    secret: ${GRAFANA_API_CLIENT_SECRET:}
+    redirect-uri: ${GRAFANA_API_REDIRECT_URI:https://grafana.calcifer.tech}
+  local-login:
+    enabled: ${AUTH_LOCAL_LOGIN_ENABLED:false}
+    username: ${AUTH_LOCAL_LOGIN_USERNAME:dem.gianluigi@gmail.com}
+    password-hash: ${AUTH_LOCAL_LOGIN_PASSWORD_HASH:}

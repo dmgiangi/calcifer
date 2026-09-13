@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: authorization-server
+  namespace: authorization
+spec:
+  secretName: authorization-server-tls
+  issuerRef:
+    name: letsencrypt-production-azure
+    kind: ClusterIssuer
+  dnsNames:
+    - auth.calcifer.tech

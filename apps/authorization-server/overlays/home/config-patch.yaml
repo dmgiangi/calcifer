@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authorization-server-config
+  namespace: authorization
+data:
+  AUTH_ISSUER: https://REPLACE_HOME_AUTH_FQDN
+  AUTH_LOCAL_LOGIN_ENABLED: "true"
+  AUTH_LOCAL_LOGIN_USERNAME: dem.gianluigi@gmail.com

@@ -127,6 +127,32 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: authorization-server-dashboard
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/managed-by: grafana-operator
+data:
+  json: |
+    {"uid":"authorization-server","title":"Authorization Server","tags":["authorization","calcifer-cloud"],"timezone":"browser","schemaVersion":39,"version":1,"time":{"from":"now-6h","to":"now"},"panels":[{"id":1,"type":"stat","title":"Authorization server up","gridPos":{"h":6,"w":6,"x":0,"y":0},"datasource":{"type":"prometheus","uid":"thanos"},"targets":[{"refId":"A","expr":"sum(up{cluster=\"calcifer-cloud\",namespace=\"authorization\"})"}]},{"id":2,"type":"timeseries","title":"HTTP requests","gridPos":{"h":8,"w":18,"x":6,"y":0},"datasource":{"type":"prometheus","uid":"thanos"},"targets":[{"refId":"A","expr":"sum(rate(http_server_requests_seconds_count{cluster=\"calcifer-cloud\",namespace=\"authorization\"}[5m])) by (status)"}]},{"id":3,"type":"timeseries","title":"Resident memory","gridPos":{"h":8,"w":12,"x":0,"y":8},"datasource":{"type":"prometheus","uid":"thanos"},"targets":[{"refId":"A","expr":"process_resident_memory_bytes{cluster=\"calcifer-cloud\",namespace=\"authorization\"}"}]},{"id":4,"type":"logs","title":"Authorization server logs","gridPos":{"h":8,"w":12,"x":12,"y":8},"datasource":{"type":"loki","uid":"loki"},"targets":[{"refId":"A","expr":"{cluster=\"calcifer-cloud\",namespace=\"authorization\"}"}]}]}
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: authorization-server
+  namespace: monitoring
+spec:
+  resyncPeriod: 5m
+  folderRef: observability
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  configMapRef:
+    name: authorization-server-dashboard
+    key: json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: kubernetes-dashboard
   namespace: monitoring
   labels:
