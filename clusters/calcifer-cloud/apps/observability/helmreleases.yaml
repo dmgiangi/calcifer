@@ -75,7 +75,7 @@ spec:
         name: thanos-community
         namespace: monitoring
   values:
-    fullnameOverride: thanos
+    fullnameOverride: thanos-v2
     global:
       objstore:
         createSecret: false
@@ -620,7 +620,7 @@ spec:
               cluster = "calcifer-cloud",
             }
             endpoint {
-              url = "http://thanos-receive.monitoring.svc.cluster.local:10908/api/v1/receive"
+              url = "http://thanos-v2-receive.monitoring.svc.cluster.local:10908/api/v1/receive"
             }
           }
 
