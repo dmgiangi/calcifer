@@ -1,0 +1,8 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: k8s-gateway
+  namespace: lan-dns
+spec:
+  interval: 1h
+  url: https://k8s-gateway.kryptonian.kapsi.fi/

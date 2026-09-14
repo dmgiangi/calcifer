@@ -1,0 +1,55 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: lan-dns
+  namespace: lan-dns
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: k8s-gateway
+      version: 3.7.3
+      sourceRef:
+        kind: HelmRepository
+        name: k8s-gateway
+        namespace: lan-dns
+  values:
+    domain: calcifer.tech
+    watchedResources:
+      - DNSEndpoint
+    fallthrough:
+      enabled: true
+      zones:
+        - calcifer.tech
+    extraZonePlugins:
+      - name: errors
+      - name: health
+        configBlock: |-
+          lameduck 5s
+      - name: ready
+      - name: prometheus
+        parameters: 0.0.0.0:9153
+      - name: forward
+        parameters: . 1.1.1.1
+      - name: cache
+        parameters: 30
+      - name: loop
+      - name: reload
+      - name: loadbalance
+    service:
+      type: LoadBalancer
+      port: 53
+      loadBalancerIP: 192.168.0.102
+      useTcp: true
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
