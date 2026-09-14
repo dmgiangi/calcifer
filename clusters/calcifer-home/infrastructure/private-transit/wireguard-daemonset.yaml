@@ -9,6 +9,8 @@ spec:
       app.kubernetes.io/name: home-edge-wireguard
   template:
     metadata:
+      annotations:
+        checksum/wireguard-config: 1bf3eace7a125c99cc00037237565b75e69ad057fd98c45702299a9f3529f35e
       labels:
         app.kubernetes.io/name: home-edge-wireguard
     spec:
