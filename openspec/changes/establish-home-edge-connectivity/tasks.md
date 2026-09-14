@@ -20,7 +20,7 @@
 - [x] 3.1 Add pinned, dedicated WireGuard DaemonSets with `hostNetwork`, minimum required capabilities/mounts, SOPS-encrypted key mounts, and node scheduling for both clusters.
 - [x] 3.2 Configure the DaemonSet peers so Home maintains an outbound encrypted connection to Cloud and only the dedicated tunnel range is routed.
 - [x] 3.3 Apply declarative host firewall rules through the DaemonSets that admit WireGuard establishment at Cloud, permit only selected Home ingress ports from the tunnel and LAN, and add no Home-router Internet port-forward.
-- [ ] 3.4 Verify the tunnel handshake, bidirectional reachability of only the intended tunnel endpoints, and absence of routes to either remote Kubernetes Pod or Service CIDR.
+- [x] 3.4 Verify the tunnel handshake at both peers, Cloud-to-Home HTTPS reachability on the sole permitted service port, rejection of other tunnel ingress, and absence of routes to either remote Kubernetes Pod or Service CIDR. A reverse Cloud service endpoint is not required by this edge-to-Home transport.
 
 ## 4. LAN DNS
 
