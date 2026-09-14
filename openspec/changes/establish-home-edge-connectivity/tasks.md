@@ -12,7 +12,7 @@
 - [x] 2.1 Add the `clusters/calcifer-home` Kustomize and Flux roots needed to reconcile infrastructure and enforce cert-manager installation before its configuration.
 - [x] 2.2 Add the pinned cert-manager HelmRepository, namespace, and HelmRelease for Home using the Cloud installation pattern.
 - [x] 2.3 Add SOPS-encrypted Azure DNS credentials plus staging and production DNS-01 ClusterIssuers for `calcifer.tech`.
-- [ ] 2.4 Reconcile the Home certificate-management Kustomizations and verify the controller, both issuers, and SOPS decryption are Ready.
+- [x] 2.4 Reconcile the Home certificate-management Kustomizations and verify the controller, both issuers, and SOPS decryption are Ready.
 - [ ] 2.5 Issue and verify staging then production Certificates for the selected Home test hostname without publishing a direct Home Internet endpoint.
 
 ## 3. Private Cloud-to-Home transport

@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: edge-test-staging
+  namespace: edge-test
+spec:
+  secretName: edge-test-staging-tls
+  dnsNames:
+    - edge-test.calcifer.tech
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-staging-azure

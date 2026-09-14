@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - cert-manager-install.yaml
   - cert-manager-config.yaml
+  - home-apps.yaml
