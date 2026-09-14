@@ -14,7 +14,7 @@
 - [x] 1.6 Add and verify Cloud- and Home-pinned OAuth endpoint profiles and
   their DNS/TLS/ingress routes; both endpoint certificates and live routes
   are Ready on the new revision.
-- [ ] 1.7 Register the Cloud and Home callback URIs in the configured Google
+- [x] 1.7 Register the Cloud and Home callback URIs in the configured Google
   OAuth client.
 
 ## 2. Common authorization-server implementation
@@ -74,7 +74,7 @@
 - [x] 5.1 Define and document the application integration contract: canonical
   issuer, discovery, client registration, scopes, audiences, roles, and
   canonical subject.
-- [ ] 5.2 Update Grafana Cloud integration to validate the canonical issuer,
+- [x] 5.2 Update Grafana Cloud integration to validate the canonical issuer,
   use the Cloud-pinned endpoints, and verify browser OIDC login through the
   Cloud path from public Internet and LAN.
 - [x] 5.3 Document the reusable Grafana integration for any future Home
@@ -94,14 +94,13 @@
   ForwardAuth decisions, and resource use.
 - [x] 6.2 Verify Alloy and Loki collection independently for Cloud and Home,
   including the no-sensitive-data guarantee.
-- [ ] 6.3 Verify Home LAN password login while Internet/Google is unavailable.
-- [x] 6.4 Verify Cloud authentication and Cloud application access while Home
+- [x] 6.3 Verify Cloud authentication and Cloud application access while Home
   is unavailable.
-- [x] 6.5 Verify tokens issued through Cloud and Home have the same issuer,
+- [x] 6.4 Verify tokens issued through Cloud and Home have the same issuer,
   canonical subject, roles, scopes, and cross-cluster JWKS validation.
-- [x] 6.6 Obtain a machine token through each edge without printing it and use
+- [x] 6.5 Obtain a machine token through each edge without printing it and use
   it against the permitted Grafana datasource API.
-- [x] 6.7 Record safe validation, certificate renewal, key rotation, password
+- [x] 6.6 Record safe validation, certificate renewal, key rotation, password
   recovery, and symmetric rollback procedures.
-- [ ] 6.8 Mark the change complete only after both clusters reconcile and all
+- [x] 6.7 Mark the change complete only after both clusters reconcile and all
   acceptance checks pass without memory or availability regressions.
