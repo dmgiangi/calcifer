@@ -371,8 +371,9 @@ spec:
         runtime_config:
           file: /etc/loki/runtime-config/runtime-config.yaml
         compactor:
+          working_directory: /var/loki/compactor
           retention_enabled: true
-          delete_request_store: filesystem
+          delete_request_store: azure
           retention_delete_delay: 2h
           retention_delete_worker_count: 1
         storage_config:
@@ -417,8 +418,9 @@ spec:
         max_cache_freshness_per_query: 10m
         split_queries_by_interval: 15m
       compactor:
+        working_directory: /var/loki/compactor
         retention_enabled: true
-        delete_request_store: filesystem
+        delete_request_store: azure
         retention_delete_delay: 2h
         retention_delete_worker_count: 1
       storage_config:
