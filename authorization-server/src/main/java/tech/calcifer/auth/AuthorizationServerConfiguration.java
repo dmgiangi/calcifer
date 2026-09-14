@@ -21,8 +21,8 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
@@ -32,8 +32,6 @@ import org.springframework.security.oauth2.server.authorization.settings.Authori
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -47,10 +45,24 @@ class AuthorizationServerConfiguration {
   SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
     OAuth2AuthorizationServerConfigurer authorizationServer = new OAuth2AuthorizationServerConfigurer();
     http.securityMatcher(authorizationServer.getEndpointsMatcher())
-        .with(authorizationServer, configurer -> configurer.oidc(Customizer.withDefaults()))
+        .with(authorizationServer, configurer -> configurer.oidc(oidc -> oidc
+            .providerConfigurationEndpoint(endpoint -> endpoint.providerConfigurationCustomizer(provider -> {
+              provider.grantTypes(grants -> {
+                grants.clear();
+                grants.add(AuthorizationGrantType.AUTHORIZATION_CODE.getValue());
+                grants.add(AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
+              });
+              provider.scopes(scopes -> {
+                scopes.clear();
+                scopes.add("openid");
+                scopes.add("profile");
+                scopes.add("email");
+                scopes.add("grafana.api");
+              });
+            }))))
         .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()))
         .exceptionHandling(exceptions -> exceptions.defaultAuthenticationEntryPointFor(
-            new LoginUrlAuthenticationEntryPoint("/oauth2/authorization/google"),
+            new LoginUrlAuthenticationEntryPoint("/login"),
             new MediaTypeRequestMatcher(MediaType.TEXT_HTML)));
     return http.build();
   }
@@ -58,12 +70,15 @@ class AuthorizationServerConfiguration {
   @Bean
   SecurityFilterChain applicationSecurityFilterChain(HttpSecurity http, IdentityProperties properties, GoogleAdminOidcUserService googleUserService) throws Exception {
     http.authorizeHttpRequests(authorize -> authorize
-        .requestMatchers("/actuator/health/**", "/actuator/prometheus", "/internal/traefik/forward-auth").permitAll()
+        .requestMatchers("/actuator/health/**", "/actuator/prometheus", "/internal/traefik/forward-auth",
+            "/login", "/oauth2/**", "/login/oauth2/**").permitAll()
             .anyRequest().authenticated())
-        .oauth2Login(login -> login.userInfoEndpoint(endpoint -> endpoint.oidcUserService(googleUserService)))
+        .oauth2Login(login -> login
+            .loginPage("/login")
+            .userInfoEndpoint(endpoint -> endpoint.oidcUserService(googleUserService)))
         .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()));
     if (properties.localLogin().enabled()) {
-      http.formLogin(Customizer.withDefaults());
+      http.formLogin(form -> form.loginPage("/login").permitAll());
     }
     return http.build();
   }
@@ -90,7 +105,7 @@ class AuthorizationServerConfiguration {
   @ConditionalOnProperty(prefix = "identity.local-login", name = "enabled", havingValue = "true")
   UserDetailsService localAdministrator(IdentityProperties properties) {
     if (properties.localLogin().passwordHash() == null || properties.localLogin().passwordHash().isBlank()) {
-      throw new IllegalStateException("Home local login requires AUTH_LOCAL_LOGIN_PASSWORD_HASH");
+      throw new IllegalStateException("Local login requires AUTH_LOCAL_LOGIN_PASSWORD_HASH");
     }
     return new InMemoryUserDetailsManager(User.withUsername(properties.localLogin().username())
         .password(properties.localLogin().passwordHash()).roles("ADMIN").build());
@@ -120,15 +135,21 @@ class AuthorizationServerConfiguration {
   }
 
   @Bean
-  OAuth2TokenCustomizer<JwtEncodingContext> jwtClaimsCustomizer() {
+  OAuth2TokenCustomizer<JwtEncodingContext> jwtClaimsCustomizer(IdentityProperties properties) {
     return context -> {
-      if (context.getTokenType().getValue().equals("access_token")) {
-        context.getClaims().audience(List.of("grafana"));
+      boolean clientCredentials = AuthorizationGrantType.CLIENT_CREDENTIALS.equals(context.getAuthorizationGrantType());
+      String audience = clientCredentials ? properties.grafanaApi().audience() : properties.grafana().audience();
+      context.getClaims().audience(List.of(audience));
+      if (clientCredentials) {
+        context.getClaims().subject(context.getPrincipal().getName());
+        context.getClaims().claim("roles", Set.of("service"));
+      } else {
+        context.getClaims().subject(properties.canonicalUserId());
         context.getClaims().claim("roles", Set.of("admin"));
-        if (context.getPrincipal() instanceof OAuth2AuthenticationToken authentication
-            && authentication.getPrincipal() instanceof OidcUser user) {
-          context.getClaims().claim("email", user.getEmail());
-        }
+        context.getClaims().claim("email", properties.allowedGoogleEmail());
+      }
+      if (OidcParameterNames.ID_TOKEN.equals(context.getTokenType().getValue())) {
+        context.getClaims().claim("email_verified", true);
       }
     };
   }

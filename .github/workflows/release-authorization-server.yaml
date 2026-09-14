@@ -26,9 +26,11 @@ jobs:
         with:
           ref: master
       - name: Validate version
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          test "${{ inputs.version }}" != ""
-          printf '%s' "${{ inputs.version }}" | grep -Ex '[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?'
+          test -n "$VERSION"
+          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$'
       - uses: graalvm/setup-graalvm@v1
         with:
           java-version: '25'
@@ -37,6 +39,14 @@ jobs:
       - name: Test and compile native executable
         working-directory: authorization-server
         run: mvn -B -s .mvn/settings.xml -Pnative test native:compile
+      - name: Validate GitOps overlays
+        run: |
+          for overlay in \
+            clusters/apps/authorization-server/overlays/cloud \
+            clusters/apps/authorization-server/overlays/home; do
+            test -f "$overlay/image-patch.yaml"
+            kubectl kustomize "$overlay" >/dev/null
+          done
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -51,12 +61,30 @@ jobs:
           platforms: linux/amd64
           tags: ${{ env.IMAGE }}:${{ inputs.version }}
       - name: Promote immutable digest to Flux
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          DIGEST="$(docker buildx imagetools inspect "${IMAGE}:${{ inputs.version }}" --format '{{.Manifest.Digest}}')"
-          test -n "$DIGEST"
-          sed -i -E "s|image: ghcr.io/.+|image: ${IMAGE}@${DIGEST}|" clusters/apps/authorization-server/overlays/cloud/image-patch.yaml
+          DIGEST="$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{.Manifest.Digest}}')"
+          printf '%s' "$DIGEST" | grep -Eq '^sha256:[0-9a-f]{64}$'
+          promotion_dir="$(mktemp -d)"
+          trap 'rm -rf "$promotion_dir"' EXIT
+          for file in \
+            clusters/apps/authorization-server/overlays/cloud/image-patch.yaml \
+            clusters/apps/authorization-server/overlays/home/image-patch.yaml; do
+            staged="$promotion_dir/$(basename "$file")"
+            cp "$file" "$staged"
+            sed -i -E "s|image: ghcr.io/.+|image: ${IMAGE}@${DIGEST}|" "$staged"
+            grep -Eq "^[[:space:]]+image: ${IMAGE}@${DIGEST}$" "$staged"
+          done
+          for file in \
+            clusters/apps/authorization-server/overlays/cloud/image-patch.yaml \
+            clusters/apps/authorization-server/overlays/home/image-patch.yaml; do
+            cp "$promotion_dir/$(basename "$file")" "$file"
+          done
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add clusters/apps/authorization-server/overlays/cloud/image-patch.yaml
-          git commit -m "release(auth): promote authorization server ${{ inputs.version }}" 
+          git add \
+            clusters/apps/authorization-server/overlays/cloud/image-patch.yaml \
+            clusters/apps/authorization-server/overlays/home/image-patch.yaml
+          git commit -m "release(auth): promote authorization server $VERSION"
           git push origin HEAD:master

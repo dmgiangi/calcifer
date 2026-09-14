@@ -1,56 +1,105 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
-### Requirement: Cloud federates only the configured Google administrator
-The cloud authorization server SHALL use Google OIDC as its only human authentication mechanism. It SHALL accept `dem.gianluigi@gmail.com` only when Google verifies the identity, map it to `admin`, and reject every other identity. It SHALL not expose a cloud user/password login or persist a plaintext human credential.
+### Requirement: Cloud and Home expose one logical OIDC issuer
+The authorization-server instances in `calcifer-cloud` and `calcifer-home` SHALL
+publish the same explicit issuer, `https://auth.calcifer.tech`, and
+equivalent discovery, authorization, token, JWKS, and user-info metadata.
+Neither application configuration nor token validation SHALL require a
+cluster-specific issuer.
 
-#### Scenario: Configured Google identity completes authorization
-- **WHEN** Google returns a verified identity for `dem.gianluigi@gmail.com`
-- **THEN** the server SHALL establish an `admin` principal and continue the requested OAuth2 authorization flow
+#### Scenario: Application discovers identity metadata from Cloud
+- **WHEN** an application requests discovery through the public Cloud path
+- **THEN** the response SHALL identify `https://auth.calcifer.tech` as issuer
 
-#### Scenario: Unconfigured Google identity attempts authorization
-- **WHEN** Google returns a verified identity whose email is not configured
-- **THEN** the server SHALL deny authorization without issuing a code or token
+#### Scenario: Application discovers identity metadata from Home LAN
+- **WHEN** an application requests discovery through the Home LAN path
+- **THEN** the response SHALL identify the same `https://auth.calcifer.tech`
+  issuer
 
-### Requirement: Authorization server exposes interoperable OIDC and OAuth2 endpoints
-The authorization server SHALL publish an explicit HTTPS issuer, OIDC discovery metadata, authorization, token, JWKS, and user-info endpoints. Issued JWTs SHALL contain the configured issuer, expiry, audience, scopes, and only the configured role claims required by clients.
+### Requirement: Canonical subjects are independent of provider and cluster
+The server SHALL map every accepted authentication method to a stable
+canonical subject. Google provider subjects, cluster names, and deployment
+locations SHALL not be used as the application identity. Cloud and Home SHALL
+emit equivalent subject and role claims for the same user.
 
-#### Scenario: OIDC client discovers issuer metadata
-- **WHEN** an OIDC client requests the issuer discovery document
-- **THEN** it SHALL receive endpoint and JWKS metadata whose issuer equals the configured explicit issuer URL
+#### Scenario: Google and password identify the same administrator
+- **WHEN** the configured administrator authenticates once through Google and
+  once through the local password method
+- **THEN** both successful authorizations SHALL contain the same canonical
+  subject and `admin` role
 
-#### Scenario: Resource server verifies issued access token
-- **WHEN** a resource server obtains the issuer JWKS and receives an unexpired issued JWT
-- **THEN** it SHALL be able to verify its signature and issuer without a database lookup
+#### Scenario: Application validates a token from either cluster
+- **WHEN** an application receives an unexpired token issued through either
+  edge
+- **THEN** it SHALL validate issuer, signature, audience, expiry, and roles
+  without knowing which cluster issued it
 
-### Requirement: Technical clients use scoped client credentials
-The authorization server SHALL permit only statically configured private clients to use `client_credentials`. The Grafana machine client SHALL receive only a short-lived token containing `grafana.api` after authenticating with its current secret; it SHALL not receive a user identity or refresh-token privilege.
+### Requirement: Google authentication is optional to local availability
+Both instances SHALL accept only the configured verified Google identity when
+Google authentication is used. Both instances SHALL expose a password fallback
+for the configured administrator, backed only by an Argon2id or bcrypt hash
+from SOPS, so a Google outage does not prevent authentication.
 
-#### Scenario: Configured Grafana machine client obtains token
-- **WHEN** the configured client authenticates with `grant_type=client_credentials` and requests `grafana.api`
-- **THEN** the server SHALL return a short-lived JWT limited to that scope
+#### Scenario: Home authenticates over LAN without Internet
+- **WHEN** Home cannot reach Google and the administrator submits the correct
+  local password over the LAN path
+- **THEN** the server SHALL complete the requested OAuth/OIDC authorization
+  with the canonical administrator subject and `admin` role
 
-#### Scenario: Client requests unauthorized scope
-- **WHEN** a configured or unknown client requests a scope it is not permitted to use
-- **THEN** the token endpoint SHALL deny the request without issuing a JWT
+#### Scenario: Cloud authenticates while Home is unavailable
+- **WHEN** the Home cluster or Home Internet path is unavailable and the
+  administrator reaches a Cloud application
+- **THEN** the Cloud instance SHALL independently complete Google or password
+  authentication and issue a valid token
 
-### Requirement: Home identity remains autonomous and has local fallback
-The reusable home configuration SHALL define an issuer independent from cloud, with distinct signing and OAuth-client secrets. It SHALL enable local administrator password login only in the home overlay and map success to the same canonical identity and `admin` role used for home Google login. Cloud configuration SHALL disable this fallback.
+#### Scenario: Unconfigured Google identity attempts login
+- **WHEN** Google returns a verified identity other than the configured user
+- **THEN** authorization SHALL be denied without issuing a code or token
 
-#### Scenario: Home authenticates locally during Internet loss
-- **WHEN** home cannot reach Google and its configured local administrator presents the correct password over TLS
-- **THEN** it SHALL authenticate that administrator and complete the requested local OAuth2 authorization flow
+### Requirement: Tokens are interoperable and scoped
+Cloud and Home SHALL use equivalent registered clients, audiences, scopes,
+roles, token lifetimes, and signing material required for interoperability.
+Issued JWTs SHALL contain issuer, subject, expiry, audience, scopes, and only
+the configured authorization claims. They SHALL not contain cluster identity.
 
-#### Scenario: Cloud receives password-login attempt
-- **WHEN** a caller attempts password login on the cloud issuer
-- **THEN** the cloud authorization server SHALL reject it
+#### Scenario: Client credentials work against either edge
+- **WHEN** a configured private client requests an allowed scope through
+  either Cloud or Home
+- **THEN** it SHALL receive a short-lived JWT accepted by the configured
+  resource servers
 
-### Requirement: Identity secrets are stable and encrypted
-Signing keys, Google client secrets, technical-client secrets, and the home password hash SHALL be supplied from SOPS-encrypted Kubernetes Secrets. The server SHALL use a stable asymmetric signing key across pod restarts and SHALL not log or expose secrets, passwords, authorization codes, or access tokens.
+#### Scenario: Unauthorized scope is requested
+- **WHEN** a client requests a scope not registered for it
+- **THEN** both instances SHALL deny the request without issuing a JWT
 
-#### Scenario: Pod restarts after issuing a token
-- **WHEN** a server pod restarts while a JWT is unexpired
-- **THEN** the issuer JWKS SHALL still validate that JWT signature
+### Requirement: Identity secrets remain encrypted and equivalent
+Signing keys, Google secrets, client secrets, and password hashes SHALL be
+provided through SOPS-encrypted Secrets in both overlays. The stable signing
+material SHALL remain available across restarts and SHALL never be logged or
+emitted by diagnostics.
 
-#### Scenario: Workload logs authentication activity
-- **WHEN** authentication or token issuance is logged
-- **THEN** logs SHALL omit passwords, email identities, client secrets, authorization codes, and access tokens
+#### Scenario: One instance restarts
+- **WHEN** either authorization-server instance restarts while a JWT is still
+  valid
+- **THEN** both issuer paths SHALL continue to expose JWKS data that validates
+  that JWT
+
+#### Scenario: Authentication activity is logged
+- **WHEN** either instance logs authentication or token activity
+- **THEN** it SHALL omit passwords, hashes, email labels, client secrets,
+  authorization codes, access tokens, and signing-key contents
+
+### Requirement: OAuth state locality is explicit
+The v1 system SHALL keep an authorization-code flow and browser session on the
+identity instance selected by its access path. It SHALL not claim replicated
+cross-cluster browser sessions or seamless continuation after a path change.
+
+#### Scenario: Normal Home application login
+- **WHEN** a user starts and completes an OAuth flow through the Home LAN path
+- **THEN** authorization and token exchange SHALL be handled through Home
+
+#### Scenario: Path changes during an active flow
+- **WHEN** a user changes from a Cloud path to a Home path during an active
+  OAuth flow
+- **THEN** the flow MAY require restarting authentication rather than relying
+  on unsynchronized in-memory state

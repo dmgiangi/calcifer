@@ -1,0 +1,11 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authorization-server
+  namespace: authorization
+spec:
+  template:
+    spec:
+      containers:
+        - name: authorization-server
+          image: ghcr.io/dmgiangi/calcifer-authorization-server@sha256:80c1fde6d20909a406986aa44e4514fb3696f2dd285480197ffb303542000598

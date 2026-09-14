@@ -5,4 +5,4 @@ metadata:
   namespace: authorization
 data:
   AUTH_ISSUER: https://auth.calcifer.tech
-  AUTH_LOCAL_LOGIN_ENABLED: "false"
+  AUTH_LOCAL_LOGIN_ENABLED: "true"

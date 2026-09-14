@@ -1,0 +1,64 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaAlertRuleGroup
+metadata:
+  name: authorization-server
+  namespace: monitoring
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  folderRef: observability
+  interval: 1m
+  rules:
+    - uid: authorization-server-down
+      title: Authorization server unavailable
+      condition: A
+      for: 5m
+      noDataState: Alerting
+      execErrState: Alerting
+      labels:
+        severity: critical
+        component: authorization
+      annotations:
+        summary: A Calcifer authorization-server instance is unavailable
+      data:
+        - refId: A
+          datasourceUid: thanos
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            datasource:
+              type: prometheus
+              uid: thanos
+            editorMode: code
+            expr: min by (cluster) (up{namespace="authorization"}) < 1
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+    - uid: authorization-server-errors
+      title: Authorization server HTTP errors
+      condition: A
+      for: 10m
+      noDataState: OK
+      execErrState: Alerting
+      labels:
+        severity: warning
+        component: authorization
+      annotations:
+        summary: Authorization server HTTP 5xx rate is elevated
+      data:
+        - refId: A
+          datasourceUid: thanos
+          relativeTimeRange:
+            from: 300
+            to: 0
+          model:
+            datasource:
+              type: prometheus
+              uid: thanos
+            editorMode: code
+            expr: sum by (cluster) (rate(http_server_requests_seconds_count{namespace="authorization",status=~"5.."}[5m])) / clamp_min(sum by (cluster) (rate(http_server_requests_seconds_count{namespace="authorization"}[5m])), 1) > 0.05
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A

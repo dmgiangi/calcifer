@@ -1,6 +1,7 @@
 package tech.calcifer.auth;
 
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
@@ -12,10 +13,19 @@ import org.springframework.stereotype.Component;
 
 @Component
 class GoogleAdminOidcUserService implements OAuth2UserService<OidcUserRequest, OidcUser> {
-  private final OidcUserService delegate = new OidcUserService();
+  private final OAuth2UserService<OidcUserRequest, OidcUser> delegate;
   private final IdentityProperties properties;
 
-  GoogleAdminOidcUserService(IdentityProperties properties) { this.properties = properties; }
+  @Autowired
+  GoogleAdminOidcUserService(IdentityProperties properties) {
+    this(new OidcUserService(), properties);
+  }
+
+  GoogleAdminOidcUserService(OAuth2UserService<OidcUserRequest, OidcUser> delegate,
+      IdentityProperties properties) {
+    this.delegate = delegate;
+    this.properties = properties;
+  }
 
   @Override
   public OidcUser loadUser(OidcUserRequest request) {

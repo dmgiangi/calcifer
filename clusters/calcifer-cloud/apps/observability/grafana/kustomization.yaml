@@ -6,6 +6,9 @@ resources:
   - grafana-folder.yaml
   - grafana-datasources.yaml
   - grafana-service-account.yaml
+  - grafana-ingress-network-policy.yaml
   - dashboards.yaml
+  - authorization-server-alerts.yaml
+  - authorization-server-outcomes.yaml
   - home-forwarding-dashboard.yaml
   - grafana-traefik.yaml

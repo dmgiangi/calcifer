@@ -56,6 +56,7 @@ Encrypted secret locations are:
 - `clusters/calcifer-home/infrastructure/cert-manager/config/azure-dns-credentials.sops.yaml`
 - `clusters/calcifer-home/apps/edge-test/basic-auth.sops.yaml`
 - `clusters/calcifer-cloud/apps/edge-test/basic-auth.sops.yaml`
+- `clusters/apps/authorization-server/overlays/home/authorization-server-secrets.sops.yaml`
 
 Rotate WireGuard keys by generating a new pair on a trusted administrative
 machine, replacing only the encrypted Secret values and the opposite public
@@ -88,6 +89,13 @@ dig @192.168.0.102 edge-test.calcifer.tech A
 dig @192.168.0.102 auth.calcifer.tech A
 dig @192.168.0.102 example.com A
 ```
+
+The `auth.calcifer.tech` answer is reserved for the Home authorization-server
+route and points to `192.168.0.102`. Keep the identity hostname on the same
+certificate and issuer as the public Cloud route. The Home authorization-server
+Flux Kustomization can serve the Google-capable path with the common signing
+key, client credentials, and Google registration. Add the password hash to both
+encrypted Secrets before enabling the local password fallback.
 
 ## Azure DNS and certificates
 

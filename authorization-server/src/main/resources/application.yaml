@@ -24,15 +24,18 @@ spring:
 identity:
   issuer: ${AUTH_ISSUER:}
   allowed-google-email: ${AUTH_ALLOWED_GOOGLE_EMAIL:dem.gianluigi@gmail.com}
+  canonical-user-id: ${AUTH_CANONICAL_USER_ID:user:admin}
   signing-key-location: ${AUTH_SIGNING_KEY_LOCATION:file:/var/run/secrets/authorization-server/jwt-private-key.pem}
   grafana:
     id: ${GRAFANA_OIDC_CLIENT_ID:grafana}
     secret: ${GRAFANA_OIDC_CLIENT_SECRET:}
     redirect-uri: ${GRAFANA_OIDC_REDIRECT_URI:https://grafana.calcifer.tech/login/generic_oauth}
+    audience: ${GRAFANA_OIDC_AUDIENCE:grafana}
   grafana-api:
     id: ${GRAFANA_API_CLIENT_ID:grafana-api}
     secret: ${GRAFANA_API_CLIENT_SECRET:}
     redirect-uri: ${GRAFANA_API_REDIRECT_URI:https://grafana.calcifer.tech}
+    audience: ${GRAFANA_API_AUDIENCE:grafana}
   local-login:
     enabled: ${AUTH_LOCAL_LOGIN_ENABLED:false}
     username: ${AUTH_LOCAL_LOGIN_USERNAME:dem.gianluigi@gmail.com}

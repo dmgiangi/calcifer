@@ -1,0 +1,20 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: authorization-server-rate-limit
+  namespace: authorization
+spec:
+  rateLimit:
+    average: 30
+    burst: 60
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: authorization-server-security-headers
+  namespace: authorization
+spec:
+  headers:
+    contentTypeNosniff: true
+    frameDeny: true
+    referrerPolicy: no-referrer

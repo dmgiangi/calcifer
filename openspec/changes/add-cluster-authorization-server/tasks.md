@@ -1,51 +1,98 @@
-## 1. Prerequisites and project setup
+## 1. Architecture and prerequisites
 
-- [x] 1.1 Verify the cloud node architecture, available resource headroom, Traefik source addressing, GitHub package ownership, and Actions permissions required for a linux/amd64 GHCR release.
-- [x] 1.2 Provision `auth.calcifer.tech` DNS/TLS prerequisites and create the cloud Google OAuth client with redirect URI `https://auth.calcifer.tech/login/oauth2/code/google`; keep generated credentials outside Git.
-- [x] 1.3 Create the Java/Maven authorization-server module with Java 25, Spring Authorization Server, OAuth2 Client, Actuator, Prometheus registry, test dependencies, and native-image build configuration.
-- [x] 1.4 Add application configuration model, configuration validation, and documentation for issuer, static users/roles, registered clients, grants, scopes, token lifetime, and local-login feature flag.
+- [x] 1.1 Inspect Cloud/Home networking, DNS, TLS, resource headroom, and
+  existing authorization-server implementation.
+- [x] 1.2 Decide and document the canonical identity contract: issuer,
+  canonical subject format, roles, scopes, audiences, and the v1 limitation on
+  cross-cluster session state.
+- [ ] 1.3 Prepare public DNS for `auth.calcifer.tech` to Cloud and split-horizon
+  LAN DNS for the same name to Home.
+- [ ] 1.4 Provision valid TLS certificates for `auth.calcifer.tech` in both
+  clusters and document renewal behavior during a Home Internet outage.
+- [x] 1.5 Confirm the password fallback exposure policy, rate limiting, and
+  operator recovery procedure for both ingress paths.
 
-## 2. Authorization server implementation
+## 2. Common authorization-server implementation
 
-- [x] 2.1 Configure Spring Authorization Server endpoints, explicit issuer, stable asymmetric JWK source, JWT claims, discovery metadata, user-info, and short-lived access tokens without refresh tokens.
-- [ ] 2.2 Implement Google OAuth2 login and an authority mapper that accepts only verified `dem.gianluigi@gmail.com` and maps it to `admin`; add negative authorization tests for other identities.
-- [ ] 2.3 Configure static private clients, including a `grafana-api` client limited to `client_credentials` and `grafana.api`; add grant, scope-denial, token-claim, and JWKS verification tests.
-- [x] 2.4 Implement the internal Traefik ForwardAuth endpoint: validate issuer/signature/expiry/audience/scope, reject invalid bearer tokens, return only named Grafana identity/role headers for valid machine tokens, and pass bearer-less browser-session requests without headers.
-- [ ] 2.5 Implement home-only local administrator password authentication using Argon2id or bcrypt hash configuration, map it to the canonical admin identity, and test that the cloud profile rejects password login.
-- [ ] 2.6 Configure Actuator health groups, Prometheus exposure, structured secret-safe security events, liveness/readiness probes, and native-image integration tests.
+- [x] 2.1 Retain the Java 25 Spring Authorization Server module, standard OIDC
+  endpoints, native-image direction, and explicit configuration model.
+- [x] 2.2 Change Google and local authentication to resolve to the same
+  canonical administrator subject and `admin` role.
+- [x] 2.3 Enable and test password fallback on both Cloud and Home without
+  storing or logging the plaintext password; both overlays are enabled, their
+  encrypted hashes are equivalent, and the native login smoke test passes.
+- [x] 2.4 Configure equivalent static clients, redirect URIs, audiences, grant
+  types, scopes, token lifetimes, and role claims in both profiles.
+- [x] 2.5 Use interoperable stable signing material and verify tokens issued by
+  either instance against both JWKS endpoints; two native instances issued
+  machine tokens that validated against both local JWKS responses.
+- [x] 2.6 Ensure discovery metadata and all token claims are identical in
+  contract and contain no cluster identity.
+- [ ] 2.7 Make OAuth authorization state locality explicit and test that a
+  normal flow remains on one edge; document re-login after a path change.
+- [ ] 2.8 Add negative tests for unknown Google identities, bad passwords,
+  unauthorized clients/scopes, invalid issuer/audience/signature, expired
+  tokens, and spoofed proxy headers.
+- [x] 2.9 Add Actuator health groups, Prometheus metrics, structured
+  secret-safe authentication events, and native-image integration tests.
 
-## 3. Native image and manual release delivery
+## 3. Container and release delivery
 
-- [ ] 3.1 Add a reproducible non-root, read-only-root-filesystem native container build for linux/amd64 and verify the resulting image starts and serves health/discovery endpoints.
-- [x] 3.2 Add a `workflow_dispatch` GitHub Actions workflow that validates release-version input, runs tests, builds the native image, and publishes an immutable GHCR artifact with minimum required permissions.
-- [x] 3.3 Add workflow digest resolution, promotion concurrency control, and a commit that updates the cloud Kustomize image reference to the immutable digest; verify an invalid input cannot publish or promote.
+- [x] 3.1 Add a reproducible non-root, read-only-root-filesystem native image
+  container for linux/amd64 and verify health/discovery startup.
+- [x] 3.2 Keep the manually dispatched GitHub Actions build/test/native-image
+  workflow with minimum package permissions.
+- [x] 3.3 Update release promotion to write the same digest to Cloud and Home,
+  with concurrency control and validation before either file changes.
 
-## 4. Cloud GitOps deployment and secret handling
+## 4. Cloud and Home GitOps deployment
 
-- [x] 4.1 Add reusable Kustomize base resources for namespace, ServiceAccount, Deployment, Service, ConfigMap, probes, pod metrics annotations, security context, explicit resource bounds, and NetworkPolicies.
-- [x] 4.2 Add the `calcifer-cloud` overlay and Flux inclusion for `auth.calcifer.tech`, production cert-manager/Traefik TLS configuration, cloud issuer values, and digest-pinned image reference.
-- [x] 4.3 Prepare SOPS Secret templates and a non-printing operator procedure for the cloud signing key, Google client secret, Grafana browser client secret, and Grafana machine client secret; generate/encrypt real values without committing plaintext.
-- [x] 4.4 Render the cloud Kustomization, validate Secret references and policy selectors, and confirm no sensitive generated value appears in Git, command output, or logs.
+- [x] 4.1 Retain reusable base resources for namespace, ServiceAccount,
+  Deployment, Service, probes, metrics annotations, security context, resource
+  bounds, and NetworkPolicy.
+- [x] 4.2 Update the Cloud overlay to use the common issuer, common identity
+  contract, and public canonical route.
+- [x] 4.3 Activate the Home overlay with the same issuer, local canonical route,
+  local password fallback, TLS configuration, and independent Flux inclusion;
+  live reconciliation remains part of the acceptance checks.
+- [x] 4.4 Create equivalent SOPS-encrypted Secrets for signing material, Google
+  registration, OIDC clients, machine clients, and password hash in both
+  clusters without emitting plaintext.
+- [x] 4.5 Render both overlays and verify equivalent issuer/client/claim
+  configuration, valid Secret references, selectors, and policies.
 
-## 5. Grafana and Traefik integration
+## 5. Reusable application and Grafana integration
 
-- [x] 5.1 Register Grafana as an authorization-code/PKCE client and configure the Grafana Operator resource for Generic OAuth discovery, role mapping, SOPS-sourced client secret, and the existing root URL.
-- [x] 5.2 Enable Grafana Auth Proxy for only trusted forwarded identities, configure its source whitelist from verified Traefik addressing, and retain the existing encrypted Grafana admin Secret for rollback.
-- [x] 5.3 Replace the operator-created Grafana all-path ingress with TLS-equivalent explicit Traefik routes: prioritized `/api` with header-scrub plus ForwardAuth middleware and `/` for normal browser flow.
-- [ ] 5.4 Add NetworkPolicies that permit Grafana only from Traefik and permit the internal ForwardAuth call plus Alloy scraping; test valid browser session, valid machine token, absent token, invalid token, and spoofed header behavior.
-- [ ] 5.5 Disable the cloud Grafana password-login form only after browser OIDC and client-token API acceptance succeeds.
+- [x] 5.1 Define and document the application integration contract: canonical
+  issuer, discovery, client registration, scopes, audiences, roles, and
+  canonical subject.
+- [ ] 5.2 Update Grafana Cloud integration to use only the canonical issuer and
+  verify browser OIDC login through the Cloud path.
+- [x] 5.3 Document the reusable Grafana integration for any future Home
+  exposure; Home currently has no Grafana ingress and must not introduce a
+  second issuer.
+- [x] 5.4 Apply protected `/api` ForwardAuth routes and NetworkPolicies to each
+  Grafana ingress that is enabled; static rendering and controller tests cover
+  bearer-less browser sessions, valid machine tokens, invalid tokens, and
+  missing scopes. Live spoof-header behavior remains an acceptance check.
+- [ ] 5.5 Disable local Grafana password login only after the applicable OIDC
+  and machine-token acceptance checks succeed.
 
-## 6. Home autonomy preparation
+## 6. Observability and acceptance
 
-- [x] 6.1 Add a non-applied `calcifer-home` overlay with independent issuer, signing-key/client Secret references, cluster labels, ingress placeholders, and Grafana client configuration; do not add it to a Flux root.
-- [x] 6.2 Document the required future home FQDN, split-horizon DNS, TLS issuer, distinct Google callback/client, and the trust implications of separate cloud/home issuers.
-- [x] 6.3 Provide an operator-local procedure to generate and SOPS-encrypt the initial home admin password hash without revealing the plaintext; render-test the home overlay with non-secret placeholders.
-
-## 7. Observability and acceptance
-
-- [x] 7.1 Add a Grafana Operator dashboard in the existing Observability folder for authorization-server availability, HTTP errors/latency, login/token/ForwardAuth outcomes, and CPU/memory usage.
-- [ ] 7.2 Verify Alloy sends authorization-server metrics to Thanos and Loki collects its structured logs without sensitive labels or fields.
-- [ ] 7.3 Manually dispatch an initial GHCR release, confirm Flux reconciliation, inspect workload/resource readiness, and stop or resize before proceeding if the node experiences memory pressure.
-- [ ] 7.4 Perform interactive Google login to `grafana.calcifer.tech` as `dem.gianluigi@gmail.com` and verify Grafana organization Admin access.
-- [ ] 7.5 Obtain a `grafana.api` client-credentials token without printing it and use it against `https://grafana.calcifer.tech/api/ds/query` to confirm successful Thanos and Loki queries.
-- [ ] 7.6 Record the safe validation and rollback procedures; mark the change complete only after all live checks pass.
+- [x] 6.1 Provision dashboard panels and alerts for both authorization-server
+  instances, including availability, errors, login/token/password outcomes,
+  ForwardAuth decisions, and resource use.
+- [ ] 6.2 Verify Alloy and Loki collection independently for Cloud and Home,
+  including the no-sensitive-data guarantee.
+- [ ] 6.3 Verify Home LAN password login while Internet/Google is unavailable.
+- [ ] 6.4 Verify Cloud authentication and Cloud application access while Home
+  is unavailable.
+- [ ] 6.5 Verify tokens issued through Cloud and Home have the same issuer,
+  canonical subject, roles, scopes, and cross-cluster JWKS validation.
+- [ ] 6.6 Obtain a machine token through each edge without printing it and use
+  it against the permitted Grafana datasource API.
+- [x] 6.7 Record safe validation, certificate renewal, key rotation, password
+  recovery, and symmetric rollback procedures.
+- [ ] 6.8 Mark the change complete only after both clusters reconcile and all
+  acceptance checks pass without memory or availability regressions.

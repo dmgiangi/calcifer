@@ -7,3 +7,4 @@ resources:
   - cert-manager-config.yaml
   - lan-dns-install.yaml
   - home-apps.yaml
+  - authorization-server.yaml

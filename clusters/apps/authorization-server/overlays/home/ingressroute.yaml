@@ -6,8 +6,11 @@ metadata:
 spec:
   entryPoints: [websecure]
   routes:
-    - match: Host(`REPLACE_HOME_AUTH_FQDN`)
+    - match: Host(`auth.calcifer.tech`)
       kind: Rule
+      middlewares:
+        - name: authorization-server-rate-limit
+        - name: authorization-server-security-headers
       services:
         - name: authorization-server
           port: 8080

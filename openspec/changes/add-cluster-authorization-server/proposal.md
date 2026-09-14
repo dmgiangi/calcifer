@@ -1,69 +1,69 @@
 ## Why
 
-`calcifer-cloud` has no cluster-owned identity boundary: Grafana uses a local
-administrator credential and there is no standard way for workloads to obtain
-short-lived credentials. A small authorization server is needed to bridge the
-administrator's Google identity into cluster roles and to issue scoped machine
-credentials, while allowing `calcifer-home` to keep working when the cloud or
-the Internet is unavailable.
+The two K3s clusters need one reusable identity contract for all applications.
+Authentication must continue to work when the user reaches the public Cloud
+edge, and from the Home LAN when Home has no Internet access. The previous
+design used independent Cloud and Home issuers, which would force every
+application to know which cluster issued a token and would produce different
+user identifiers.
 
 ## What Changes
 
-- Add a native Java 25 Spring Authorization Server deployed by Flux to
-  `calcifer-cloud` at `https://auth.calcifer.tech`.
-- Authenticate the cloud human administrator only through Google OIDC and map
-  `dem.gianluigi@gmail.com` to the configured `admin` role; do not expose a
-  cloud password-login path.
-- Expose standard OIDC discovery, authorization, JWKS, user-info, and token
-  endpoints, including the OAuth 2.0 `client_credentials` grant for explicitly
-  configured technical clients and scopes.
-- Configure Grafana at `grafana.calcifer.tech` to use the authorization server
-  for browser OIDC login and to accept a valid machine token on its existing
-  `/api` path through a protected Traefik ForwardAuth integration. Browser
-  sessions must continue to work on the same hostname.
-- Add a reusable, non-applied `calcifer-home` overlay that creates an
-  independent issuer with its own keys, technical clients, Google registration,
-  and an SOPS-encrypted local password-hash fallback for the sole home admin.
-  The home fallback is intentionally disabled in cloud.
-- Instrument the authorization server with Spring Boot Actuator Prometheus
-  metrics and structured logs, add Grafana dashboard/query coverage, and bound
-  its resources for the single-node cluster.
-- Add a manually dispatched GitHub Actions release workflow that produces a
-  Java 25 native image, publishes an immutable image to GHCR, and promotes the
-  selected digest into Flux-managed cloud manifests.
+- Deploy the same compact authorization server to both `calcifer-cloud` and
+  `calcifer-home`.
+- Expose both instances through the canonical `https://auth.calcifer.tech`
+  name: public DNS resolves to Cloud, while split-horizon LAN DNS resolves to
+  Home.
+- Use one logical issuer, one canonical user identifier space, and common
+  roles/scopes. Applications SHALL not receive or depend on a Cloud/Home
+  cluster identity.
+- Support Google OIDC and a locally verified password fallback on both
+  instances. Google is optional for a successful local password login.
+- Keep signing keys, client registrations, and identity mapping equivalent on
+  both clusters so tokens issued at either edge can be validated by either
+  cluster.
+- Keep OAuth/OIDC integration reusable: applications use the canonical issuer;
+  ForwardAuth is reserved for applications such as Grafana that need an edge
+  adapter.
+- Retain the existing observability, resource bounds, SOPS handling, native
+  image, and manual immutable release workflow, extending them to both
+  overlays.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `cluster-identity-bridge`: Federated Google login, static identity/role
-  configuration, autonomous home password fallback, and standard OAuth2/OIDC
-  token issuance.
+- `cluster-identity-bridge`: Common Cloud/Home OIDC issuer, Google login,
+  password fallback, canonical subjects, roles, scopes, and interoperable JWTs.
+- `cluster-identity-routing`: Public and LAN resolution of the same identity
+  endpoint and TLS/routing behavior for both access paths.
 - `grafana-authorization-server-integration`: Browser OIDC sign-in and scoped
-  machine access to Grafana's existing API hostname through trusted ingress
-  authentication.
-- `authorization-server-observability`: Metrics, logs, dashboarding, resource
-  bounds, and live health verification for the identity workload.
-- `authorization-server-release-delivery`: Manually triggered native-image
-  build, GHCR publication, and GitOps promotion of immutable releases.
+  machine access to Grafana's existing API hostname.
+- `authorization-server-observability`: Metrics, logs, dashboards, resource
+  bounds, and health verification for both identity workloads.
+- `authorization-server-release-delivery`: Manual native-image release and
+  digest-pinned promotion for both cluster overlays.
 
 ### Modified Capabilities
 
-None.
+- `cloud-home-private-transit`: only if additional explicit edge routes are
+  needed for identity validation or operational checks; the identity service
+  SHALL not depend on the Cloud-to-Home tunnel for normal availability.
+- `home-lan-dns`: declare the LAN answer for the canonical identity hostname.
 
 ## Impact
 
-- Adds a Java/Spring source module, native container build definition, tests,
-  and GitHub Actions workflow.
-- Adds Flux/Kustomize workload manifests, SOPS-encrypted technical secrets,
-  Traefik middleware/route configuration, NetworkPolicies, and Grafana
-  configuration/resources under the cloud cluster configuration.
-- Establishes public cloud endpoints `auth.calcifer.tech` and the existing
-  `grafana.calcifer.tech`; Google OAuth client registration and DNS/TLS
-  configuration are required operational dependencies.
-- Establishes a reusable home overlay but does not bootstrap, reconcile, or
-  expose the not-yet-developed `calcifer-home` cluster.
-- Replaces Grafana's normal cloud administrator sign-in path with Google OIDC
-  after live acceptance has proved the replacement works. Existing Grafana
-  service-account automation remains available only for internal provisioning,
-  not as the external client-credential contract.
+- The existing Java/Spring module remains the implementation baseline, but its
+  principal mapping and local-login behavior must be made cluster-independent.
+- Cloud and Home each receive an active authorization-server deployment and a
+  valid TLS route for the same hostname.
+- SOPS must supply equivalent identity material to both clusters. A shared
+  signing key is the simplest v1 choice and increases the impact of a key
+  compromise; rotation must therefore be coordinated.
+- Applications get one issuer and one canonical `sub`, but the v1 design does
+  not replicate browser sessions or OAuth authorization state between
+  clusters. A user may need to authenticate again after changing access paths
+  or during a failover.
+- Cloud applications remain usable when Home or the Home Internet connection
+  is unavailable. Home applications remain usable over the LAN when Cloud or
+  the Internet is unavailable, using the password fallback.

@@ -5,8 +5,11 @@ metadata:
   namespace: authorization
 data:
   AUTH_ALLOWED_GOOGLE_EMAIL: dem.gianluigi@gmail.com
+  AUTH_CANONICAL_USER_ID: user:admin
   GRAFANA_OIDC_CLIENT_ID: grafana
   GRAFANA_OIDC_REDIRECT_URI: https://grafana.calcifer.tech/login/generic_oauth
+  GRAFANA_OIDC_AUDIENCE: grafana
   GRAFANA_API_CLIENT_ID: grafana-api
   GRAFANA_API_REDIRECT_URI: https://grafana.calcifer.tech
+  GRAFANA_API_AUDIENCE: grafana
   AUTH_LOCAL_LOGIN_ENABLED: "false"
