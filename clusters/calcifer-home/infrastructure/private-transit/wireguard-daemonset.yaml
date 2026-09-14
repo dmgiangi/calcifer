@@ -34,7 +34,6 @@ spec:
           securityContext:
             privileged: true
             runAsUser: 0
-            allowPrivilegeEscalation: false
             capabilities:
               add:
                 - NET_ADMIN
