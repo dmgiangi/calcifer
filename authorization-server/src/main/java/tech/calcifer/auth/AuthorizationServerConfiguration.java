@@ -82,7 +82,8 @@ class AuthorizationServerConfiguration {
       AuthenticationSuccessHandler oauth2LoginSuccessHandler) throws Exception {
     http.authorizeHttpRequests(authorize -> authorize
         .requestMatchers("/actuator/health/**", "/actuator/prometheus", "/internal/traefik/forward-auth",
-            "/error", "/login", "/oauth2/**", "/login/oauth2/**").permitAll()
+            "/error", "/login", "/login.html", "/login.css", "/login.js", "/google-mark.svg", "/login/config",
+            "/login/csrf", "/oauth2/**", "/login/oauth2/**").permitAll()
             .anyRequest().authenticated())
         .requestCache(cache -> cache.requestCache(authorizationRequestCache()))
         .oauth2Login(login -> login

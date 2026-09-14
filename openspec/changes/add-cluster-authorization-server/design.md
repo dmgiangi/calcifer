@@ -115,6 +115,12 @@ before offering the password path. Rate limiting and safe authentication
 events are required because the fallback is available at the public Cloud
 edge as well as from the LAN.
 
+The login presentation is served from versioned static HTML, CSS, JavaScript,
+and a local Google mark asset. The `/login` controller only forwards to the
+static page and exposes small JSON endpoints for the configured password
+fallback and the CSRF token required by the password form. This keeps the
+security behavior dynamic while avoiding inline HTML generation.
+
 The two instances do not share live login sessions. A session created on one
 instance is therefore not assumed to exist on the other. Pinned profiles keep
 each normal flow on one instance; a path change or failover may require a new

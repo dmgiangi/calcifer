@@ -40,6 +40,9 @@
   tokens, and spoofed proxy headers.
 - [x] 2.9 Add Actuator health groups, Prometheus metrics, structured
   secret-safe authentication events, and native-image integration tests.
+- [x] 2.10 Replace inline login HTML with static HTML/CSS/JavaScript assets,
+  retain conditional password fallback and CSRF protection, and add a local
+  Google icon.
 
 ## 3. Container and release delivery
 

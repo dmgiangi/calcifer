@@ -57,6 +57,21 @@ from SOPS, so a Google outage does not prevent authentication.
 - **WHEN** Google returns a verified identity other than the configured user
 - **THEN** authorization SHALL be denied without issuing a code or token
 
+### Requirement: The login presentation is static and configuration-aware
+The `/login` endpoint SHALL serve a versioned static HTML page with separate
+CSS, JavaScript, and local Google icon assets. The page SHALL keep the Google
+action available and SHALL display the password form only when local password
+login is enabled. The password form SHALL retain CSRF protection.
+
+#### Scenario: Password fallback is disabled
+- **WHEN** a user opens the login page on an instance with local login disabled
+- **THEN** the page SHALL show the Google action without a usable password form
+
+#### Scenario: Password fallback is enabled
+- **WHEN** a user opens the login page on an instance with local login enabled
+- **THEN** the page SHALL load the protected password form and allow a valid
+  password login without embedding the CSRF token in the static HTML
+
 ### Requirement: Tokens are interoperable and scoped
 Cloud and Home SHALL use equivalent registered clients, audiences, scopes,
 roles, token lifetimes, and signing material required for interoperability.

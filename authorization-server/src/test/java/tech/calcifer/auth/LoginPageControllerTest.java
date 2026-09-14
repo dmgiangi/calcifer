@@ -13,9 +13,9 @@ class LoginPageControllerTest {
 
   @Test
   void alwaysOffersGoogleAndHidesPasswordUntilEnabled() {
-    String page = new LoginPageController(BASE).login(null);
-    assertThat(page).contains("/oauth2/authorization/google");
-    assertThat(page).doesNotContain("type=\"password\"");
+    var controller = new LoginPageController(BASE);
+    assertThat(controller.login()).isEqualTo("forward:/login.html");
+    assertThat(controller.loginConfig()).containsEntry("passwordEnabled", false);
   }
 
   @Test
@@ -23,7 +23,6 @@ class LoginPageControllerTest {
     IdentityProperties properties = new IdentityProperties(BASE.issuer(), BASE.allowedGoogleEmail(), BASE.canonicalUserId(),
         BASE.signingKeyLocation(), BASE.grafana(), BASE.grafanaApi(),
         new IdentityProperties.LocalLogin(true, "dem.gianluigi@gmail.com", "{bcrypt}hash"));
-    String page = new LoginPageController(properties).login(null);
-    assertThat(page).contains("action=\"/login\"").contains("type=\"password\"");
+    assertThat(new LoginPageController(properties).loginConfig()).containsEntry("passwordEnabled", true);
   }
 }
