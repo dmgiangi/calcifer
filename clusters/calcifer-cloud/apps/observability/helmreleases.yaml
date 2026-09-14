@@ -118,6 +118,8 @@ spec:
       replicaCount: 1
       tsdb:
         retention: 48h
+      extraArgs:
+        - --tsdb.out-of-order.time-window=2h
       persistence:
         enabled: true
         size: 8Gi
