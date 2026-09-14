@@ -24,9 +24,9 @@
 
 ## 4. LAN DNS
 
-- [ ] 4.1 Add the ExternalDNS `DNSEndpoint` CRD and a pinned CoreDNS/k8s-gateway deployment with RBAC limited to `DNSEndpoint` records in the intended zone.
-- [ ] 4.2 Expose the dedicated resolver through a K3s LoadBalancer Service on `192.168.0.102` for both UDP and TCP port 53, with a direct `1.1.1.1` upstream and no forwarding loop to the LAN router.
-- [ ] 4.3 Add a non-production Home `DNSEndpoint` and verify that queries sent to the LAN router resolve it to `192.168.0.102` while undeclared `calcifer.tech` names retain their public Cloud answer.
+- [x] 4.1 Add the ExternalDNS `DNSEndpoint` CRD and a pinned CoreDNS/k8s-gateway deployment with RBAC limited to `DNSEndpoint` records in the intended zone.
+- [x] 4.2 Expose the dedicated resolver through a K3s LoadBalancer Service on `192.168.0.102` for both UDP and TCP port 53, with a direct `1.1.1.1` upstream and no forwarding loop to the LAN router.
+- [x] 4.3 Add a non-production Home `DNSEndpoint` and verify that queries sent to the LAN router resolve it to `192.168.0.102` while undeclared `calcifer.tech` names retain their public Cloud answer.
 - [ ] 4.4 Verify the router's Cloudflare fallback preserves general Internet resolution when the Home resolver is deliberately unavailable, then restore the resolver.
 
 ## 5. Cloud edge and Home ingress routing
