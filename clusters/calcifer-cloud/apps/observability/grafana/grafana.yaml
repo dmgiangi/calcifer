@@ -7,6 +7,8 @@ metadata:
     dashboards: grafana
 spec:
   version: 13.2.1
+  client:
+    useKubeAuth: true
   disableDefaultAdminSecret: true
   config:
     log:
@@ -17,6 +19,18 @@ spec:
       root_url: https://grafana.calcifer.tech
     auth.basic:
       enabled: "false"
+    auth.jwt:
+      enabled: "true"
+      header_name: Authorization
+      expect_claims: '{"aud": ["operator.grafana.com"]}'
+      username_claim: sub
+      email_claim: sub
+      auto_sign_up: "true"
+      role_attribute_strict: "true"
+      role_attribute_path: "contains(sub, 'system:serviceaccount:monitoring:grafana-operator') && 'GrafanaAdmin' || 'None'"
+      jwk_set_url: https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT_HTTPS}/openid/v1/jwks
+      jwk_set_bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tls_client_ca: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     auth:
       disable_login_form: "true"
     auth.generic_oauth:
