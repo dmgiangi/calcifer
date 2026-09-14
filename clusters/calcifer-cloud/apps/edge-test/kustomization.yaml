@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - basic-auth.sops.yaml
+  - certificate.yaml
+  - service.yaml
+  - endpointslice.yaml
+  - traefik.yaml
