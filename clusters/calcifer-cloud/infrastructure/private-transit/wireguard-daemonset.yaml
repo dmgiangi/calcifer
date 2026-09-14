@@ -32,6 +32,7 @@ spec:
               wg-quick up /run/wireguard/wg0.conf
               while true; do sleep 3600 & wait "$!"; done
           securityContext:
+            privileged: true
             runAsUser: 0
             allowPrivilegeEscalation: false
             capabilities:
