@@ -10,10 +10,16 @@ data:
     PrivateKey = __PRIVATE_KEY__
     Table = off
     PostUp = ip route replace 172.31.255.1/32 dev %i
-    PostUp = iptables -C INPUT -i %i -s 172.31.255.1/32 -p tcp --dport 443 -j ACCEPT || iptables -I INPUT -i %i -s 172.31.255.1/32 -p tcp --dport 443 -j ACCEPT
-    PostUp = iptables -C INPUT -i %i -j DROP || iptables -I INPUT -i %i -j DROP
-    PostDown = iptables -D INPUT -i %i -j DROP || true
-    PostDown = iptables -D INPUT -i %i -s 172.31.255.1/32 -p tcp --dport 443 -j ACCEPT || true
+    PostUp = iptables -t mangle -N CALCIFER_HOME_EDGE || true
+    PostUp = iptables -t mangle -F CALCIFER_HOME_EDGE
+    PostUp = iptables -t mangle -A CALCIFER_HOME_EDGE -i %i -s 172.31.255.1/32 -p tcp --dport 443 -j ACCEPT
+    PostUp = iptables -t mangle -A CALCIFER_HOME_EDGE -i %i -j DROP
+    PostUp = iptables -t mangle -A CALCIFER_HOME_EDGE -i wlp1s0 -s 192.168.0.0/24 -p tcp --dport 443 -j ACCEPT
+    PostUp = iptables -t mangle -A CALCIFER_HOME_EDGE -i wlp1s0 -p tcp --dport 443 -j DROP
+    PostUp = iptables -t mangle -C PREROUTING -j CALCIFER_HOME_EDGE || iptables -t mangle -I PREROUTING -j CALCIFER_HOME_EDGE
+    PostDown = iptables -t mangle -D PREROUTING -j CALCIFER_HOME_EDGE || true
+    PostDown = iptables -t mangle -F CALCIFER_HOME_EDGE || true
+    PostDown = iptables -t mangle -X CALCIFER_HOME_EDGE || true
     PostDown = ip route del 172.31.255.1/32 dev %i || true
 
     [Peer]
