@@ -11,9 +11,11 @@ user identifiers.
 
 - Deploy the same compact authorization server to both `calcifer-cloud` and
   `calcifer-home`.
-- Expose both instances through the canonical `https://auth.calcifer.tech`
+- Keep `https://auth.calcifer.tech` as the canonical issuer and compatibility
   name: public DNS resolves to Cloud, while split-horizon LAN DNS resolves to
-  Home.
+  Home. Expose stateful OAuth endpoint aliases pinned to each physical edge:
+  `auth-cloud.calcifer.tech` for Cloud applications and
+  `auth-home.calcifer.tech` for Home applications.
 - Use one logical issuer, one canonical user identifier space, and common
   roles/scopes. Applications SHALL not receive or depend on a Cloud/Home
   cluster identity.
@@ -60,10 +62,11 @@ user identifiers.
 - SOPS must supply equivalent identity material to both clusters. A shared
   signing key is the simplest v1 choice and increases the impact of a key
   compromise; rotation must therefore be coordinated.
-- Applications get one issuer and one canonical `sub`, but the v1 design does
-  not replicate browser sessions or OAuth authorization state between
-  clusters. A user may need to authenticate again after changing access paths
-  or during a failover.
+- Applications get one issuer and one canonical `sub`, but their deployment
+  pins authorization, token, and user-info requests to its own physical edge.
+  The v1 design does not replicate browser sessions or OAuth authorization
+  state between clusters. A user may need to authenticate again after changing
+  edges or during a failover.
 - Cloud applications remain usable when Home or the Home Internet connection
   is unavailable. Home applications remain usable over the LAN when Cloud or
   the Internet is unavailable, using the password fallback.

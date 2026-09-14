@@ -1,19 +1,34 @@
 # Application identity integration
 
-Applications in both clusters use the same OIDC issuer:
+Applications in both clusters validate the same OIDC issuer:
 
 ```text
 https://auth.calcifer.tech
 ```
 
 They must not configure separate Cloud/Home issuers and must not infer
-authorization from the cluster where a token was issued.
+authorization from the cluster where a token was issued. `iss` is always
+`https://auth.calcifer.tech`.
 
 ## Interactive applications
 
 Register one confidential OIDC client per application. Use authorization code
-with PKCE and the redirect URI registered for that application. Discover the
-authorization, token, JWKS, and user-info endpoints from the canonical issuer.
+with PKCE and the redirect URI registered for that application.
+
+An authorization code and its browser session are stateful, so an application
+deployment must pin all its browser-facing OIDC endpoints to its own edge.
+This is deployment transport configuration, not an identity choice:
+
+| Application location | Authorization, token, and user-info endpoint base | DNS behavior |
+| --- | --- | --- |
+| Cloud | `https://auth-cloud.calcifer.tech` | public Cloud edge, including for LAN browsers |
+| Home | `https://auth-home.calcifer.tech` | Home LAN edge only |
+
+Keep `https://auth.calcifer.tech` as the issuer/JWKS validation value. Do not
+derive a stateful endpoint from the split-horizon canonical hostname when a
+browser can be in a different network from the application backend. Frameworks
+that use discovery for endpoint configuration must support explicit endpoint
+overrides; configure the issuer separately for token validation.
 
 The initial administrator has the same canonical subject after either Google
 or password login:
@@ -34,11 +49,11 @@ signature, expiry, and scope. Do not use a browser client secret for API calls.
 
 ## Network locality
 
-Public clients reach the Cloud edge. LAN clients reach the Home edge through
-split-horizon DNS. The identity contract is identical at both edges. The v1
-implementation does not replicate live browser sessions or authorization-code
-state, so an in-progress flow must remain on one edge and a path change may
-require a new login.
+Cloud applications always use the Cloud endpoint profile, even when their
+browser is on the LAN. Home applications always use the Home endpoint profile.
+The identity contract is identical at both edges. The v1 implementation does
+not replicate live browser sessions or authorization-code state, so a session
+is not shared between the two physical edges.
 
 ## Operational rules
 

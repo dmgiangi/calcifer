@@ -1,18 +1,19 @@
 ## MODIFIED Requirements
 
 ### Requirement: Enabled Grafana instances use the canonical issuer
-Every exposed Grafana instance SHALL use Generic OAuth/OIDC against
-`https://auth.calcifer.tech` with authorization code and PKCE. A user carrying
-the canonical `admin` role SHALL receive Grafana organization Admin access.
-Grafana configuration SHALL not contain separate Cloud/Home issuers. The
-current repository exposes Grafana only in Cloud; a future Home Grafana SHALL
-reuse this same contract.
+Every exposed Grafana instance SHALL validate the canonical issuer
+`https://auth.calcifer.tech` and use authorization code with PKCE. Its
+authorization, token, and user-info URLs SHALL use the endpoint profile pinned
+to Grafana's deployment: Cloud Grafana uses `auth-cloud.calcifer.tech`; a
+future Home Grafana uses `auth-home.calcifer.tech`. A user carrying the
+canonical `admin` role SHALL receive Grafana organization Admin access.
+Grafana configuration SHALL not contain separate Cloud/Home issuers.
 
 #### Scenario: Administrator signs in through an enabled edge
-- **WHEN** the configured administrator signs in to an exposed Grafana
-  instance through its reachable edge
-- **THEN** Grafana SHALL establish an organization Admin session from the
-  canonical OIDC claims
+- **WHEN** a LAN browser signs in to Cloud Grafana
+- **THEN** browser authorization and Cloud Grafana token exchange SHALL both
+  use `auth-cloud.calcifer.tech`, and Grafana SHALL establish an organization
+  Admin session from canonical OIDC claims
 
 ### Requirement: Grafana API accepts scoped machine credentials from either edge
 The Grafana API SHALL accept a valid `client_credentials` JWT with

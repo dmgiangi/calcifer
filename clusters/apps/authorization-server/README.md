@@ -6,7 +6,10 @@ material so either instance can validate tokens from the other. The Secret
 contains these keys:
 
 - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, to be supplied from a Google
-  OAuth client whose redirect URI is `https://auth.calcifer.tech/login/oauth2/code/google`.
+  OAuth client whose authorized redirect URIs include:
+  - `https://auth.calcifer.tech/login/oauth2/code/google` (legacy canonical path)
+  - `https://auth-cloud.calcifer.tech/login/oauth2/code/google` (Cloud endpoint)
+  - `https://auth-home.calcifer.tech/login/oauth2/code/google` (Home LAN endpoint)
 - `GRAFANA_OIDC_CLIENT_SECRET` and `GRAFANA_API_CLIENT_SECRET`, generated as
   distinct random values.
 - `AUTH_LOCAL_LOGIN_PASSWORD_HASH`, an Argon2id or bcrypt hash of the
@@ -47,10 +50,16 @@ verifies that both input files are encrypted, stages both updates, and prints
 only a success message. It does not enable the login feature; after reviewing
 the changes, set `AUTH_LOCAL_LOGIN_ENABLED=true` in both overlays.
 
-`calcifer-home` uses the canonical `auth.calcifer.tech` hostname and the Home
-LAN DNS override. Its Flux Kustomization is active and carries the same local
-password fallback configuration as Cloud. The live outage procedure remains
-an acceptance check before considering the change complete.
+`auth.calcifer.tech` remains the canonical issuer and compatibility path:
+public DNS sends it to Cloud and Home LAN DNS sends it to Home. Stateful
+browser flows must instead use a location-pinned endpoint: Cloud applications
+use `auth-cloud.calcifer.tech`, which is public and intentionally has no LAN
+override; Home applications use `auth-home.calcifer.tech`, which the Home LAN
+resolver maps to Home. Both aliases return tokens with the canonical issuer.
+
+The Home Flux Kustomization carries the same local password fallback
+configuration as Cloud. The live outage procedure remains an acceptance check
+before considering the change complete.
 
 The only release path is the manually started **Release authorization server**
 workflow. It compiles the native executable, publishes a linux/amd64 GHCR

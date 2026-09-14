@@ -39,7 +39,7 @@ deployment and identity model.
 
 ## Decisions
 
-### One logical issuer, two local instances
+### One logical issuer, two local instances, and pinned endpoint profiles
 
 Both instances publish the same issuer:
 
@@ -47,26 +47,45 @@ Both instances publish the same issuer:
 https://auth.calcifer.tech
 ```
 
-Public DNS sends Internet clients to Cloud Traefik. Home split-horizon DNS
-sends LAN clients to Home Traefik. Each ingress terminates TLS and forwards to
-the local authorization-server Service; normal authentication does not depend
+`auth.calcifer.tech` is the issuer and compatibility hostname. Public DNS sends
+it to Cloud Traefik, while Home split-horizon DNS sends it to Home Traefik.
+That hostname cannot safely select a stateful OAuth instance when the browser
+and application backend are in different networks: a LAN browser can create a
+code on Home while a Cloud backend would redeem it on Cloud.
+
+Each deployment therefore selects one location-pinned endpoint profile for all
+stateful authorization, token, and user-info requests:
+
+| Application deployment | Endpoint hostname | Resolution |
+| --- | --- | --- |
+| Cloud | `auth-cloud.calcifer.tech` | public Cloud edge, with no Home LAN override |
+| Home | `auth-home.calcifer.tech` | Home LAN edge only |
+
+Both physical endpoints terminate TLS and forward to their local
+authorization-server Service. They always issue tokens with the canonical
+issuer above. The endpoint profile is deployment transport configuration, not
+an identity claim or an alternate issuer. Normal authentication does not depend
 on the Cloud/Home WireGuard tunnel.
 
-Both routes use the same hostname and certificate identity. Home certificate
-issuance/renewal must be prepared while connectivity is available, and the
-resulting Secret must remain valid during a temporary Internet outage.
+Cloud and Home certificates cover their respective pinned hostname plus the
+canonical compatibility hostname. Home certificate issuance/renewal must be
+prepared while connectivity is available, and the resulting Secret must remain
+valid during a temporary Internet outage. The shared Google OAuth client must
+authorize the callback URI for every served hostname.
 
 The routing contract is:
 
 ```text
-                         public DNS
-Internet ───────────────▶ Cloud Traefik ─▶ Cloud auth server
+Cloud application/backend ──▶ auth-cloud.calcifer.tech ─▶ Cloud auth server
+LAN browser for Cloud app ───▶ auth-cloud.calcifer.tech ─▶ Cloud auth server
 
-LAN client ── split DNS ─▶ Home Traefik  ─▶ Home auth server
+Home application/backend ────▶ auth-home.calcifer.tech ──▶ Home auth server
+LAN browser for Home app ─────▶ auth-home.calcifer.tech ──▶ Home auth server
 ```
 
-Applications use only the canonical issuer. Cluster-local DNS and ingress
-provide locality without exposing that choice to application configuration.
+Applications validate only the canonical issuer. Their deployment configuration
+chooses the endpoint profile; application authorization logic never branches on
+Cloud/Home identity.
 
 ### Canonical identity and authorization claims
 
@@ -97,9 +116,9 @@ events are required because the fallback is available at the public Cloud
 edge as well as from the LAN.
 
 The two instances do not share live login sessions. A session created on one
-instance is therefore not assumed to exist on the other. The local routing
-rule keeps ordinary flows on one instance; a path change or failover may
-require a new login.
+instance is therefore not assumed to exist on the other. Pinned profiles keep
+each normal flow on one instance; a path change or failover may require a new
+login.
 
 ### Signing keys, JWKS, and token validation
 
@@ -118,8 +137,9 @@ combined JWKS, but that is deliberately outside the minimal implementation.
 
 JWT validation is stateless, but authorization-code exchange and browser
 sessions are not. The v1 contract requires an OAuth flow to remain on the
-identity instance selected by its access path. Cloud applications use the
-Cloud path and Home applications use the Home path during normal operation.
+identity instance selected by the application's endpoint profile. Cloud
+applications use the Cloud profile even for LAN browsers; Home applications
+use the Home profile.
 
 If a future requirement demands completely seamless SSO while a browser moves
 between independently reachable Cloud and Home paths, the change must add a
@@ -128,8 +148,9 @@ code/session design. It must not silently rely on two in-memory stores.
 
 ### Reusable application integration
 
-OIDC-capable applications configure the canonical issuer and their own client
-registration. They consume canonical subjects, roles, groups, audiences, and
+OIDC-capable applications configure the canonical issuer for token validation,
+their own client registration, and the endpoint profile selected by the
+deployment. They consume canonical subjects, roles, groups, audiences, and
 scopes only. Applications that cannot validate OIDC use a controlled edge
 adapter such as the existing Grafana ForwardAuth integration; the adapter
 validates issuer, signature, audience, expiry, and scope and strips spoofable
@@ -148,8 +169,9 @@ both digest-pinned overlays atomically or fail before changing either one.
 - [A shared signing key increases blast radius] → protect it with SOPS,
   restrict access, coordinate rotation, and document the later multi-key
   option.
-- [Browser state is not replicated] → keep flows local, accept re-login after
-  path changes, and do not advertise cross-site failover as seamless SSO.
+- [Browser state is not replicated] → pin every stateful endpoint to the
+  application's edge, accept re-login after a profile change, and do not
+  advertise cross-edge browser sessions as seamless SSO.
 - [Public password fallback increases attack surface] → use a strong hash,
   rate limiting, safe failure responses, and secret-safe audit events.
 - [Two deployments can drift] → render both overlays in CI and test issuer,
@@ -164,14 +186,15 @@ both digest-pinned overlays atomically or fail before changing either one.
 1. Update the existing authorization-server configuration model and tests to
    use canonical subjects, common issuer values, and password fallback on both
    profiles.
-2. Prepare public and split-horizon DNS, TLS certificates, and equivalent
-   SOPS-encrypted identity material for Cloud and Home.
-3. Activate the Home overlay and expose the same canonical hostname locally;
-   keep the Cloud overlay as the independent public instance.
+2. Prepare public and split-horizon DNS, TLS certificates, Google callback
+   registrations, and equivalent SOPS-encrypted identity material for Cloud
+   and Home.
+3. Activate the Home overlay with its LAN-pinned endpoint and expose the Cloud
+   endpoint publicly; retain the canonical hostname as issuer compatibility.
 4. Validate discovery, Google login, password login, JWKS, canonical claims,
    and client credentials independently through each edge.
-5. Integrate Grafana and subsequent applications against only the canonical
-   issuer. Verify both browser and machine paths.
+5. Integrate Grafana and subsequent applications with the canonical issuer and
+   their deployment-pinned endpoints. Verify both browser and machine paths.
 6. Release and promote the same immutable image digest to both overlays, then
    verify reconciliation and resource headroom in both clusters.
 

@@ -11,6 +11,10 @@
   clusters and document renewal behavior during a Home Internet outage.
 - [x] 1.5 Confirm the password fallback exposure policy, rate limiting, and
   operator recovery procedure for both ingress paths.
+- [ ] 1.6 Add and verify Cloud- and Home-pinned OAuth endpoint profiles and
+  their DNS/TLS/ingress routes.
+- [ ] 1.7 Register the Cloud and Home callback URIs in the configured Google
+  OAuth client.
 
 ## 2. Common authorization-server implementation
 
@@ -66,8 +70,9 @@
 - [x] 5.1 Define and document the application integration contract: canonical
   issuer, discovery, client registration, scopes, audiences, roles, and
   canonical subject.
-- [ ] 5.2 Update Grafana Cloud integration to use only the canonical issuer and
-  verify browser OIDC login through the Cloud path.
+- [ ] 5.2 Update Grafana Cloud integration to validate the canonical issuer,
+  use the Cloud-pinned endpoints, and verify browser OIDC login through the
+  Cloud path from public Internet and LAN.
 - [x] 5.3 Document the reusable Grafana integration for any future Home
   exposure; Home currently has no Grafana ingress and must not introduce a
   second issuer.

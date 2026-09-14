@@ -2,10 +2,11 @@
 
 ### Requirement: Cloud and Home expose one logical OIDC issuer
 The authorization-server instances in `calcifer-cloud` and `calcifer-home` SHALL
-publish the same explicit issuer, `https://auth.calcifer.tech`, and
-equivalent discovery, authorization, token, JWKS, and user-info metadata.
-Neither application configuration nor token validation SHALL require a
-cluster-specific issuer.
+publish the same explicit issuer, `https://auth.calcifer.tech`, and equivalent
+issuer, JWKS, claim, and client contracts. Neither application authorization
+logic nor token validation SHALL require a cluster-specific issuer. Stateful
+endpoint selection is deployment transport configuration and is not inferred
+from the issuer.
 
 #### Scenario: Application discovers identity metadata from Cloud
 - **WHEN** an application requests discovery through the public Cloud path
@@ -91,15 +92,16 @@ emitted by diagnostics.
 
 ### Requirement: OAuth state locality is explicit
 The v1 system SHALL keep an authorization-code flow and browser session on the
-identity instance selected by its access path. It SHALL not claim replicated
-cross-cluster browser sessions or seamless continuation after a path change.
+identity instance selected by the application's pinned endpoint profile. It
+SHALL not claim replicated cross-cluster browser sessions or seamless
+continuation after a path change.
 
 #### Scenario: Normal Home application login
-- **WHEN** a user starts and completes an OAuth flow through the Home LAN path
+- **WHEN** a user starts and completes a Home application's OAuth flow through
+  the Home endpoint profile
 - **THEN** authorization and token exchange SHALL be handled through Home
 
 #### Scenario: Path changes during an active flow
-- **WHEN** a user changes from a Cloud path to a Home path during an active
-  OAuth flow
+- **WHEN** an active OAuth flow changes endpoint profile
 - **THEN** the flow MAY require restarting authentication rather than relying
   on unsynchronized in-memory state

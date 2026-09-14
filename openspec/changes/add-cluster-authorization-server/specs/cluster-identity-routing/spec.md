@@ -1,20 +1,36 @@
 ## ADDED Requirements
 
-### Requirement: The canonical identity hostname has local and public paths
-The system SHALL expose `auth.calcifer.tech` through Cloud for public Internet
-clients and through Home for LAN clients. Public DNS SHALL resolve the name to
-the Cloud edge, while Home split-horizon DNS SHALL resolve it to the Home
-edge. Both paths SHALL preserve the same hostname and HTTPS issuer.
+### Requirement: Canonical issuer and stateful endpoint profiles are separate
+The system SHALL retain `https://auth.calcifer.tech` as the sole token issuer.
+It SHALL expose `auth-cloud.calcifer.tech` as a public Cloud stateful OAuth
+endpoint and `auth-home.calcifer.tech` as a Home-LAN stateful OAuth endpoint.
+Cloud application deployments SHALL use the Cloud endpoint for authorization,
+token, and user-info requests; Home application deployments SHALL use the Home
+endpoint. Neither endpoint SHALL create a second issuer.
 
-#### Scenario: Internet client reaches identity service
-- **WHEN** an Internet client resolves `auth.calcifer.tech`
-- **THEN** the request SHALL reach the Cloud Traefik route and the Cloud
-  authorization-server instance
+#### Scenario: LAN browser signs in to a Cloud application
+- **WHEN** a LAN browser starts a Cloud application's OAuth flow
+- **THEN** its authorization request and the Cloud backend's token exchange
+  SHALL both reach the Cloud authorization-server through
+  `auth-cloud.calcifer.tech`
 
-#### Scenario: LAN client reaches identity service
-- **WHEN** a LAN client resolves `auth.calcifer.tech` through the Home resolver
-- **THEN** the request SHALL reach the Home Traefik route and the Home
-  authorization-server instance without requiring Internet access
+#### Scenario: LAN browser signs in to a Home application
+- **WHEN** a LAN browser starts a Home application's OAuth flow
+- **THEN** its authorization request and the Home backend's token exchange
+  SHALL both reach the Home authorization-server through
+  `auth-home.calcifer.tech` without requiring Internet access
+
+### Requirement: Compatibility hostname remains split-horizon
+Public DNS SHALL resolve `auth.calcifer.tech` to the Cloud edge, while Home
+split-horizon DNS SHALL resolve it to the Home edge. This hostname SHALL remain
+valid for issuer and JWKS validation compatibility, but applications whose
+browser and backend can have different network locality SHALL NOT use it as a
+stateful OAuth endpoint profile.
+
+#### Scenario: Issuer validation uses the compatibility hostname
+- **WHEN** an application validates a token issued through either endpoint
+- **THEN** it SHALL accept the canonical issuer `https://auth.calcifer.tech`
+  without depending on the endpoint hostname that issued the token
 
 ### Requirement: Home identity access is independent of the Internet
 The Home DNS, TLS, ingress, authorization-server Service, and password login path SHALL
@@ -26,7 +42,7 @@ valid.
 #### Scenario: Home loses upstream Internet
 - **WHEN** a LAN client accesses a Home application while Home's Internet path
   is unavailable
-- **THEN** it SHALL resolve and reach the canonical identity endpoint locally
+- **THEN** it SHALL resolve and reach the Home stateful identity endpoint locally
   and complete password authentication
 
 ### Requirement: Identity routing does not depend on the private transit tunnel
@@ -40,12 +56,13 @@ Neither path SHALL require the Cloud/Home WireGuard tunnel to be available.
   independently reachable through their local edges
 
 ### Requirement: Both paths enforce equivalent TLS and ingress protection
-Cloud and Home SHALL serve a valid certificate for `auth.calcifer.tech`, route
-only the intended identity endpoints to the authorization-server Service, and
-apply equivalent security headers, request limits, and network restrictions.
+Cloud and Home SHALL serve valid certificates for their endpoint profile and
+the canonical compatibility hostname, route only intended identity hostnames
+to the authorization-server Service, and apply equivalent security headers,
+request limits, and network restrictions.
 
 #### Scenario: Client uses an invalid hostname or direct Service address
-- **WHEN** a caller bypasses the canonical HTTPS route or targets the Service
+- **WHEN** a caller bypasses an approved HTTPS route or targets the Service
   directly
 - **THEN** the request SHALL not become an alternative unauthenticated public
   identity path

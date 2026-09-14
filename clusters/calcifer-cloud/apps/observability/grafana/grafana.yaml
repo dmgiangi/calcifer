@@ -41,9 +41,12 @@ spec:
       client_id: grafana
       client_secret: $__env{GRAFANA_OIDC_CLIENT_SECRET}
       scopes: openid profile email
-      auth_url: https://auth.calcifer.tech/oauth2/authorize
-      token_url: https://auth.calcifer.tech/oauth2/token
-      api_url: https://auth.calcifer.tech/userinfo
+      # Grafana is hosted in Cloud. Pin all stateful OIDC endpoints to the
+      # Cloud edge so a LAN browser cannot create an authorization code on
+      # Home that this Cloud workload would try to redeem on Cloud.
+      auth_url: https://auth-cloud.calcifer.tech/oauth2/authorize
+      token_url: https://auth-cloud.calcifer.tech/oauth2/token
+      api_url: https://auth-cloud.calcifer.tech/userinfo
       use_pkce: "true"
       role_attribute_path: contains(roles[*], 'admin') && 'Admin' || 'Viewer'
     auth.proxy:
