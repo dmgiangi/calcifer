@@ -15,7 +15,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.MediaType;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -141,8 +140,10 @@ class AuthorizationServerConfiguration {
   PasswordEncoder passwordEncoder() { return PasswordEncoderFactories.createDelegatingPasswordEncoder(); }
 
   @Bean
-  @ConditionalOnProperty(prefix = "identity.local-login", name = "enabled", havingValue = "true")
   UserDetailsService localAdministrator(IdentityProperties properties) {
+    if (!properties.localLogin().enabled()) {
+      return new InMemoryUserDetailsManager();
+    }
     if (properties.localLogin().passwordHash() == null || properties.localLogin().passwordHash().isBlank()) {
       throw new IllegalStateException("Local login requires AUTH_LOCAL_LOGIN_PASSWORD_HASH");
     }
@@ -151,7 +152,6 @@ class AuthorizationServerConfiguration {
   }
 
   @Bean
-  @ConditionalOnProperty(prefix = "identity.local-login", name = "enabled", havingValue = "true")
   DaoAuthenticationProvider localPasswordAuthenticationProvider(UserDetailsService userDetailsService,
       PasswordEncoder passwordEncoder) {
     DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
