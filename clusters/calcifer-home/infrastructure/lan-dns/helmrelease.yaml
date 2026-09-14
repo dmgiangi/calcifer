@@ -38,7 +38,11 @@ spec:
       - name: loadbalance
     service:
       type: LoadBalancer
-      port: 53
+      # Bootstrap on a non-conflicting host port so the node can pull the
+      # resolver image through the router's public fallback. This is changed
+      # to 53 in the immediately following GitOps revision once the image is
+      # present on the node.
+      port: 1053
       loadBalancerIP: 192.168.0.102
       useTcp: true
     resources:
