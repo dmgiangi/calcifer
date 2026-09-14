@@ -47,7 +47,7 @@ class LocalLoginConfigurationTest {
     BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     var configuration = new AuthorizationServerConfiguration();
     var provider = configuration.localPasswordAuthenticationProvider(
-        configuration.localAdministrator(properties(encoder.encode("correct-password"))), encoder);
+        properties(encoder.encode("correct-password")), encoder);
 
     var authentication = provider.authenticate(
         new UsernamePasswordAuthenticationToken("dem.gianluigi@gmail.com", "correct-password"));

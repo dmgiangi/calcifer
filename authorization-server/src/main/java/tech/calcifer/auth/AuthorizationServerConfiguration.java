@@ -52,6 +52,7 @@ class AuthorizationServerConfiguration {
   SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
     OAuth2AuthorizationServerConfigurer authorizationServer = new OAuth2AuthorizationServerConfigurer();
     http.securityMatcher(authorizationServer.getEndpointsMatcher())
+        .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
         .with(authorizationServer, configurer -> configurer.oidc(oidc -> oidc
             .providerConfigurationEndpoint(endpoint -> endpoint.providerConfigurationCustomizer(provider -> {
               provider.grantTypes(grants -> {
@@ -139,7 +140,6 @@ class AuthorizationServerConfiguration {
   @Bean
   PasswordEncoder passwordEncoder() { return PasswordEncoderFactories.createDelegatingPasswordEncoder(); }
 
-  @Bean
   UserDetailsService localAdministrator(IdentityProperties properties) {
     if (!properties.localLogin().enabled()) {
       return new InMemoryUserDetailsManager();
@@ -152,9 +152,9 @@ class AuthorizationServerConfiguration {
   }
 
   @Bean
-  DaoAuthenticationProvider localPasswordAuthenticationProvider(UserDetailsService userDetailsService,
+  DaoAuthenticationProvider localPasswordAuthenticationProvider(IdentityProperties properties,
       PasswordEncoder passwordEncoder) {
-    DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+    DaoAuthenticationProvider provider = new DaoAuthenticationProvider(localAdministrator(properties));
     provider.setPasswordEncoder(passwordEncoder);
     return provider;
   }
