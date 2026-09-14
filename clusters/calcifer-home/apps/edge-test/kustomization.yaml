@@ -4,6 +4,7 @@ resources:
   - namespace.yaml
   - certificate-staging.yaml
   - certificate-production.yaml
+  - basic-auth.sops.yaml
   - dnsendpoint.yaml
   - deployment.yaml
   - service.yaml

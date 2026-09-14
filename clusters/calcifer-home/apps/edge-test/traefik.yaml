@@ -1,13 +1,11 @@
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: edge-test-source-policy
+  name: edge-test-auth
   namespace: edge-test
 spec:
-  ipAllowList:
-    sourceRange:
-      - 172.31.255.1/32
-      - 192.168.0.0/24
+  basicAuth:
+    secret: edge-test-auth
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -20,7 +18,7 @@ spec:
     - kind: Rule
       match: Host(`edge-test.calcifer.tech`)
       middlewares:
-        - name: edge-test-source-policy
+        - name: edge-test-auth
       services:
         - name: whoami
           port: 80
