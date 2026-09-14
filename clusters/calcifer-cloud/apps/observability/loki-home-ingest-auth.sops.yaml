@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: loki-home-ingest-auth
+    namespace: monitoring
+type: Opaque
+stringData:
+    users: ENC[AES256_GCM,data:zKbNBV9PmFLYD+nfJEKLmqBn6wEQtfM3PceEo7a3IlYWfmfv6C7fQayrobyLhWbYpcL/Ar98lbTnTVU5mzLGSgMXx/b9oHE=,iv:/ocIxdwaV5kD+CkvXYygfvnN0NJ7HOyMyHf6DcANOMA=,tag:hDSeevEWP8jgGHOSKWLAaw==,type:str]
+sops:
+    age:
+        - recipient: age1zrcssj5duesp5x4pnp5rxk96dy378fg68ntpvlyxdhwzcchrvsgqcc9uqn
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBvU3JtVDdkejZCQ0xzemRw
+            cGEvdGlRRUtNV1AxOGJNTStYRnhJOUZNVFdRCkRPcTNjdDZJVTNBQUF0QVhxUkJj
+            blNNMFFtYkpGOTJZOVNic1BNa3ZMM0UKLS0tIGxNQ3UrZ1NKbDE0cUpQVzQ4OVZm
+            UXFhVHpTSUVRSitzUTVKcFliaitYUlUKg4JIjrfzYasp3x3qp6/HZRMgDGluqY8X
+            P3QdUxBSCpIRoSCLc4/P8ONRXJFNxUGbhkXpOdQNxjzgCtkqO62w5g==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-09-14T10:49:19Z"
+    mac: ENC[AES256_GCM,data:NEXGymGIGQ+yK8pGKFeXLGyTpxAEHLTG0jwzFXWDtpbbA0BIFnmteBDHV7tYZWbJrZYOqbypKedz4SOn85PQ7khzHB+9uzhjAFtsqkMkuwYZcobRK1sbZnxxSXp2ZCvjmldJv3NdEsmGh/jeK6WdVDz3LMmknvYOl+uQyd2QDtM=,iv:WtHaGwvlVCW1rsNSQUZ44eFkynNZvzGScKsHY0Sp+c4=,tag:GMM+Yim/6adHuZ8rN8Lfvg==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.12.2

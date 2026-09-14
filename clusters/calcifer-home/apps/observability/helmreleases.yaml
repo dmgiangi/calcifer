@@ -1,0 +1,414 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-state-metrics
+  namespace: monitoring
+spec:
+  interval: 30m
+  timeout: 10m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  chart:
+    spec:
+      chart: kube-state-metrics
+      version: 8.2.0
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: monitoring
+  values:
+    fullnameOverride: kube-state-metrics
+    replicas: 1
+    prometheusScrape: true
+    service:
+      type: ClusterIP
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8080"
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        cpu: 150m
+        memory: 192Mi
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: prometheus-node-exporter
+  namespace: monitoring
+spec:
+  interval: 30m
+  timeout: 10m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  chart:
+    spec:
+      chart: prometheus-node-exporter
+      version: 4.56.3
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: monitoring
+  values:
+    fullnameOverride: node-exporter
+    prometheus:
+      monitor:
+        enabled: false
+    service:
+      type: ClusterIP
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "9100"
+        prometheus.io/scrape: "true"
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: alloy
+  namespace: monitoring
+spec:
+  interval: 30m
+  timeout: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  chart:
+    spec:
+      chart: alloy
+      version: 1.12.1
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: monitoring
+  values:
+    crds:
+      create: true
+    controller:
+      type: statefulset
+      replicas: 1
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      podDisruptionBudget:
+        enabled: false
+      volumeClaimTemplates:
+        - metadata:
+            name: alloy-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: local-path
+            resources:
+              requests:
+                storage: 16Gi
+    service:
+      type: ClusterIP
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "12345"
+    alloy:
+      enableReporting: false
+      stabilityLevel: experimental
+      storagePath: /var/lib/alloy
+      hostAliases:
+        - ip: 172.31.255.1
+          hostnames:
+            - thanos-ingest.calcifer.tech
+            - loki-ingest.calcifer.tech
+      extraEnv:
+        - name: THANOS_INGEST_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: home-ingest-credentials
+              key: THANOS_INGEST_USERNAME
+        - name: THANOS_INGEST_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: home-ingest-credentials
+              key: THANOS_INGEST_PASSWORD
+        - name: LOKI_INGEST_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: home-ingest-credentials
+              key: LOKI_INGEST_USERNAME
+        - name: LOKI_INGEST_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: home-ingest-credentials
+              key: LOKI_INGEST_PASSWORD
+      mounts:
+        extra:
+          - name: alloy-data
+            mountPath: /var/lib/alloy
+      configMap:
+        content: |-
+          logging {
+            level  = "info"
+            format = "logfmt"
+          }
+
+          discovery.kubernetes "pods" {
+            role = "pod"
+          }
+
+          discovery.relabel "pod_metrics" {
+            targets = discovery.kubernetes.pods.targets
+
+            rule {
+              source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_scrape"]
+              regex         = "true"
+              action         = "keep"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_path"]
+              target_label  = "__metrics_path__"
+              regex         = "(.+)"
+              action         = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_port", "__meta_kubernetes_pod_ip"]
+              regex         = "([0-9]+);(.+)"
+              replacement   = "$2:$1"
+              target_label  = "__address__"
+              action        = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_namespace"]
+              target_label  = "namespace"
+              action         = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_pod_name"]
+              target_label  = "pod"
+              action         = "replace"
+            }
+          }
+
+          prometheus.scrape "pod_metrics" {
+            targets    = discovery.relabel.pod_metrics.output
+            forward_to = [prometheus.remote_write.thanos.receiver]
+          }
+
+          discovery.kubernetes "services" {
+            role = "service"
+          }
+
+          discovery.relabel "service_metrics" {
+            targets = discovery.kubernetes.services.targets
+
+            rule {
+              source_labels = ["__meta_kubernetes_service_annotation_prometheus_io_scrape"]
+              regex         = "true"
+              action         = "keep"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_service_annotation_prometheus_io_path"]
+              target_label  = "__metrics_path__"
+              regex         = "(.+)"
+              action         = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_service_annotation_prometheus_io_port"]
+              target_label  = "__meta_kubernetes_service_port_number"
+              regex         = "(.+)"
+              action         = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_service_name", "__meta_kubernetes_namespace", "__meta_kubernetes_service_port_number"]
+              regex         = "(.+);(.+);(.+)"
+              replacement   = "$1.$2.svc.cluster.local:$3"
+              target_label  = "__address__"
+              action        = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_namespace"]
+              target_label  = "namespace"
+              action         = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_service_name"]
+              target_label  = "service"
+              action         = "replace"
+            }
+          }
+
+          prometheus.scrape "service_metrics" {
+            targets    = discovery.relabel.service_metrics.output
+            forward_to = [prometheus.remote_write.thanos.receiver]
+          }
+
+          discovery.kubernetes "nodes" {
+            role = "node"
+          }
+
+          discovery.relabel "kubelet" {
+            targets = discovery.kubernetes.nodes.targets
+
+            rule {
+              source_labels = ["__meta_kubernetes_node_name"]
+              target_label  = "node"
+              action         = "replace"
+            }
+            rule {
+              target_label = "__address__"
+              replacement  = "kubernetes.default.svc.cluster.local:443"
+              action        = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_node_name"]
+              regex         = "(.+)"
+              replacement   = "/api/v1/nodes/$1/proxy/metrics"
+              target_label  = "__metrics_path__"
+              action         = "replace"
+            }
+          }
+
+          prometheus.scrape "kubelet" {
+            targets           = discovery.relabel.kubelet.output
+            scheme             = "https"
+            bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+            tls_config {
+              insecure_skip_verify = true
+            }
+            forward_to = [prometheus.remote_write.thanos.receiver]
+          }
+
+          discovery.relabel "cadvisor" {
+            targets = discovery.kubernetes.nodes.targets
+
+            rule {
+              source_labels = ["__meta_kubernetes_node_name"]
+              target_label  = "node"
+              action         = "replace"
+            }
+            rule {
+              target_label = "__address__"
+              replacement  = "kubernetes.default.svc.cluster.local:443"
+              action        = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_node_name"]
+              regex         = "(.+)"
+              replacement   = "/api/v1/nodes/$1/proxy/metrics/cadvisor"
+              target_label  = "__metrics_path__"
+              action        = "replace"
+            }
+          }
+
+          prometheus.scrape "cadvisor" {
+            targets           = discovery.relabel.cadvisor.output
+            scheme             = "https"
+            bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+            tls_config {
+              insecure_skip_verify = true
+            }
+            forward_to = [prometheus.remote_write.thanos.receiver]
+          }
+
+          loki.process "pod_logs" {
+            stage.labels {
+              values = {
+                cluster   = "cluster",
+                namespace = "namespace",
+                pod       = "pod",
+                container = "container",
+              }
+            }
+            forward_to = [loki.write.loki.receiver]
+          }
+
+          loki.source.kubernetes "pod_logs" {
+            targets    = discovery.kubernetes.pods.targets
+            forward_to = [loki.process.pod_logs.receiver]
+          }
+
+          prometheus.remote_write "thanos" {
+            external_labels = {
+              cluster = "calcifer-home",
+            }
+            endpoint {
+              url = "https://thanos-ingest.calcifer.tech:32443/api/v1/receive"
+              basic_auth {
+                username = sys.env("THANOS_INGEST_USERNAME")
+                password = sys.env("THANOS_INGEST_PASSWORD")
+              }
+              tls_config {
+                server_name = "thanos-ingest.calcifer.tech"
+              }
+              queue_config {
+                max_backoff = "5m"
+                sample_age_limit = "48h"
+              }
+            }
+          }
+
+          loki.write "loki" {
+            external_labels = {
+              cluster = "calcifer-home",
+            }
+            endpoint {
+              url = "https://loki-ingest.calcifer.tech:32443/loki/api/v1/push"
+              basic_auth {
+                username = sys.env("LOKI_INGEST_USERNAME")
+                password = sys.env("LOKI_INGEST_PASSWORD")
+              }
+              tls_config {
+                server_name = "loki-ingest.calcifer.tech"
+              }
+              queue_config {
+                capacity = "32MiB"
+                block_on_overflow = true
+              }
+            }
+              wal {
+                enabled = true
+                max_segment_age = "1h"
+              }
+          }
+      resources:
+        requests:
+          cpu: 75m
+          memory: 192Mi
+        limits:
+          cpu: 400m
+          memory: 512Mi
+    rbac:
+      create: true
+      clusterRules:
+        - apiGroups:
+            - ""
+          resources:
+            - nodes
+          verbs:
+            - get
+            - list
+            - watch
+        - apiGroups:
+            - ""
+          resources:
+            - nodes/proxy
+          verbs:
+            - get

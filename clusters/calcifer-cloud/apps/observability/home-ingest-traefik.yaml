@@ -1,0 +1,71 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: home-ingest-wireguard-source
+  namespace: monitoring
+spec:
+  ipAllowList:
+    sourceRange:
+      - 172.31.255.2/32
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: home-thanos-ingest-auth
+  namespace: monitoring
+spec:
+  basicAuth:
+    secret: thanos-home-ingest-auth
+    removeHeader: true
+    headerField: X-Home-Thanos-Ingest
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: home-loki-ingest-auth
+  namespace: monitoring
+spec:
+  basicAuth:
+    secret: loki-home-ingest-auth
+    removeHeader: true
+    headerField: X-Home-Loki-Ingest
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: home-thanos-ingest
+  namespace: monitoring
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`thanos-ingest.calcifer.tech`) && Path(`/api/v1/receive`)
+      kind: Rule
+      middlewares:
+        - name: home-ingest-wireguard-source
+        - name: home-thanos-ingest-auth
+      services:
+        - name: thanos-v2-receive
+          port: 10908
+  tls:
+    secretName: thanos-home-ingest-tls
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: home-loki-ingest
+  namespace: monitoring
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`loki-ingest.calcifer.tech`) && Path(`/loki/api/v1/push`)
+      kind: Rule
+      middlewares:
+        - name: home-ingest-wireguard-source
+        - name: home-loki-ingest-auth
+      services:
+        - name: loki
+          port: 3100
+  tls:
+    secretName: loki-home-ingest-tls

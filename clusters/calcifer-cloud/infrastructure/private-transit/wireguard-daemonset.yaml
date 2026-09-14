@@ -9,6 +9,8 @@ spec:
       app.kubernetes.io/name: home-edge-wireguard
   template:
     metadata:
+      annotations:
+        checksum/wireguard-config: private-ingest-nodeport-v1
       labels:
         app.kubernetes.io/name: home-edge-wireguard
     spec:

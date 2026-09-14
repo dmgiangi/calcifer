@@ -7,4 +7,5 @@ resources:
   - grafana-datasources.yaml
   - grafana-service-account.yaml
   - dashboards.yaml
+  - home-forwarding-dashboard.yaml
   - grafana-traefik.yaml

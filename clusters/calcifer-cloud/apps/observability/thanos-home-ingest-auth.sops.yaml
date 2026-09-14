@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: thanos-home-ingest-auth
+    namespace: monitoring
+type: Opaque
+stringData:
+    users: ENC[AES256_GCM,data:hUaH/uq+g8FXTORWxipCWIbmFuqU2gkbNALSMkajlq86B4ImxbO/mLfAA+z1fHlEKIED9puaPfuRB+ccdwNowT9PxlDi5KM=,iv:xEh1FESlQ/ixfn+/Qgkg2EzwS7xjpXrVVspJMMbYFf4=,tag:tVwNUTqCV9yxWAO6+49hLw==,type:str]
+sops:
+    age:
+        - recipient: age1zrcssj5duesp5x4pnp5rxk96dy378fg68ntpvlyxdhwzcchrvsgqcc9uqn
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBqQ2plTnhCRFFQclcxKytj
+            aENiUFhZakdDejNjNmZlVFc5dmpxVXl4Y2lnCjg0N1d6Z2VwQk5XNzIrU0pjN01y
+            MXFuOEhjSGhBQWI1aFBKN0VhY2NEZUkKLS0tIE9mclV0WjhqZHBJWGlUY2RLQW1W
+            S3dmSnMyQjd3MklxWEw2NFN3bnVnbm8KMcks1O85Ek7CmeJHGnr19ENT+Ehlcier
+            DVlKX4HsiJPa2iDiguaYpEtMoJFZ8dnX54gAuJ/jOyJeN9b7Fww8iw==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-09-14T10:49:19Z"
+    mac: ENC[AES256_GCM,data:7NZG9kFRxzyH+3s0kt6ZA8LqHG1m2PxhFknjjUBC0W+7xoZhwyd6MTEaR7nyaflPCHPnR9AJfxLWw6xeYJS8b9fK90OdQdkocPAUbJ60CrVITafg3l5iMi2GmzmHHekUjWs1HJyMVNZYkZBvNhJ96AujK1zZlpyy2JEdgx1j7AI=,iv:SqQSPcuLBKU4AiBP4qPwaw5gbNDv0uCOY2pA4VcleWU=,tag:6aXw+2A95kFS0YLuq0TjKw==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.12.2

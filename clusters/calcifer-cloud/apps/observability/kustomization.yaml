@@ -8,3 +8,10 @@ resources:
   - loki-objstore.sops.yaml
   - grafana-admin.sops.yaml
   - thanos-receive-network-policy.yaml
+  - thanos-home-ingest-certificate.yaml
+  - loki-home-ingest-certificate.yaml
+  - thanos-home-ingest-auth.sops.yaml
+  - loki-home-ingest-auth.sops.yaml
+  - home-ingest-traefik.yaml
+  - home-ingest-nodeport.yaml
+  - loki-ingress-network-policy.yaml

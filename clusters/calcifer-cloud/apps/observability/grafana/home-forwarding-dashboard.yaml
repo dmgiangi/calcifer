@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: home-forwarding-dashboard
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/managed-by: grafana-operator
+data:
+  json: |
+    {
+      "uid": "home-forwarding",
+      "title": "Home Observability Forwarding",
+      "tags": ["calcifer-home", "alloy", "observability"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "time": {"from": "now-6h", "to": "now"},
+      "templating": {"list": [{"name": "cluster", "label": "Cluster", "type": "query", "datasource": {"type": "prometheus", "uid": "thanos"}, "query": "label_values(up, cluster)", "includeAll": true, "multi": true, "current": {"text": "All", "value": ["$__all"]}}]},
+      "panels": [
+        {"id": 1, "type": "stat", "title": "Alloy targets up", "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0}, "datasource": {"type": "prometheus", "uid": "thanos"}, "targets": [{"refId": "A", "expr": "sum(up{cluster=~\"$cluster\", namespace=\"monitoring\", pod=~\"alloy.*\"})"}], "options": {"reduceOptions": {"calcs": ["lastNotNull"]}}},
+        {"id": 2, "type": "timeseries", "title": "Remote write pending samples", "gridPos": {"h": 8, "w": 18, "x": 6, "y": 0}, "datasource": {"type": "prometheus", "uid": "thanos"}, "targets": [{"refId": "A", "expr": "sum by (instance) (prometheus_remote_storage_samples_pending{cluster=~\"$cluster\"})", "legendFormat": "{{instance}}"}]},
+        {"id": 3, "type": "timeseries", "title": "Remote write failures and drops", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}, "datasource": {"type": "prometheus", "uid": "thanos"}, "targets": [{"refId": "A", "expr": "sum by (instance) (rate(prometheus_remote_storage_samples_failed_total{cluster=~\"$cluster\"}[5m]))", "legendFormat": "failed {{instance}}"}, {"refId": "B", "expr": "sum by (instance) (rate(prometheus_remote_storage_samples_dropped_total{cluster=~\"$cluster\"}[5m]))", "legendFormat": "dropped {{instance}}"}]},
+        {"id": 4, "type": "timeseries", "title": "Loki retries and dropped entries", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}, "datasource": {"type": "prometheus", "uid": "thanos"}, "targets": [{"refId": "A", "expr": "sum by (instance) (rate(loki_write_batch_retries_total{cluster=~\"$cluster\"}[5m]))", "legendFormat": "retries {{instance}}"}, {"refId": "B", "expr": "sum by (instance) (rate(loki_write_dropped_entries_total{cluster=~\"$cluster\"}[5m]))", "legendFormat": "dropped {{instance}}"}]},
+        {"id": 5, "type": "timeseries", "title": "Alloy memory", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}, "datasource": {"type": "prometheus", "uid": "thanos"}, "targets": [{"refId": "A", "expr": "sum by (pod) (container_memory_working_set_bytes{cluster=~\"$cluster\", namespace=\"monitoring\", pod=~\"alloy.*\", container=\"alloy\"})", "legendFormat": "{{pod}}"}]},
+        {"id": 6, "type": "timeseries", "title": "Alloy data volume", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}, "datasource": {"type": "prometheus", "uid": "thanos"}, "targets": [{"refId": "A", "expr": "sum by (persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", persistentvolumeclaim=~\"alloy.*\"})", "legendFormat": "{{persistentvolumeclaim}}"}]}
+      ],
+      "annotations": {"list": []}
+    }
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: home-forwarding
+  namespace: monitoring
+spec:
+  resyncPeriod: 5m
+  folderRef: observability
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  configMapRef:
+    name: home-forwarding-dashboard
+    key: json
