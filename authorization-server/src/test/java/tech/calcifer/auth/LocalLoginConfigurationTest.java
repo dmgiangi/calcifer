@@ -42,6 +42,21 @@ class LocalLoginConfigurationTest {
         .isInstanceOf(BadCredentialsException.class);
   }
 
+  @Test
+  void explicitLocalProviderAuthenticatesTheConfiguredUser() {
+    BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    var configuration = new AuthorizationServerConfiguration();
+    var provider = configuration.localPasswordAuthenticationProvider(
+        configuration.localAdministrator(properties(encoder.encode("correct-password"))), encoder);
+
+    var authentication = provider.authenticate(
+        new UsernamePasswordAuthenticationToken("dem.gianluigi@gmail.com", "correct-password"));
+
+    assertThat(authentication.isAuthenticated()).isTrue();
+    assertThat(authentication.getName()).isEqualTo("dem.gianluigi@gmail.com");
+    assertThat(authentication.getAuthorities()).extracting(Object::toString).contains("ROLE_ADMIN");
+  }
+
   private static IdentityProperties properties(String hash) {
     return new IdentityProperties("https://auth.calcifer.tech", "dem.gianluigi@gmail.com", "user:admin", "file:key",
         GRAFANA, API, new IdentityProperties.LocalLogin(true, "dem.gianluigi@gmail.com", hash));

@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ResourceLoader;
@@ -17,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -39,6 +41,10 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
 @Configuration
@@ -63,6 +69,7 @@ class AuthorizationServerConfiguration {
               });
             }))))
         .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()))
+        .requestCache(cache -> cache.requestCache(authorizationRequestCache()))
         .exceptionHandling(exceptions -> exceptions.defaultAuthenticationEntryPointFor(
             new LoginUrlAuthenticationEntryPoint("/login"),
             new MediaTypeRequestMatcher(MediaType.TEXT_HTML)));
@@ -70,19 +77,41 @@ class AuthorizationServerConfiguration {
   }
 
   @Bean
-  SecurityFilterChain applicationSecurityFilterChain(HttpSecurity http, IdentityProperties properties, GoogleAdminOidcUserService googleUserService) throws Exception {
+  SecurityFilterChain applicationSecurityFilterChain(HttpSecurity http, IdentityProperties properties,
+      GoogleAdminOidcUserService googleUserService, ObjectProvider<DaoAuthenticationProvider> localPasswordProvider,
+      AuthenticationSuccessHandler oauth2LoginSuccessHandler) throws Exception {
     http.authorizeHttpRequests(authorize -> authorize
         .requestMatchers("/actuator/health/**", "/actuator/prometheus", "/internal/traefik/forward-auth",
-            "/login", "/oauth2/**", "/login/oauth2/**").permitAll()
+            "/error", "/login", "/oauth2/**", "/login/oauth2/**").permitAll()
             .anyRequest().authenticated())
+        .requestCache(cache -> cache.requestCache(authorizationRequestCache()))
         .oauth2Login(login -> login
             .loginPage("/login")
+            .successHandler(oauth2LoginSuccessHandler)
             .userInfoEndpoint(endpoint -> endpoint.oidcUserService(googleUserService)))
         .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()));
     if (properties.localLogin().enabled()) {
+      // With multiple filter chains, do not rely on the global manager discovery
+      // to attach the conditional local UserDetailsService to form login.
+      http.authenticationProvider(localPasswordProvider.getObject());
       http.formLogin(form -> form.loginPage("/login").permitAll());
     }
     return http.build();
+  }
+
+  @Bean
+  RequestCache authorizationRequestCache() {
+    HttpSessionRequestCache cache = new HttpSessionRequestCache();
+    cache.setRequestMatcher(request -> "GET".equals(request.getMethod())
+        && "/oauth2/authorize".equals(request.getRequestURI()));
+    return cache;
+  }
+
+  @Bean
+  AuthenticationSuccessHandler oauth2LoginSuccessHandler(RequestCache authorizationRequestCache) {
+    SavedRequestAwareAuthenticationSuccessHandler handler = new SavedRequestAwareAuthenticationSuccessHandler();
+    handler.setRequestCache(authorizationRequestCache);
+    return handler;
   }
 
   @Bean
@@ -119,6 +148,15 @@ class AuthorizationServerConfiguration {
     }
     return new InMemoryUserDetailsManager(User.withUsername(properties.localLogin().username())
         .password(properties.localLogin().passwordHash()).roles("ADMIN").build());
+  }
+
+  @Bean
+  @ConditionalOnProperty(prefix = "identity.local-login", name = "enabled", havingValue = "true")
+  DaoAuthenticationProvider localPasswordAuthenticationProvider(UserDetailsService userDetailsService,
+      PasswordEncoder passwordEncoder) {
+    DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+    provider.setPasswordEncoder(passwordEncoder);
+    return provider;
   }
 
   @Bean
