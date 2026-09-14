@@ -16,11 +16,16 @@ separately after confirming that the Cloud receive component is Ready and has
 enough memory to replay its own WAL.
 
 During the controlled test, Alloy Home retained the outage backlog and drained
-its local queue after transit recovery. The Grafana end-to-end recovery check
-was not accepted as a change gate because the pre-existing Cloud Receive limit
-of 512Mi caused WAL replay OOM and subsequent out-of-order backlog rejection;
-the desired manifest now raises that limit to 1Gi. Repeat the full recovery
-check after the change has been committed and reconciled by Flux.
+its local queue after transit recovery. After the change was committed and
+reconciled by Flux, the Grafana end-to-end recovery check completed successfully:
+PromQL and LogQL queries filtered by `cluster="calcifer-home"` returned non-empty
+results.
+
+Thanos Receive uses `1Gi` of memory and
+`--tsdb.out-of-order.time-window=2h` to tolerate temporary sample reordering
+during replay. This window does not replace Alloy WAL retention: remote write
+keeps `sample_age_limit="48h"`, while the dedicated 16Gi local PVC remains a
+bounded buffer that must be monitored against the measured ingest rate.
 
 ## Ingest credential rotation
 
