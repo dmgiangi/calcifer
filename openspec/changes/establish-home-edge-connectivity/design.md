@@ -13,8 +13,10 @@ Internet clients must enter through Cloud, including for services whose
 workloads run at Home. LAN clients must be able to reach selected Home services
 directly, using the same hostname. The repository SOPS age key is intentionally
 shared between the clusters; its private material is provisioned outside Git.
-The LAN router remains the DNS server advertised to clients and is configured
-to use Home as its primary upstream and Cloudflare as fallback.
+The LAN router remains the DNS server advertised to clients and uses Home as
+its primary upstream. The deployed router cannot provide a Cloudflare
+fallback for that upstream, so Home resolver availability is an accepted LAN
+operational prerequisite.
 
 ## Goals / Non-Goals
 
@@ -146,6 +148,13 @@ Pi-hole was rejected for this change because advertisement blocking, its UI,
 and persistent query storage are not required for service placement. It can be
 introduced later as an independent consumer of the same DNS policy if desired.
 
+The LAN router has an accepted operational constraint: it cannot be configured
+with Cloudflare as a DNS fallback while forwarding to the Home resolver. When
+the Home resolver is unavailable, the router therefore returns DNS failure
+instead of preserving general Internet resolution. This does not expose Home
+services publicly, but it makes resolver availability a prerequisite for LAN
+DNS operation and must be considered in monitoring and incident recovery.
+
 ### Make Home ingress deny-by-default for non-LAN traffic
 
 Home does not create an Internet-facing DNS destination or router port-forward.
@@ -180,9 +189,9 @@ for that service must remain disabled.
 - [Cloud proxy cannot validate Home TLS] → validate the selectorless Service,
   EndpointSlice, ServersTransport SNI, and CA behavior with a disposable
   Home test backend before routing a production application.
-- [The LAN DNS resolver is unavailable] → the router falls back to Cloudflare;
-  Home-name clients then use the public Cloud edge rather than losing Internet
-  resolution. Validate this behavior before enabling any local-only service.
+- [The LAN DNS resolver is unavailable] → the router reports DNS failure because
+  its configured fallback is unavailable; restore the Home resolver before
+  relying on LAN DNS. This does not create a public path to Home.
 - [DNS forwarding loops through the router] → configure CoreDNS forwarding
   directly to `1.1.1.1` and test both an explicit `DNSEndpoint` and an
   undeclared `calcifer.tech` name.
@@ -201,8 +210,10 @@ for that service must remain disabled.
    Confirm the Home node is reachable from Cloud only at the intended tunnel
    address and port.
 5. Deploy the dedicated LAN CoreDNS/k8s-gateway service, then verify the router
-   resolves an explicit Home `DNSEndpoint` locally and falls through to the
-   public answer for undeclared names.
+   resolves an explicit Home `DNSEndpoint` locally and returns the public
+   answer for undeclared names while Home is available. Record the accepted
+   router constraint that an outage returns DNS failure, then restore the
+   resolver.
 6. Deploy a disposable Home test backend and Home Traefik route; create the
    Cloud selectorless Service, EndpointSlice, ServersTransport, and edge route.
    Verify TLS, Host preservation, denial of direct Internet access to Home,

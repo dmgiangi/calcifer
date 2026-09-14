@@ -25,13 +25,14 @@ a Home `DNSEndpoint` SHALL therefore retain its public DNS answer.
   forwarding loop
 
 ### Requirement: Router fallback does not bypass local routing during health
-The LAN router SHALL use the Home resolver as its primary upstream and
-Cloudflare as fallback. The system SHALL verify that fallback preserves general
-Internet resolution during a Home resolver outage and that normal operation
-uses declared Home records.
+The intended LAN-router configuration uses the Home resolver as its primary
+upstream and Cloudflare as fallback. In the deployed environment, the router
+cannot implement that fallback configuration; this is an accepted operational
+constraint and SHALL be documented for monitoring and incident recovery.
 
 #### Scenario: Home resolver becomes unavailable
 - **WHEN** the Home LAN DNS resolver is unavailable
-- **THEN** the router SHALL retain general Internet DNS resolution through its
-  Cloudflare fallback and a declared Home record SHALL not be reported as a
-  successful local resolution
+- **THEN** the router SHALL report DNS failure until the Home resolver is
+  restored, because the deployed router cannot provide the intended Cloudflare
+  fallback. It SHALL not expose or successfully resolve the declared Home
+  record through a public destination.

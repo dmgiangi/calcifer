@@ -7,11 +7,15 @@ spec:
   interval: 10m
   path: ./clusters/calcifer-home/apps
   prune: true
-  wait: false
-  timeout: 10m
+  wait: true
+  timeout: 15m
   sourceRef:
     kind: GitRepository
     name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
   dependsOn:
     - name: cert-manager-config
     - name: lan-dns-install
