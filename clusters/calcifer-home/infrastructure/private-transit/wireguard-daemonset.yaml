@@ -24,6 +24,7 @@ spec:
           args:
             - |
               private_key="$(tr -d '\n' </secrets/private-key)"
+              mkdir -p /run/wireguard
               awk -v key="$private_key" '{ gsub("__PRIVATE_KEY__", key); print }' /config/wg0.conf.template >/run/wireguard/wg0.conf
               chmod 600 /run/wireguard/wg0.conf
               cleanup() { wg-quick down /run/wireguard/wg0.conf || true; }
