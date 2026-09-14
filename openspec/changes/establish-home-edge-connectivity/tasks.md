@@ -2,8 +2,8 @@
 
 - [x] 1.1 Select and document a dedicated WireGuard tunnel CIDR that does not overlap the Cloud/Home Pod CIDRs, Service CIDRs, or Home LAN CIDRs.
 - [x] 1.2 Identify the Cloud public WireGuard endpoint, the LAN CIDRs permitted for direct Home access, and the initial non-production canonical hostname used for acceptance testing.
-- [ ] 1.3 Verify the Home and Cloud nodes support the required host-network DaemonSet mounts, `/dev/net/tun`, WireGuard kernel/userspace operation, and minimum security capabilities before deploying a tunnel.
-- [ ] 1.4 Generate distinct WireGuard key pairs without printing private material, encrypt each private key in a cluster-specific SOPS Secret, and record only public peer details in Git.
+- [x] 1.3 Verify the Home and Cloud nodes support the required host-network DaemonSet mounts, `/dev/net/tun`, WireGuard kernel/userspace operation, and minimum security capabilities before deploying a tunnel.
+- [x] 1.4 Generate distinct WireGuard key pairs without printing private material, encrypt each private key in a cluster-specific SOPS Secret, and record only public peer details in Git.
 - [x] 1.5 Provision the existing repository SOPS age private key as `flux-system/sops-age` on `calcifer-home` without printing or committing it.
 - [x] 1.6 Create and scope a dedicated Azure DNS client required by Home cert-manager; encrypt its Kubernetes Secret with SOPS without committing plaintext values.
 

@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: home-edge-wireguard
+    namespace: private-transit
+stringData:
+    private-key: ENC[AES256_GCM,data:njNjV7pm3CbWEkFn8GI8Y0iZzEcQFxzf127NuNPzT73eiqR2y7B7J5kbMwU=,iv:GeDBTJOWcNjubTtHiOClpc2cagOTOWevFTA24kJPTI4=,tag:jOATUEMIu/5YMmK/5cT1TQ==,type:str]
+sops:
+    age:
+        - recipient: age1zrcssj5duesp5x4pnp5rxk96dy378fg68ntpvlyxdhwzcchrvsgqcc9uqn
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSAvSmFML2FiT250RDNkNzds
+            TVdGczNabWUwNEJHZGlmUlppaHVwbUFUK1VBClBWUnVXZ0tWSkpRNm1Td2h3RUxa
+            VzVWODNDRE1UM25sdVZpcE9IWVhGOXMKLS0tIGdRTlJPMWhLQ3ozTHlKazZqczMv
+            d2E4NUw3Y04zd2Y2Z1JmVUZHcGJLekkKLXt8+UpC27/avYof3oiinLOQXsC8tcCZ
+            y58LYEqeKfMh/F2M+do5zi9G7ADQmkcpFn/Qz0xbcEILcTUSi4av6A==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-09-14T07:55:58Z"
+    mac: ENC[AES256_GCM,data:0dkIotsrDWWNb16D6x8NOFMZrS3hxUjRVZboX7E9FNkbjc1R2tK4btzV1sJX4BolAQbAx6dJKWlbK47disoXPldLOuBl8CH6bryeIKXrdqOBppAXBtOvNlb80zenVJE36c2sk3cPENe7bzUdXOBJTOLEdCFyegFiJXOkxEFx59U=,iv:DUUR8AlNcFXz3wMLrFsLnL6zCNoO+TgjR7LRzDkdnkM=,tag:33OZOkR3kAc4fzptZHawVw==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.12.2

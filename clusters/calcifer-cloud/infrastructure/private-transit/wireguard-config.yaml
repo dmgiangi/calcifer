@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: home-edge-wireguard-config
+  namespace: private-transit
+data:
+  wg0.conf.template: |
+    [Interface]
+    Address = 172.31.255.1/30
+    ListenPort = 51820
+    PrivateKey = __PRIVATE_KEY__
+    Table = off
+    PostUp = ip route replace 172.31.255.2/32 dev %i
+    PostUp = iptables -C INPUT -p udp --dport 51820 -j ACCEPT || iptables -I INPUT -p udp --dport 51820 -j ACCEPT
+    PostDown = iptables -D INPUT -p udp --dport 51820 -j ACCEPT || true
+    PostDown = ip route del 172.31.255.2/32 dev %i || true
+
+    [Peer]
+    PublicKey = W0zQ1stn3UsbNKPhRLD/2bMrpb31snwuIr/lUJPMG3E=
+    AllowedIPs = 172.31.255.2/32
