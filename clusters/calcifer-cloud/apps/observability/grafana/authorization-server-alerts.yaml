@@ -32,7 +32,9 @@ spec:
               type: prometheus
               uid: thanos
             editorMode: code
-            expr: min by (cluster) (up{namespace="authorization"}) < 1
+            # This rule is intentionally single-dimensional: Grafana evaluates
+            # it as one alert that fires when either cluster is unavailable.
+            expr: min(up{namespace="authorization"}) < 1
             intervalMs: 1000
             maxDataPoints: 43200
             refId: A
