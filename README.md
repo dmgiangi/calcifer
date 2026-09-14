@@ -7,6 +7,10 @@ This repository contains the configuration for two K3s clusters:
 
 The configurations for both clusters are kept in the same repository so they can be versioned and maintained consistently. When adding or changing manifests, make sure to apply them to the intended cluster only.
 
+All Kubernetes manifests live under [`clusters/`](clusters/). Shared application
+bases and their cluster overlays live in `clusters/apps/`; each cluster's Flux
+configuration selects the applicable overlay.
+
 ## GitOps
 
 `calcifer-cloud` is bootstrapped with Flux. Flux watches the `master` branch and reconciles the cluster from [`clusters/calcifer-cloud`](clusters/calcifer-cloud/). See the [cluster documentation](clusters/calcifer-cloud/README.md) for details.
