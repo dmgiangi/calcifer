@@ -672,8 +672,28 @@ spec:
             forward_to = [loki.write.loki.receiver]
           }
 
+          discovery.relabel "pod_logs" {
+            targets = discovery.kubernetes.pods.targets
+
+            rule {
+              source_labels = ["__meta_kubernetes_namespace"]
+              target_label  = "namespace"
+              action        = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_pod_name"]
+              target_label  = "pod"
+              action        = "replace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_pod_container_name"]
+              target_label  = "container"
+              action        = "replace"
+            }
+          }
+
           loki.source.kubernetes "pod_logs" {
-            targets    = discovery.kubernetes.pods.targets
+            targets    = discovery.relabel.pod_logs.output
             forward_to = [loki.process.pod_logs.receiver]
           }
 

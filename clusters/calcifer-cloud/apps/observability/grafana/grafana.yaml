@@ -15,6 +15,9 @@ spec:
       enabled: "true"
     server:
       root_url: https://grafana.calcifer.tech
+    auth.basic:
+      enabled: "false"
+    auth.disable_login_form: "true"
     auth.generic_oauth:
       enabled: "true"
       name: Calcifer Authorization Server

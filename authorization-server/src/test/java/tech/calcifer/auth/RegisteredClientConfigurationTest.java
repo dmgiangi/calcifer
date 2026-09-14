@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
 
 class RegisteredClientConfigurationTest {
   private static final IdentityProperties PROPERTIES = new IdentityProperties(
@@ -24,5 +25,8 @@ class RegisteredClientConfigurationTest {
     assertThat(browser.getScopes()).containsExactlyInAnyOrder("openid", "profile", "email");
     assertThat(machine.getScopes()).containsExactly("grafana.api");
     assertThat(browser.getScopes()).doesNotContain("grafana.api");
+    assertThat(browser.getAuthorizationGrantTypes()).containsExactly(AuthorizationGrantType.AUTHORIZATION_CODE);
+    assertThat(machine.getAuthorizationGrantTypes()).containsExactly(AuthorizationGrantType.CLIENT_CREDENTIALS);
+    assertThat(machine.getAuthorizationGrantTypes()).doesNotContain(AuthorizationGrantType.AUTHORIZATION_CODE);
   }
 }

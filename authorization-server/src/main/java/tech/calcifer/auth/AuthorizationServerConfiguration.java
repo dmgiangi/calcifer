@@ -25,6 +25,8 @@ import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
+import org.springframework.security.oauth2.server.authorization.InMemoryOAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
@@ -96,6 +98,14 @@ class AuthorizationServerConfiguration {
         .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
         .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS).scope("grafana.api").build();
     return new InMemoryRegisteredClientRepository(grafana, api);
+  }
+
+  @Bean
+  OAuth2AuthorizationService authorizationService() {
+    // Authorization codes, consents, and browser sessions are deliberately
+    // local to this process. The canonical issuer and JWTs are the shared v1
+    // contract; a path change may require starting authentication again.
+    return new InMemoryOAuth2AuthorizationService();
   }
 
   @Bean

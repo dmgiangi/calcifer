@@ -5,9 +5,9 @@
 - [x] 1.2 Decide and document the canonical identity contract: issuer,
   canonical subject format, roles, scopes, audiences, and the v1 limitation on
   cross-cluster session state.
-- [ ] 1.3 Prepare public DNS for `auth.calcifer.tech` to Cloud and split-horizon
+- [x] 1.3 Prepare public DNS for `auth.calcifer.tech` to Cloud and split-horizon
   LAN DNS for the same name to Home.
-- [ ] 1.4 Provision valid TLS certificates for `auth.calcifer.tech` in both
+- [x] 1.4 Provision valid TLS certificates for `auth.calcifer.tech` in both
   clusters and document renewal behavior during a Home Internet outage.
 - [x] 1.5 Confirm the password fallback exposure policy, rate limiting, and
   operator recovery procedure for both ingress paths.
@@ -28,9 +28,9 @@
   machine tokens that validated against both local JWKS responses.
 - [x] 2.6 Ensure discovery metadata and all token claims are identical in
   contract and contain no cluster identity.
-- [ ] 2.7 Make OAuth authorization state locality explicit and test that a
+- [x] 2.7 Make OAuth authorization state locality explicit and test that a
   normal flow remains on one edge; document re-login after a path change.
-- [ ] 2.8 Add negative tests for unknown Google identities, bad passwords,
+- [x] 2.8 Add negative tests for unknown Google identities, bad passwords,
   unauthorized clients/scopes, invalid issuer/audience/signature, expired
   tokens, and spoofed proxy headers.
 - [x] 2.9 Add Actuator health groups, Prometheus metrics, structured

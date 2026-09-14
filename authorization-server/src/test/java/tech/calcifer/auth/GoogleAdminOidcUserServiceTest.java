@@ -29,4 +29,23 @@ class GoogleAdminOidcUserServiceTest {
         .isInstanceOf(AccessDeniedException.class)
         .hasMessage("Google identity is not authorized");
   }
+
+  @Test
+  void rejectsUnverifiedConfiguredGoogleIdentity() {
+    IdentityProperties properties = new IdentityProperties(
+        "https://auth.calcifer.tech", "dem.gianluigi@gmail.com", "user:admin", "file:key",
+        new IdentityProperties.Client("grafana", "secret", "https://grafana.calcifer.tech/login/generic_oauth", "grafana"),
+        new IdentityProperties.Client("grafana-api", "secret", "https://grafana.calcifer.tech", "grafana"),
+        new IdentityProperties.LocalLogin(false, "dem.gianluigi@gmail.com", ""));
+    @SuppressWarnings("unchecked")
+    OAuth2UserService<OidcUserRequest, OidcUser> delegate = mock(OAuth2UserService.class);
+    OidcUser user = mock(OidcUser.class);
+    when(user.getEmail()).thenReturn("dem.gianluigi@gmail.com");
+    when(user.getEmailVerified()).thenReturn(false);
+    when(delegate.loadUser(null)).thenReturn(user);
+
+    assertThatThrownBy(() -> new GoogleAdminOidcUserService(delegate, properties).loadUser(null))
+        .isInstanceOf(AccessDeniedException.class)
+        .hasMessage("Google identity is not authorized");
+  }
 }
