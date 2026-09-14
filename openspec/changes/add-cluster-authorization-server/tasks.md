@@ -75,7 +75,7 @@
   Grafana ingress that is enabled; static rendering and controller tests cover
   bearer-less browser sessions, valid machine tokens, invalid tokens, and
   missing scopes. Live spoof-header behavior remains an acceptance check.
-- [ ] 5.5 Disable local Grafana password login only after the applicable OIDC
+- [x] 5.5 Disable local Grafana password login only after the applicable OIDC
   and machine-token acceptance checks succeed.
 
 ## 6. Observability and acceptance
@@ -83,14 +83,14 @@
 - [x] 6.1 Provision dashboard panels and alerts for both authorization-server
   instances, including availability, errors, login/token/password outcomes,
   ForwardAuth decisions, and resource use.
-- [ ] 6.2 Verify Alloy and Loki collection independently for Cloud and Home,
+- [x] 6.2 Verify Alloy and Loki collection independently for Cloud and Home,
   including the no-sensitive-data guarantee.
 - [ ] 6.3 Verify Home LAN password login while Internet/Google is unavailable.
-- [ ] 6.4 Verify Cloud authentication and Cloud application access while Home
+- [x] 6.4 Verify Cloud authentication and Cloud application access while Home
   is unavailable.
-- [ ] 6.5 Verify tokens issued through Cloud and Home have the same issuer,
+- [x] 6.5 Verify tokens issued through Cloud and Home have the same issuer,
   canonical subject, roles, scopes, and cross-cluster JWKS validation.
-- [ ] 6.6 Obtain a machine token through each edge without printing it and use
+- [x] 6.6 Obtain a machine token through each edge without printing it and use
   it against the permitted Grafana datasource API.
 - [x] 6.7 Record safe validation, certificate renewal, key rotation, password
   recovery, and symmetric rollback procedures.
