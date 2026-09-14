@@ -11,8 +11,9 @@
   clusters and document renewal behavior during a Home Internet outage.
 - [x] 1.5 Confirm the password fallback exposure policy, rate limiting, and
   operator recovery procedure for both ingress paths.
-- [ ] 1.6 Add and verify Cloud- and Home-pinned OAuth endpoint profiles and
-  their DNS/TLS/ingress routes.
+- [x] 1.6 Add and verify Cloud- and Home-pinned OAuth endpoint profiles and
+  their DNS/TLS/ingress routes; both endpoint certificates and live routes
+  are Ready on the new revision.
 - [ ] 1.7 Register the Cloud and Home callback URIs in the configured Google
   OAuth client.
 
