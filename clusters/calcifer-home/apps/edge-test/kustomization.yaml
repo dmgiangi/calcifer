@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - certificate-staging.yaml
+  - certificate-production.yaml
