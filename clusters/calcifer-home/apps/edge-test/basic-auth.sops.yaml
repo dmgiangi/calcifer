@@ -4,7 +4,7 @@ metadata:
     name: edge-test-auth
     namespace: edge-test
 stringData:
-    users: ENC[AES256_GCM,data:G/wgMS1bA7T529GpMpkI6OslrfMd8ltl37bJ/j28/rg7DUPn2TUDjYLNE9yNXLs=,iv:eBaOkT7rPeohIT1UNTLvM0Dl9MbmGi1ICkiozp22Wrc=,tag:epDH3VFBhUAMEPean5IYKw==,type:str]
+    users: ENC[AES256_GCM,data:ATfnbNuHx9jrVZQAd8Yst24KoWaK54PDVLRgZZNL78iM32m9ikXKfYboIujvH6g=,iv:2wAV0kvTGzn6CKUORU1fR69EPUEURczhqWC7YbfNmXc=,tag:YLCXTeBUpL04f+Yk70Xfdg==,type:str]
 sops:
     age:
         - recipient: age1zrcssj5duesp5x4pnp5rxk96dy378fg68ntpvlyxdhwzcchrvsgqcc9uqn
@@ -16,7 +16,7 @@ sops:
             Z3BzZDhmdDNQTm82cHlhNmhZSHhvMUkKwnkIZPqcTC5CALAXj/wcjRNh9UfpFR9T
             TV+1o8jVyONE74yfVoVEUFBeNP47tVE6GPlRZWPIAsNK+xCnzPydQg==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2026-09-14T09:04:00Z"
-    mac: ENC[AES256_GCM,data:ammmElnWI187tVbqhMR1GvjpA0d1LJ4Kt7wQhFFksKLJLnxUOxJMQChPsvwbx3tBq1pXwjt/zg+z1n7FvlJDGTcFPw3wnF8Qmibicg/z86FJrw6jYDCOFzH8tArTbikfZ87iAeaAiZeNWC29yUDLjcyBlrD/19VRwFTVrBNxFs4=,iv:sBtS/Si/DDab91sPIwrX1CiiPM4zAjbUEm3vW7745pU=,tag:HA2mC0taQ6MBff2bx9XdZA==,type:str]
+    lastmodified: "2026-09-14T09:04:26Z"
+    mac: ENC[AES256_GCM,data:qPiHiZSEM2+KhOHjyJnNlq8r+8qhGibT5MsXk3vxFzCHQDjvDI/4QoVDyop3tZfh8iXHvS5H8c8W3AD8kL0BXt0Pig2wJKWWXLpMe9sJDD76LwOHrt9CbbKvAdK35u9NLqH2zQOcmDmkb75HHmxYE8UUiZhcvGuL7l8uv/pY1Ds=,iv:9lHuvfBDPBj4ZQbQDpl9Dz2jaWrHNeMQnVuau+UnV2k=,tag:EyVBg5cenqOjL2ddzlvqrg==,type:str]
     encrypted_regex: ^(data|stringData)$
     version: 3.12.2
