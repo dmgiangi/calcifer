@@ -41,6 +41,11 @@ roles: [admin]
 Applications map `admin` to their local administrator role. Email is a login
 attribute, not the stable authorization identity.
 
+When an application already has accounts keyed by a provider-specific subject,
+it must perform a controlled one-time migration to the canonical subject. For
+the single-tenant Grafana instance, email lookup is enabled only for this
+adoption; new applications should key accounts directly by `sub`.
+
 ## Machine clients
 
 Use a separate private client per workload and `client_credentials`. Request

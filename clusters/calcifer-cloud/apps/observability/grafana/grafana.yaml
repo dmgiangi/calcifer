@@ -34,6 +34,9 @@ spec:
       tls_client_ca: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     auth:
       disable_login_form: "true"
+      # This single-tenant Grafana adopts the existing account while the IdP
+      # migrates from Google's subject to the canonical subject user:admin.
+      oauth_allow_insecure_email_lookup: "true"
     auth.generic_oauth:
       enabled: "true"
       name: Calcifer Authorization Server
@@ -41,6 +44,9 @@ spec:
       client_id: grafana
       client_secret: $__env{GRAFANA_OIDC_CLIENT_SECRET}
       scopes: openid profile email
+      login_attribute_path: sub
+      email_attribute_path: email
+      name_attribute_path: email
       # Grafana is hosted in Cloud. Pin all stateful OIDC endpoints to the
       # Cloud edge so a LAN browser cannot create an authorization code on
       # Home that this Cloud workload would try to redeem on Cloud.

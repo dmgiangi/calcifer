@@ -8,12 +8,21 @@ to Grafana's deployment: Cloud Grafana uses `auth-cloud.calcifer.tech`; a
 future Home Grafana uses `auth-home.calcifer.tech`. A user carrying the
 canonical `admin` role SHALL receive Grafana organization Admin access.
 Grafana configuration SHALL not contain separate Cloud/Home issuers.
+During migration from a provider-specific subject, the single-tenant Grafana
+instance SHALL use the verified email only to adopt the existing account, while
+continuing to map the stable application identity from `sub`.
 
 #### Scenario: Administrator signs in through an enabled edge
 - **WHEN** a LAN browser signs in to Cloud Grafana
 - **THEN** browser authorization and Cloud Grafana token exchange SHALL both
   use `auth-cloud.calcifer.tech`, and Grafana SHALL establish an organization
   Admin session from canonical OIDC claims
+
+#### Scenario: Existing Grafana account is adopted after subject migration
+- **WHEN** the configured verified administrator authenticates with canonical
+  subject `user:admin` and an existing Grafana account has the same email
+- **THEN** Grafana SHALL associate the OAuth identity with that account instead
+  of failing user synchronization
 
 ### Requirement: Grafana API accepts scoped machine credentials from either edge
 The Grafana API SHALL accept a valid `client_credentials` JWT with
