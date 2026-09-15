@@ -140,7 +140,7 @@ class AuthorizationStateOperationalTest {
 
         assertThat(hints.serialization().javaSerializationHints())
             .extracting(hint -> hint.getType().getName())
-            .contains(MapSession.class.getName(), Instant.class.getName(), Duration.class.getName(), HashMap.class.getName(),
+            .contains(MapSession.class.getName(), Instant.class.getName(), Duration.class.getName(), "java.time.Ser", HashMap.class.getName(),
                 HashSet.class.getName(), LinkedHashMap.class.getName(), LinkedHashSet.class.getName(),
                 AuthorizationGrantType.class.getName(), OAuth2AuthorizationRequest.class.getName(),
                 OAuth2AuthorizationResponseType.class.getName(), Collections.unmodifiableMap(new HashMap<>()).getClass().getName(),

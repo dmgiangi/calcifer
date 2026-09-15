@@ -21,6 +21,7 @@ final class AuthorizationStateRuntimeHints implements RuntimeHintsRegistrar {
     hints.serialization().registerType(TypeReference.of(MapSession.class));
     hints.serialization().registerType(TypeReference.of(Instant.class));
     hints.serialization().registerType(TypeReference.of(Duration.class));
+    hints.serialization().registerType(TypeReference.of("java.time.Ser"));
     hints.serialization().registerType(TypeReference.of(HashMap.class));
     hints.serialization().registerType(TypeReference.of(HashSet.class));
     hints.serialization().registerType(TypeReference.of(LinkedHashMap.class));
