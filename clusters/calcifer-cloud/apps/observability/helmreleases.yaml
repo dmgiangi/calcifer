@@ -95,7 +95,7 @@ spec:
       enabled: false
     query:
       enabled: true
-      replicaCount: 1
+      replicaCount: 0
       endpoints:
         autogen:
           enabled: true
@@ -115,7 +115,7 @@ spec:
     receive:
       enabled: true
       mode: standalone
-      replicaCount: 1
+      replicaCount: 0
       tsdb:
         retention: 48h
       extraArgs:
@@ -139,7 +139,7 @@ spec:
           memory: 1Gi
     storegateway:
       enabled: true
-      replicaCount: 1
+      replicaCount: 0
       service:
         type: ClusterIP
         annotations:
@@ -159,6 +159,7 @@ spec:
           memory: 384Mi
     compactor:
       enabled: true
+      replicaCount: 0
       retention:
         resolutionRaw: 30d
         resolution5m: 30d
@@ -458,7 +459,7 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: tempo
+  name: victoria-traces
   namespace: monitoring
 spec:
   interval: 30m
@@ -472,39 +473,37 @@ spec:
       remediateLastFailure: true
   chart:
     spec:
-      chart: tempo
-      version: 3.0.0
+      chart: victoria-traces-single
+      version: 0.1.11
       sourceRef:
         kind: HelmRepository
-        name: grafana-community
+        name: victoria-metrics
         namespace: monitoring
   values:
-    tempo:
-      reportingEnabled: false
-      retention: 168h
-      receivers:
-        otlp:
-          protocols:
-            http:
-              endpoint: 0.0.0.0:4318
+    server:
+      fullnameOverride: victoria-traces
+      replicaCount: 1
+      retentionPeriod: 7d
+      retentionDiskSpaceUsage: 8
+      podLabels:
+        observability.calcifer.tech/trace-backend: victoria-traces
+      persistentVolume:
+        enabled: true
+        storageClassName: local-path
+        size: 10Gi
+      service:
+        clusterIP: ""
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/path: /metrics
+          prometheus.io/port: "10428"
       resources:
         requests:
-          cpu: 100m
-          memory: 256Mi
+          cpu: 25m
+          memory: 64Mi
         limits:
-          cpu: 750m
-          memory: 1Gi
-    service:
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/path: /metrics
-        prometheus.io/port: "3200"
-    persistence:
-      enabled: true
-      storageClassName: local-path
-      accessModes:
-        - ReadWriteOnce
-      size: 10Gi
+          cpu: 300m
+          memory: 384Mi
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -571,13 +570,13 @@ spec:
             timeout         = "1s"
             send_batch_size = 128
             output {
-              traces = [otelcol.exporter.otlphttp.tempo.input]
+              traces = [otelcol.exporter.otlphttp.victoria_traces.input]
             }
           }
 
-          otelcol.exporter.otlphttp "tempo" {
+          otelcol.exporter.otlphttp "victoria_traces" {
             client {
-              endpoint = "http://tempo.monitoring.svc.cluster.local:4318"
+              endpoint = "http://victoria-traces.monitoring.svc.cluster.local:10428/insert/opentelemetry"
               tls {
                 insecure = true
               }

@@ -1,13 +1,12 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: tempo-ingress
+  name: victoria-traces-ingress
   namespace: monitoring
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/instance: tempo
-      app.kubernetes.io/name: tempo
+      observability.calcifer.tech/trace-backend: victoria-traces
   policyTypes:
     - Ingress
   ingress:
@@ -22,13 +21,9 @@ spec:
           podSelector:
             matchLabels:
               app.kubernetes.io/name: traefik
-      ports:
-        - protocol: TCP
-          port: 4318
-    - from:
         - podSelector:
             matchLabels:
               app: grafana
       ports:
         - protocol: TCP
-          port: 3200
+          port: 10428

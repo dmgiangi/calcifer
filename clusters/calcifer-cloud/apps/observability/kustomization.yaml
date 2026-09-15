@@ -17,4 +17,4 @@ resources:
   - home-ingest-traefik.yaml
   - home-ingest-nodeport.yaml
   - loki-ingress-network-policy.yaml
-  - tempo-ingress-network-policy.yaml
+  - victoria-traces-ingress-network-policy.yaml
