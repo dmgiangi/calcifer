@@ -45,6 +45,23 @@ spec:
       port: 9121
       targetPort: metrics
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authorization-state-redis-endpoint
+  namespace: authorization
+  labels:
+    app.kubernetes.io/name: authorization-state-redis
+    app.kubernetes.io/component: authorization-state
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: authorization-state-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -216,14 +233,6 @@ spec:
     - from:
         - ipBlock:
             cidr: 172.31.255.2/32
-      ports:
-        - protocol: TCP
-          port: 6379
-    # kube-proxy SNATs the WireGuard-to-ClusterIP flow to the Cloud node IP
-    # before the pod network policy evaluates the Redis ingress source.
-    - from:
-        - ipBlock:
-            cidr: 136.144.222.128/32
       ports:
         - protocol: TCP
           port: 6379

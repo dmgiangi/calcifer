@@ -26,8 +26,7 @@ spec:
           args:
             - |
               private_key="$(tr -d '\n' </secrets/private-key)"
-              redis_service_ip="$(getent ahostsv4 authorization-state-redis.authorization.svc.cluster.local | awk 'NR == 1 {print $1}')"
-              test -n "$redis_service_ip"
+              redis_endpoint_name="authorization-state-redis-endpoint.authorization.svc.cluster.local"
               mkdir -p /run/wireguard
               awk -v key="$private_key" '{ gsub("__PRIVATE_KEY__", key); print }' /config/wg0.conf.template >/run/wireguard/wg0.conf
               chmod 600 /run/wireguard/wg0.conf
@@ -35,7 +34,7 @@ spec:
                 iptables -t nat -D PREROUTING -j CALCIFER_AUTH_STATE_REDIS || true
                 iptables -t nat -F CALCIFER_AUTH_STATE_REDIS || true
                 iptables -t nat -X CALCIFER_AUTH_STATE_REDIS || true
-                iptables -D FORWARD -i wg0 -s 172.31.255.2/32 -d "$redis_service_ip" -p tcp --dport 6379 -j ACCEPT || true
+                iptables -D FORWARD -i wg0 -s 172.31.255.2/32 -p tcp --dport 6379 -j ACCEPT || true
                 iptables -D FORWARD -o wg0 -d 172.31.255.2/32 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT || true
                 wg-quick down /run/wireguard/wg0.conf || true
               }
@@ -43,16 +42,20 @@ spec:
               wg-quick up /run/wireguard/wg0.conf
               iptables -t nat -N CALCIFER_AUTH_STATE_REDIS || true
               iptables -t nat -F CALCIFER_AUTH_STATE_REDIS
-              iptables -t nat -A CALCIFER_AUTH_STATE_REDIS -i wg0 -s 172.31.255.2/32 -p tcp --dport 16379 -j DNAT --to-destination "$redis_service_ip:6379"
               iptables -t nat -C PREROUTING -j CALCIFER_AUTH_STATE_REDIS || iptables -t nat -I PREROUTING -j CALCIFER_AUTH_STATE_REDIS
-              iptables -C FORWARD -i wg0 -s 172.31.255.2/32 -d "$redis_service_ip" -p tcp --dport 6379 -j ACCEPT || iptables -I FORWARD -i wg0 -s 172.31.255.2/32 -d "$redis_service_ip" -p tcp --dport 6379 -j ACCEPT
+              iptables -C FORWARD -i wg0 -s 172.31.255.2/32 -p tcp --dport 6379 -j ACCEPT || iptables -I FORWARD -i wg0 -s 172.31.255.2/32 -p tcp --dport 6379 -j ACCEPT
               iptables -C FORWARD -o wg0 -d 172.31.255.2/32 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT || iptables -I FORWARD -o wg0 -d 172.31.255.2/32 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-              if command -v nc >/dev/null 2>&1 && nc -z -w 2 "$redis_service_ip" 6379 >/dev/null 2>&1; then
-                echo "redis service status=reachable"
-              else
-                echo "redis service status=unreachable"
-              fi
-              while true; do sleep 3600 & wait "$!"; done
+              while true; do
+                redis_endpoint_ip="$(getent ahostsv4 "$redis_endpoint_name" | awk 'NR == 1 {print $1}')"
+                iptables -t nat -F CALCIFER_AUTH_STATE_REDIS
+                if test -n "$redis_endpoint_ip"; then
+                  iptables -t nat -A CALCIFER_AUTH_STATE_REDIS -i wg0 -s 172.31.255.2/32 -p tcp --dport 16379 -j DNAT --to-destination "$redis_endpoint_ip:6379"
+                  echo "redis endpoint status=resolved"
+                else
+                  echo "redis endpoint status=unresolved"
+                fi
+                sleep 5
+              done
           securityContext:
             privileged: true
             runAsUser: 0
