@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.aot.hint.TypeReference;
@@ -17,6 +18,7 @@ final class AuthorizationStateRuntimeHints implements RuntimeHintsRegistrar {
     hints.serialization().registerType(TypeReference.of(Instant.class));
     hints.serialization().registerType(TypeReference.of(Duration.class));
     hints.serialization().registerType(TypeReference.of(HashMap.class));
+    hints.serialization().registerType(TypeReference.of(LinkedHashMap.class));
     hints.serialization().registerType(TypeReference.of(OAuth2AuthorizationRequest.class));
     hints.serialization().registerType(TypeReference.of(Collections.unmodifiableMap(new HashMap<>()).getClass()));
   }
