@@ -6,19 +6,18 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.validation.Validation;
-import java.time.Instant;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.actuate.health.Status;
 import org.springframework.aot.hint.RuntimeHints;
+import org.springframework.boot.actuate.health.Status;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.session.MapSession;
-
 
 class AuthorizationStateOperationalTest {
 
@@ -112,7 +111,7 @@ class AuthorizationStateOperationalTest {
 
         assertThat(hints.serialization().javaSerializationHints())
             .extracting(hint -> hint.getType().getName())
-            .contains(MapSession.class.getName(), Instant.class.getName());
+            .contains(MapSession.class.getName(), Instant.class.getName(), Duration.class.getName());
     }
 
     @Test
