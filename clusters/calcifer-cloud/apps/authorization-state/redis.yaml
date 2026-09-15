@@ -219,3 +219,11 @@ spec:
       ports:
         - protocol: TCP
           port: 6379
+    # kube-proxy SNATs the WireGuard-to-ClusterIP flow to the Cloud node IP
+    # before the pod network policy evaluates the Redis ingress source.
+    - from:
+        - ipBlock:
+            cidr: 136.144.222.128/32
+      ports:
+        - protocol: TCP
+          port: 6379
