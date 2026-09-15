@@ -30,6 +30,10 @@ final class StateRouteFilter extends OncePerRequestFilter {
                 unavailable(response);
                 return;
             }
+            if (route.owner() == StateRoute.Owner.LOCAL && isGoogleFlow(request.getRequestURI())) {
+                unavailable(response);
+                return;
+            }
             chain.doFilter(request, response);
         } catch (StateUnavailableException exception) {
             if (response.isCommitted()) {
@@ -58,6 +62,10 @@ final class StateRouteFilter extends OncePerRequestFilter {
         // that can read or create an HTTP session therefore needs one immutable
         // route, not only the OAuth protocol endpoints.
         return true;
+    }
+
+    private static boolean isGoogleFlow(String path) {
+        return path.equals("/oauth2/authorization/google") || path.equals("/login/oauth2/code/google");
     }
 
     private static void unavailable(HttpServletResponse response) throws IOException {

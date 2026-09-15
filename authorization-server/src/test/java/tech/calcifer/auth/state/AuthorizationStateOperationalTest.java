@@ -112,6 +112,27 @@ class AuthorizationStateOperationalTest {
     }
 
     @Test
+    void isolatedHomeGatesGoogleButKeepsPasswordLoginAvailable() throws Exception {
+        InMemoryRedisByteStore bytes = new InMemoryRedisByteStore();
+        bytes.available(false);
+        AuthorizationStateManager home = AuthorizationStateRoutingTest.manager(
+            bytes,
+            AuthorizationStateRoutingTest.properties(AuthorizationStateProperties.Role.HOME, 1),
+            new AuthorizationStateRoutingTest.MutableClock()
+        );
+        home.routeForStatefulRequest();
+        StateRouteFilter filter = new StateRouteFilter(home);
+
+        MockHttpServletResponse googleResponse = new MockHttpServletResponse();
+        filter.doFilter(new MockHttpServletRequest("GET", "/oauth2/authorization/google"), googleResponse, new MockFilterChain());
+        assertThat(googleResponse.getStatus()).isEqualTo(503);
+
+        MockHttpServletResponse loginResponse = new MockHttpServletResponse();
+        filter.doFilter(new MockHttpServletRequest("GET", "/login"), loginResponse, new MockFilterChain());
+        assertThat(loginResponse.getStatus()).isEqualTo(200);
+    }
+
+    @Test
     void nativeHintsRegisterSessionSerialization() {
         RuntimeHints hints = new RuntimeHints();
 
