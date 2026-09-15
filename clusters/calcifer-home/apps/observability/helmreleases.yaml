@@ -204,10 +204,10 @@ spec:
           }
 
           otelcol.auth.basic "tempo" {
-            client_auth {
-              username = sys.env("TEMPO_INGEST_USERNAME")
-              password = sys.env("TEMPO_INGEST_PASSWORD")
-            }
+            // Alloy v1.19.2 accepts client_auth during validation but cannot
+            // build it at runtime; use the compatible form until it is upgraded.
+            username = sys.env("TEMPO_INGEST_USERNAME")
+            password = sys.env("TEMPO_INGEST_PASSWORD")
           }
 
           otelcol.exporter.otlphttp "tempo" {
