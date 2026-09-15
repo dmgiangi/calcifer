@@ -1,6 +1,11 @@
 server:
   forward-headers-strategy: framework
 management:
+  otlp:
+    tracing:
+      endpoint: ${MANAGEMENT_OTLP_TRACING_ENDPOINT:http://localhost:4318/v1/traces}
+      export:
+        enabled: ${MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED:true}
   opentelemetry:
     resource-attributes:
       "cluster.name": ${AUTH_STATE_ROLE:LOCAL}
