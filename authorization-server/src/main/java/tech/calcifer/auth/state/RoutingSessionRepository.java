@@ -3,6 +3,7 @@ package tech.calcifer.auth.state;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
+import org.springframework.core.serializer.support.SerializationFailedException;
 import org.springframework.session.MapSession;
 import org.springframework.session.SessionRepository;
 
@@ -102,7 +103,17 @@ final class RoutingSessionRepository implements SessionRepository<MapSession> {
 
   private MapSession fromRedis(StateRoute route, String id) {
     byte[] encoded = redis.get(key(route, id));
-    return encoded == null ? null : serializer.deserialize(encoded);
+    if (encoded == null) return null;
+    try {
+      return serializer.deserialize(encoded);
+    } catch (SerializationFailedException exception) {
+      // A session payload can outlive a native-image serialization hint or deployment
+      // change. It is safe to discard that browser session and require fresh login;
+      // Redis connectivity failures are deliberately not caught here.
+      redis.unlink(java.util.List.of(key(route, id)));
+      state.connectedOperationSucceeded();
+      return null;
+    }
   }
 
   private MapSession copy(MapSession session) {

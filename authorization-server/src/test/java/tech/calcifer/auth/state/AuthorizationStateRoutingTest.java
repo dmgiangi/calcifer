@@ -58,6 +58,21 @@ class AuthorizationStateRoutingTest {
   }
 
   @Test
+  void incompatibleRedisSessionIsDiscardedAndRequiresFreshLogin() {
+    InMemoryRedisByteStore bytes = new InMemoryRedisByteStore();
+    AuthorizationStateManager state = manager(bytes, properties(AuthorizationStateProperties.Role.CLOUD, 1),
+        new MutableClock());
+    RoutingSessionRepository sessions = new RoutingSessionRepository(state, bytes, "auth", Duration.ofMinutes(30));
+    String id = "r.3.corrupt";
+    String key = "auth:g3:session:" + id;
+    bytes.set(key, new byte[] {'C', 'A', 'S', 1, 0});
+    RequestStateContext.bind(StateRoute.redis(3));
+
+    assertThat(sessions.findById(id)).isNull();
+    assertThat(bytes.keys()).doesNotContain(key);
+  }
+
+  @Test
   void disconnectedHomeRestartCreatesFreshEpochAndCloudFailsClosed() {
     InMemoryRedisByteStore unavailable = new InMemoryRedisByteStore();
     unavailable.available(false);
