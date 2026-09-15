@@ -2,6 +2,7 @@ package tech.calcifer.auth.state;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
@@ -17,5 +18,6 @@ final class AuthorizationStateRuntimeHints implements RuntimeHintsRegistrar {
     hints.serialization().registerType(TypeReference.of(Duration.class));
     hints.serialization().registerType(TypeReference.of(HashMap.class));
     hints.serialization().registerType(TypeReference.of(OAuth2AuthorizationRequest.class));
+    hints.serialization().registerType(TypeReference.of(Collections.unmodifiableMap(new HashMap<>()).getClass()));
   }
 }

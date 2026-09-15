@@ -9,6 +9,7 @@ import jakarta.validation.Validation;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -114,7 +115,7 @@ class AuthorizationStateOperationalTest {
         assertThat(hints.serialization().javaSerializationHints())
             .extracting(hint -> hint.getType().getName())
             .contains(MapSession.class.getName(), Instant.class.getName(), Duration.class.getName(), HashMap.class.getName(),
-                OAuth2AuthorizationRequest.class.getName());
+                OAuth2AuthorizationRequest.class.getName(), Collections.unmodifiableMap(new HashMap<>()).getClass().getName());
     }
 
     @Test
