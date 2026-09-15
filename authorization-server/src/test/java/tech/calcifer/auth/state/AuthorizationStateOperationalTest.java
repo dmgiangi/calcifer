@@ -18,6 +18,7 @@ import org.springframework.boot.actuate.health.Status;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.session.MapSession;
 
 class AuthorizationStateOperationalTest {
@@ -112,7 +113,8 @@ class AuthorizationStateOperationalTest {
 
         assertThat(hints.serialization().javaSerializationHints())
             .extracting(hint -> hint.getType().getName())
-            .contains(MapSession.class.getName(), Instant.class.getName(), Duration.class.getName(), HashMap.class.getName());
+            .contains(MapSession.class.getName(), Instant.class.getName(), Duration.class.getName(), HashMap.class.getName(),
+                OAuth2AuthorizationRequest.class.getName());
     }
 
     @Test
