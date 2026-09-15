@@ -23,9 +23,16 @@ import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.AbstractOAuth2Token;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationResponseType;
+import org.springframework.security.oauth2.core.oidc.OidcIdToken;
+import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.session.MapSession;
+
 
 class AuthorizationStateOperationalTest {
 
@@ -124,7 +131,11 @@ class AuthorizationStateOperationalTest {
         StateRouteFilter filter = new StateRouteFilter(home);
 
         MockHttpServletResponse googleResponse = new MockHttpServletResponse();
-        filter.doFilter(new MockHttpServletRequest("GET", "/oauth2/authorization/google"), googleResponse, new MockFilterChain());
+        filter.doFilter(
+            new MockHttpServletRequest("GET", "/oauth2/authorization/google"),
+            googleResponse,
+            new MockFilterChain()
+        );
         assertThat(googleResponse.getStatus()).isEqualTo(503);
 
         MockHttpServletResponse loginResponse = new MockHttpServletResponse();
@@ -140,11 +151,27 @@ class AuthorizationStateOperationalTest {
 
         assertThat(hints.serialization().javaSerializationHints())
             .extracting(hint -> hint.getType().getName())
-            .contains(MapSession.class.getName(), Instant.class.getName(), Duration.class.getName(), "java.time.Ser", HashMap.class.getName(),
-                HashSet.class.getName(), LinkedHashMap.class.getName(), LinkedHashSet.class.getName(),
-                AuthorizationGrantType.class.getName(), OAuth2AuthorizationRequest.class.getName(),
-                OAuth2AuthorizationResponseType.class.getName(), Collections.unmodifiableMap(new HashMap<>()).getClass().getName(),
-                Collections.unmodifiableSet(new HashSet<>()).getClass().getName());
+            .contains(
+                MapSession.class.getName(),
+                Instant.class.getName(),
+                Duration.class.getName(),
+                "java.time.Ser",
+                HashMap.class.getName(),
+                HashSet.class.getName(),
+                LinkedHashMap.class.getName(),
+                LinkedHashSet.class.getName(),
+                AuthorizationGrantType.class.getName(),
+                OAuth2AuthorizationRequest.class.getName(),
+                OAuth2AuthorizationResponseType.class.getName(),
+                Collections.unmodifiableMap(new HashMap<>()).getClass().getName(),
+                Collections.unmodifiableSet(new HashSet<>()).getClass().getName(),
+                OAuth2AuthenticationToken.class.getName(),
+                AbstractOAuth2Token.class.getName(),
+                OidcIdToken.class.getName(),
+                OidcUserInfo.class.getName(),
+                DefaultOAuth2User.class.getName(),
+                DefaultOidcUser.class.getName()
+            );
     }
 
     @Test
