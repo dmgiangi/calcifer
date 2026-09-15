@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationHandler;
+import io.micrometer.observation.ObservationRegistry;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -12,6 +15,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -49,6 +53,38 @@ class AuthorizationStateRoutingTest {
     StateRoute isolated = state.routeForStatefulRequest();
     RequestStateContext.bind(isolated);
     assertThat(service.findById("authorization-1")).isNull();
+  }
+
+  @Test
+  void authorizationFailureObservationCapturesOriginalRootCause() {
+    InMemoryRedisByteStore bytes = new InMemoryRedisByteStore();
+    AuthorizationStateManager state = manager(bytes, properties(AuthorizationStateProperties.Role.HOME, 2),
+        new MutableClock());
+    ObservationRegistry observations = ObservationRegistry.create();
+    AtomicReference<Observation.Context> captured = new AtomicReference<>();
+    observations.observationConfig().observationHandler(new ObservationHandler<>() {
+      @Override public void onStop(Observation.Context context) { captured.set(context); }
+      @Override public boolean supportsContext(Observation.Context context) { return true; }
+    });
+    RoutingOAuth2AuthorizationService service = new RoutingOAuth2AuthorizationService(state,
+        new RedisOAuth2AuthorizationStore(bytes, "auth"), observations);
+    RequestStateContext.bind(state.routeForStatefulRequest());
+    OAuth2Authorization invalid = OAuth2Authorization.from(authorization())
+        .attribute("invalid-test-attribute", new Object()).build();
+
+    assertThatThrownBy(() -> service.save(invalid)).isInstanceOf(StateUnavailableException.class)
+        .hasMessage("Authorization state operation failed");
+
+    Observation.Context context = captured.get();
+    assertThat(context.getName()).isEqualTo("authorization.state.repository");
+    assertThat(context.getContextualName()).isEqualTo("authorization state save");
+    assertThat(context.getError()).isInstanceOf(RuntimeException.class)
+        .isNotInstanceOf(StateUnavailableException.class);
+    assertThat(context.getLowCardinalityKeyValue("authorization.state.operation").getValue()).isEqualTo("save");
+    assertThat(context.getLowCardinalityKeyValue("authorization.state.owner").getValue()).isEqualTo("REDIS");
+    assertThat(context.getHighCardinalityKeyValue("authorization.state.generation").getValue()).isEqualTo("1");
+    assertThat(context.getHighCardinalityKeyValue("error.root_cause.type").getValue())
+        .isEqualTo("java.io.NotSerializableException");
   }
 
   @Test

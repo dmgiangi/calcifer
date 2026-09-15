@@ -3,6 +3,7 @@ package tech.calcifer.auth.state;
 import io.lettuce.core.ClientOptions;
 import io.lettuce.core.TimeoutOptions;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.observation.ObservationRegistry;
 import java.time.Clock;
 import java.time.Duration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -88,8 +89,8 @@ class ResilientAuthorizationStateConfiguration {
 
   @Bean
   OAuth2AuthorizationService resilientAuthorizationService(AuthorizationStateManager state,
-      RedisOAuth2AuthorizationStore redis) {
-    return new RoutingOAuth2AuthorizationService(state, redis);
+      RedisOAuth2AuthorizationStore redis, ObservationRegistry observations) {
+    return new RoutingOAuth2AuthorizationService(state, redis, observations);
   }
 
   @Bean
