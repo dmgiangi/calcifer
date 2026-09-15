@@ -12,9 +12,11 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.actuate.health.Status;
+import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.session.MapSession;
 
 class AuthorizationStateOperationalTest {
   @Test
@@ -78,6 +80,16 @@ class AuthorizationStateOperationalTest {
     filter.doFilter(new MockHttpServletRequest("POST", "/oauth2/token"), tokenResponse, new MockFilterChain());
     assertThat(tokenResponse.getStatus()).isEqualTo(503);
     assertThat(tokenResponse.getContentAsString()).isEqualTo("{\"error\":\"temporarily_unavailable\"}");
+  }
+
+  @Test
+  void nativeHintsRegisterSessionSerialization() {
+    RuntimeHints hints = new RuntimeHints();
+
+    new AuthorizationStateRuntimeHints().registerHints(hints, getClass().getClassLoader());
+
+    assertThat(hints.serialization().javaSerializationHints())
+        .anyMatch(hint -> hint.getType().getName().equals(MapSession.class.getName()));
   }
 
   @Test
