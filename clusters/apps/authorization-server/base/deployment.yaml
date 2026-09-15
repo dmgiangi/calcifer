@@ -35,6 +35,17 @@ spec:
                 name: authorization-server-config
             - secretRef:
                 name: authorization-server-secrets
+          env:
+            - name: AUTH_STATE_REDIS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: redis-auth
+                  key: AUTH_STATE_REDIS_USERNAME
+            - name: AUTH_STATE_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-auth
+                  key: AUTH_STATE_REDIS_PASSWORD
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

@@ -6,7 +6,7 @@ metadata:
 spec:
   entryPoints: [websecure]
   routes:
-    - match: Host(`auth.calcifer.tech`) || Host(`auth-home.calcifer.tech`)
+    - match: Host(`auth.calcifer.tech`)
       kind: Rule
       middlewares:
         - name: authorization-server-rate-limit

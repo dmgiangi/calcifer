@@ -1,0 +1,144 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaAlertRuleGroup
+metadata:
+  name: authorization-state-redis
+  namespace: monitoring
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  folderRef: observability
+  interval: 1m
+  rules:
+    - uid: authorization-state-redis-down
+      title: Authorization state Redis unavailable
+      condition: A
+      for: 2m
+      noDataState: Alerting
+      execErrState: Alerting
+      labels:
+        severity: critical
+        component: authorization-state
+      annotations:
+        summary: Dedicated authorization-state Redis is unavailable
+      data:
+        - refId: A
+          datasourceUid: thanos
+          relativeTimeRange: {from: 300, to: 0}
+          model:
+            datasource: {type: prometheus, uid: thanos}
+            editorMode: code
+            expr: min(redis_up{namespace="authorization",service="authorization-state-redis"}) < 1
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+    - uid: authorization-state-redis-aof
+      title: Authorization state Redis AOF rewrite failed
+      condition: A
+      for: 5m
+      noDataState: Alerting
+      execErrState: Alerting
+      labels:
+        severity: critical
+        component: authorization-state
+      annotations:
+        summary: Dedicated authorization-state Redis reports an AOF rewrite failure
+      data:
+        - refId: A
+          datasourceUid: thanos
+          relativeTimeRange: {from: 300, to: 0}
+          model:
+            datasource: {type: prometheus, uid: thanos}
+            editorMode: code
+            expr: redis_aof_last_bgrewrite_status{namespace="authorization",service="authorization-state-redis"} == 0
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+    - uid: authorization-state-redis-memory
+      title: Authorization state Redis memory pressure
+      condition: A
+      for: 10m
+      noDataState: OK
+      execErrState: Alerting
+      labels:
+        severity: warning
+        component: authorization-state
+      annotations:
+        summary: Dedicated authorization-state Redis is using more than 80 percent of its memory bound
+      data:
+        - refId: A
+          datasourceUid: thanos
+          relativeTimeRange: {from: 600, to: 0}
+          model:
+            datasource: {type: prometheus, uid: thanos}
+            editorMode: code
+            expr: redis_memory_used_bytes{namespace="authorization",service="authorization-state-redis"} / clamp_min(redis_memory_max_bytes{namespace="authorization",service="authorization-state-redis"}, 1) > 0.8
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+    - uid: authorization-state-redis-rejected
+      title: Authorization state Redis rejects commands
+      condition: A
+      for: 5m
+      noDataState: OK
+      execErrState: Alerting
+      labels:
+        severity: warning
+        component: authorization-state
+      annotations:
+        summary: Dedicated authorization-state Redis is rejecting commands
+      data:
+        - refId: A
+          datasourceUid: thanos
+          relativeTimeRange: {from: 300, to: 0}
+          model:
+            datasource: {type: prometheus, uid: thanos}
+            editorMode: code
+            expr: sum(increase(redis_commands_rejected_calls_total{namespace="authorization",service="authorization-state-redis"}[5m])) > 0
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+    - uid: authorization-state-redis-connections
+      title: Authorization state Redis connection pressure
+      condition: A
+      for: 10m
+      noDataState: OK
+      execErrState: Alerting
+      labels:
+        severity: warning
+        component: authorization-state
+      annotations:
+        summary: Dedicated authorization-state Redis has an unusually high client count
+      data:
+        - refId: A
+          datasourceUid: thanos
+          relativeTimeRange: {from: 600, to: 0}
+          model:
+            datasource: {type: prometheus, uid: thanos}
+            editorMode: code
+            expr: redis_connected_clients{namespace="authorization",service="authorization-state-redis"} > 80
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+    - uid: authorization-state-redis-latency
+      title: Authorization state Redis command latency
+      condition: A
+      for: 10m
+      noDataState: OK
+      execErrState: Alerting
+      labels:
+        severity: warning
+        component: authorization-state
+      annotations:
+        summary: Dedicated authorization-state Redis command latency is elevated
+      data:
+        - refId: A
+          datasourceUid: thanos
+          relativeTimeRange: {from: 600, to: 0}
+          model:
+            datasource: {type: prometheus, uid: thanos}
+            editorMode: code
+            expr: sum(rate(redis_commands_duration_seconds_total{namespace="authorization",service="authorization-state-redis"}[5m])) / clamp_min(sum(rate(redis_commands_total{namespace="authorization",service="authorization-state-redis"}[5m])), 1) > 0.1
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A

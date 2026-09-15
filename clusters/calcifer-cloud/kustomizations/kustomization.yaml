@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - traefik.yaml
   - private-transit.yaml
+  - authorization-state.yaml
   - cert-manager-install.yaml
   - cert-manager-config.yaml
   - cloud-apps.yaml

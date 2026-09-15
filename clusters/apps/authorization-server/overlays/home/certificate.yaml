@@ -10,4 +10,3 @@ spec:
     kind: ClusterIssuer
   dnsNames:
     - auth.calcifer.tech
-    - auth-home.calcifer.tech

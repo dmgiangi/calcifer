@@ -18,6 +18,7 @@ spec:
       name: sops-age
   dependsOn:
     - name: cloud-apps
+    - name: authorization-state
   healthChecks:
     - apiVersion: apps/v1
       kind: Deployment

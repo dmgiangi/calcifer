@@ -4,5 +4,18 @@ metadata:
   name: authorization-server-config
   namespace: authorization
 data:
-  AUTH_ISSUER: https://auth.calcifer.tech
+  AUTH_ISSUER: "https://auth.calcifer.tech"
   AUTH_LOCAL_LOGIN_ENABLED: "true"
+  AUTH_STATE_ENABLED: "true"
+  AUTH_STATE_ROLE: "CLOUD"
+  AUTH_STATE_REDIS_HOST: "authorization-state-redis.authorization.svc.cluster.local"
+  AUTH_STATE_REDIS_PORT: "6379"
+  AUTH_STATE_REDIS_NAMESPACE: "auth"
+  AUTH_STATE_FAILURE_THRESHOLD: "3"
+  AUTH_STATE_PROBE: "2s"
+  AUTH_STATE_MINIMUM_ISOLATION: "15s"
+  AUTH_STATE_STABLE_SUCCESS: "30s"
+  AUTH_STATE_LEASE_TTL: "30s"
+  AUTH_STATE_GATE_TTL: "20s"
+  AUTH_STATE_DRAIN: "3s"
+  AUTH_STATE_ACCESS_TOKEN_TTL: "5m"

@@ -38,6 +38,13 @@ routes. The tunnel addresses are Cloud `172.31.255.1` and Home `172.31.255.2`.
 The manifests intentionally do not route `10.42.0.0/16`, Service CIDRs, or
 arbitrary LAN networks through WireGuard.
 
+The authorization-state Redis path is deliberately narrower than general
+cluster transit: Home may connect to Cloud `172.31.255.1:16379` only through
+`wg0`. Cloud resolves the internal Service DNS name
+`authorization-state-redis.authorization.svc.cluster.local` at WireGuard
+startup and DNATs only source `172.31.255.2` on port `16379` to Service port
+`6379`. No Pod or Service CIDR route is added.
+
 ## Flux, SOPS, and secret locations
 
 Provision the existing repository age private key out-of-band as the Secret
@@ -57,6 +64,8 @@ Encrypted secret locations are:
 - `clusters/calcifer-home/apps/edge-test/basic-auth.sops.yaml`
 - `clusters/calcifer-cloud/apps/edge-test/basic-auth.sops.yaml`
 - `clusters/apps/authorization-server/overlays/home/authorization-server-secrets.sops.yaml`
+- `clusters/calcifer-cloud/apps/authorization-state/redis-auth.sops.yaml`
+- `clusters/apps/authorization-server/overlays/home/redis-auth.sops.yaml`
 
 Rotate WireGuard keys by generating a new pair on a trusted administrative
 machine, replacing only the encrypted Secret values and the opposite public
@@ -97,6 +106,15 @@ Flux Kustomization can serve the Google-capable path with the common signing
 key, client credentials, and Google registration. Add the password hash to both
 encrypted Secrets before enabling the local password fallback.
 
+Before enabling resilient state, verify that the SOPS-encrypted
+`authorization/redis-auth` manifests reconcile with the expected
+`AUTH_STATE_REDIS_USERNAME` and `AUTH_STATE_REDIS_PASSWORD` keys. Never decrypt
+or print those credentials during operational checks.
+
+The retired `auth-cloud.calcifer.tech` and `auth-home.calcifer.tech` names are
+not certificate or ingress aliases. Do not add them back as OAuth endpoint
+profiles or DNS overrides.
+
 ## Azure DNS and certificates
 
 Create a dedicated Azure application/service principal restricted to the
@@ -125,9 +143,25 @@ route. Test HTTPS with the canonical hostname and confirm Home receives the
 original Host header. Test a non-HTTPS tunnel port and arbitrary Pod/Service
 CIDR addresses to confirm they are rejected or unrouted.
 
+Run the Redis reachability checks as status-only checks; redirect output and do
+not provide a password or issue a Redis command that prints stored values:
+
+```sh
+nc -z -w 2 172.31.255.1 16379 >/dev/null 2>&1; printf 'redis-private-reachability exit=%s\n' "$?"
+nc -z -w 2 172.31.255.1 16380 >/dev/null 2>&1; printf 'undeclared-port exit=%s\n' "$?"
+```
+
+The first check is expected to succeed only from the Home tunnel path. The
+second and any public-path attempt are expected to fail. These checks validate
+reachability only and never expose ACL credentials or Redis values.
+
 The public test path must resolve to Cloud. The LAN override may resolve it to
 Home only while Home’s equivalent authorization policy is enabled. Confirm
-that `auth.calcifer.tech` and `grafana.calcifer.tech` remain unchanged.
+ that `auth.calcifer.tech` and `grafana.calcifer.tech` remain unchanged. When
+ connected, authorization telemetry should report `CONNECTED`; after the
+ configured three failed two-second probes Home may report `ISOLATED` for at
+ least 15 seconds. A 30-second stable-success window, a 30-second lease, a
+ 20-second gate, and a three-second drain precede automatic generation recovery.
 
 ## Rollback and incident recovery
 

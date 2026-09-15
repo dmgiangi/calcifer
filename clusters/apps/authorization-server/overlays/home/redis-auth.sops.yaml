@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: redis-auth
+    namespace: authorization
+type: Opaque
+stringData:
+    AUTH_STATE_REDIS_USERNAME: ENC[AES256_GCM,data:sE9YEZTZLydd/QfHqw==,iv:LkQecyKeJIoMK+1q75lNu83c1RMA4fSLN4eqcKB4c+Q=,tag:OdzOm9b9O5VGEsG0VJxp5w==,type:str]
+    AUTH_STATE_REDIS_PASSWORD: ENC[AES256_GCM,data:Xu8nFMNr+315semzRYXZXoDxBQwxTnTU3SOoZEtFTr3Yusct5LgucO65ZssPqcL+N0xLbso41IjZrLTM/XWhWA==,iv:02+AjR3jHmXD9/Du5NOyqPa15QOnNGQarvHTYNjMlxo=,tag:4C1GqZd5HWmUJtSGqO9/qw==,type:str]
+sops:
+    age:
+        - recipient: age1zrcssj5duesp5x4pnp5rxk96dy378fg68ntpvlyxdhwzcchrvsgqcc9uqn
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBRMXJuNysvYXNMek1CNFht
+            V3M5elBOTC93dGRldjZvODlVRVRFYnp6V1dJCjdMWStLTzRmNW0rVXNCckxCMHFO
+            WE9yTXozdkJUb3VLdzYyTDZrVTA1bm8KLS0tIHoyYnlCcU5VejUrUmNIVnpKcGV2
+            SEdxdjY1ZnpDQmwyTEdWSzVBVThUSTAKNn46IObegEgbqtWoCRBNwo3vgtckLjT7
+            OU9xbua6A3V+Yh8nAC9nh9EpUh7HD6F2FmzrqjQWzGNqC26YtgedLA==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-09-15T06:59:54Z"
+    mac: ENC[AES256_GCM,data:8TzLTC3l5hOf50NXTV2svcK8qekzblvZsjkElsj8yuzcVB8aKTDOu7O3zspZ6JOHD26UiRrmUZtEmDJKWvIfBxUBlO0PLGw11KgL4hpD+K5fSWt179dUK5OxVc1RINhp1KP5qN7msv43sL6QnlmV4a9YW79sheSRtJyuaTBFh/A=,iv:rxQmkHQ1lrH6lhbOvdf690Cn2WCoU2KBmL13CVn8qqc=,tag:StTrmsnpzoBVRYdbodz3vw==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.12.2

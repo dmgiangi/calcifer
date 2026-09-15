@@ -47,12 +47,11 @@ spec:
       login_attribute_path: sub
       email_attribute_path: email
       name_attribute_path: email
-      # Grafana is hosted in Cloud. Pin all stateful OIDC endpoints to the
-      # Cloud edge so a LAN browser cannot create an authorization code on
-      # Home that this Cloud workload would try to redeem on Cloud.
-      auth_url: https://auth-cloud.calcifer.tech/oauth2/authorize
-      token_url: https://auth-cloud.calcifer.tech/oauth2/token
-      api_url: https://auth-cloud.calcifer.tech/userinfo
+      # Use the canonical split-horizon endpoint; connected state is shared in
+      # Cloud Redis and the same callback is valid from either network.
+      auth_url: https://auth.calcifer.tech/oauth2/authorize
+      token_url: https://auth.calcifer.tech/oauth2/token
+      api_url: https://auth.calcifer.tech/userinfo
       use_pkce: "true"
       role_attribute_path: contains(roles[*], 'admin') && 'Admin' || 'Viewer'
     auth.proxy:

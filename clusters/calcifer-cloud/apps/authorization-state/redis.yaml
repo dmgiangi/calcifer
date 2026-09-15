@@ -1,0 +1,221 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: authorization
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authorization-state-redis-config
+  namespace: authorization
+data:
+  redis.conf: |
+    bind 0.0.0.0
+    port 6379
+    protected-mode yes
+    appendonly yes
+    appendfsync everysec
+    save ""
+    dir /data
+    maxmemory 192mb
+    maxmemory-policy noeviction
+    tcp-keepalive 60
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authorization-state-redis
+  namespace: authorization
+  labels:
+    app.kubernetes.io/name: authorization-state-redis
+    app.kubernetes.io/component: authorization-state
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "9121"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: authorization-state-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+    - name: metrics
+      port: 9121
+      targetPort: metrics
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: authorization-state-redis
+  namespace: authorization
+  labels:
+    app.kubernetes.io/name: authorization-state-redis
+    app.kubernetes.io/component: authorization-state
+spec:
+  serviceName: authorization-state-redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: authorization-state-redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: authorization-state-redis
+        app.kubernetes.io/component: authorization-state
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: redis:8.2.1-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              umask 077
+              cat > /run/redis/users.acl <<EOF
+              user default off
+              user $REDIS_USERNAME on >$REDIS_PASSWORD ~auth:* +@read +@write +@connection +@transaction +@scripting +info +scan +unlink +pttl +ttl +del
+              EOF
+              exec redis-server /etc/redis/redis.conf --aclfile /run/redis/users.acl
+          env:
+            - name: REDIS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: redis-auth
+                  key: AUTH_STATE_REDIS_USERNAME
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-auth
+                  key: AUTH_STATE_REDIS_PASSWORD
+            - name: REDISCLI_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: redis-auth
+                  key: AUTH_STATE_REDIS_PASSWORD
+          ports:
+            - name: redis
+              containerPort: 6379
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          startupProbe:
+            exec:
+              command: ["/bin/sh", "-ec", "redis-cli --user \"$REDIS_USERNAME\" ping | grep -qx PONG"]
+            failureThreshold: 30
+            periodSeconds: 2
+          livenessProbe:
+            exec:
+              command: ["/bin/sh", "-ec", "redis-cli --user \"$REDIS_USERNAME\" ping | grep -qx PONG"]
+            periodSeconds: 2
+          readinessProbe:
+            exec:
+              command: ["/bin/sh", "-ec", "redis-cli --user \"$REDIS_USERNAME\" ping | grep -qx PONG"]
+            periodSeconds: 2
+          volumeMounts:
+            - name: config
+              mountPath: /etc/redis
+              readOnly: true
+            - name: data
+              mountPath: /data
+            - name: runtime
+              mountPath: /run/redis
+        - name: redis-exporter
+          image: oliver006/redis_exporter:v1.77.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: REDIS_ADDR
+              value: redis://127.0.0.1:6379
+            - name: REDIS_USER
+              valueFrom:
+                secretKeyRef:
+                  name: redis-auth
+                  key: AUTH_STATE_REDIS_USERNAME
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-auth
+                  key: AUTH_STATE_REDIS_PASSWORD
+          ports:
+            - name: metrics
+              containerPort: 9121
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
+      volumes:
+        - name: config
+          configMap:
+            name: authorization-state-redis-config
+        - name: runtime
+          emptyDir:
+            medium: Memory
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: authorization-state-redis
+  namespace: authorization
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: authorization-state-redis
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: authorization-state-redis
+  namespace: authorization
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: authorization-state-redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: authorization
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: authorization-server
+      ports:
+        - protocol: TCP
+          port: 6379
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9121
+    - from:
+        - ipBlock:
+            cidr: 172.31.255.2/32
+      ports:
+        - protocol: TCP
+          port: 6379

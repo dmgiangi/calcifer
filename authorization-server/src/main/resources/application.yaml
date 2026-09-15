@@ -9,6 +9,11 @@ management:
     health:
       probes:
         enabled: true
+      group:
+        readiness:
+          include: readinessState,authorizationState
+        liveness:
+          include: livenessState,ping
   metrics:
     tags:
       application: authorization-server
@@ -21,6 +26,7 @@ spring:
             client-id: ${GOOGLE_CLIENT_ID:}
             client-secret: ${GOOGLE_CLIENT_SECRET:}
             scope: openid,profile,email
+            redirect-uri: https://auth.calcifer.tech/login/oauth2/code/google
 identity:
   issuer: ${AUTH_ISSUER:}
   allowed-google-email: ${AUTH_ALLOWED_GOOGLE_EMAIL:dem.gianluigi@gmail.com}
@@ -40,3 +46,21 @@ identity:
     enabled: ${AUTH_LOCAL_LOGIN_ENABLED:false}
     username: ${AUTH_LOCAL_LOGIN_USERNAME:dem.gianluigi@gmail.com}
     password-hash: ${AUTH_LOCAL_LOGIN_PASSWORD_HASH:}
+  state:
+    enabled: ${AUTH_STATE_ENABLED:false}
+    role: ${AUTH_STATE_ROLE:CLOUD}
+    redis:
+      host: ${AUTH_STATE_REDIS_HOST:localhost}
+      port: ${AUTH_STATE_REDIS_PORT:6379}
+      username: ${AUTH_STATE_REDIS_USERNAME:}
+      password: ${AUTH_STATE_REDIS_PASSWORD:}
+      namespace: ${AUTH_STATE_REDIS_NAMESPACE:auth}
+    failure-threshold: ${AUTH_STATE_FAILURE_THRESHOLD:3}
+    probe-interval: ${AUTH_STATE_PROBE:2s}
+    minimum-isolation: ${AUTH_STATE_MINIMUM_ISOLATION:15s}
+    stable-success: ${AUTH_STATE_STABLE_SUCCESS:30s}
+    lease-ttl: ${AUTH_STATE_LEASE_TTL:30s}
+    gate-ttl: ${AUTH_STATE_GATE_TTL:20s}
+    drain: ${AUTH_STATE_DRAIN:3s}
+    cleanup-batch-size: ${AUTH_STATE_CLEANUP_BATCH_SIZE:100}
+    access-token-ttl: ${AUTH_STATE_ACCESS_TOKEN_TTL:5m}

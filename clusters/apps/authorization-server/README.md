@@ -7,9 +7,7 @@ contains these keys:
 
 - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, to be supplied from a Google
   OAuth client whose authorized redirect URIs include:
-  - `https://auth.calcifer.tech/login/oauth2/code/google` (legacy canonical path)
-  - `https://auth-cloud.calcifer.tech/login/oauth2/code/google` (Cloud endpoint)
-  - `https://auth-home.calcifer.tech/login/oauth2/code/google` (Home LAN endpoint)
+  - `https://auth.calcifer.tech/login/oauth2/code/google` (the only supported callback)
 - `GRAFANA_OIDC_CLIENT_SECRET` and `GRAFANA_API_CLIENT_SECRET`, generated as
   distinct random values.
 - `AUTH_LOCAL_LOGIN_PASSWORD_HASH`, an Argon2id or bcrypt hash of the
@@ -52,10 +50,20 @@ the changes, set `AUTH_LOCAL_LOGIN_ENABLED=true` in both overlays.
 
 `auth.calcifer.tech` remains the canonical issuer and compatibility path:
 public DNS sends it to Cloud and Home LAN DNS sends it to Home. Stateful
-browser flows must instead use a location-pinned endpoint: Cloud applications
-use `auth-cloud.calcifer.tech`, which is public and intentionally has no LAN
-override; Home applications use `auth-home.calcifer.tech`, which the Home LAN
-resolver maps to Home. Both aliases return tokens with the canonical issuer.
+browser flows use this same canonical hostname. Redis in Cloud is authoritative
+while connected; Home uses a fresh process-local epoch during a private-transit
+outage and never merges isolated state back into Redis. The retired
+`auth-cloud.calcifer.tech` and `auth-home.calcifer.tech` names are not supported
+OAuth endpoints.
+
+Both overlays enable resilient state with the same `auth` Redis namespace and a
+five-minute access-token lifetime. Cloud fails closed when Redis is unavailable;
+Home keeps local password login available after failure hysteresis and recovers
+automatically after stable connectivity returns. Provision the dedicated
+`authorization/redis-auth` Secret with the expected
+`AUTH_STATE_REDIS_USERNAME` and `AUTH_STATE_REDIS_PASSWORD` keys. The Cloud and
+Home overlays include SOPS-encrypted manifests for this Secret; they contain no
+plaintext credentials and require the cluster SOPS age key during reconciliation.
 
 The Home Flux Kustomization carries the same local password fallback
 configuration as Cloud. The live outage procedure remains an acceptance check

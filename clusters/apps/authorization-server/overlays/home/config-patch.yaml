@@ -4,6 +4,19 @@ metadata:
   name: authorization-server-config
   namespace: authorization
 data:
-  AUTH_ISSUER: https://auth.calcifer.tech
+  AUTH_ISSUER: "https://auth.calcifer.tech"
   AUTH_LOCAL_LOGIN_ENABLED: "true"
-  AUTH_LOCAL_LOGIN_USERNAME: dem.gianluigi@gmail.com
+  AUTH_LOCAL_LOGIN_USERNAME: "dem.gianluigi@gmail.com"
+  AUTH_STATE_ENABLED: "true"
+  AUTH_STATE_ROLE: "HOME"
+  AUTH_STATE_REDIS_HOST: "172.31.255.1"
+  AUTH_STATE_REDIS_PORT: "16379"
+  AUTH_STATE_REDIS_NAMESPACE: "auth"
+  AUTH_STATE_FAILURE_THRESHOLD: "3"
+  AUTH_STATE_PROBE: "2s"
+  AUTH_STATE_MINIMUM_ISOLATION: "15s"
+  AUTH_STATE_STABLE_SUCCESS: "30s"
+  AUTH_STATE_LEASE_TTL: "30s"
+  AUTH_STATE_GATE_TTL: "20s"
+  AUTH_STATE_DRAIN: "3s"
+  AUTH_STATE_ACCESS_TOKEN_TTL: "5m"

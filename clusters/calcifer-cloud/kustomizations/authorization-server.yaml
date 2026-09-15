@@ -18,3 +18,5 @@ spec:
       name: sops-age
   dependsOn:
     - name: cert-manager-config
+    - name: authorization-state
+    - name: private-transit

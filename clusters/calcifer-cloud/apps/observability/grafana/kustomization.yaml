@@ -9,6 +9,7 @@ resources:
   - grafana-ingress-network-policy.yaml
   - dashboards.yaml
   - authorization-server-alerts.yaml
+  - redis-alerts.yaml
   - authorization-server-outcomes.yaml
   - home-forwarding-dashboard.yaml
   - grafana-traefik.yaml
