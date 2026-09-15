@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
@@ -81,7 +83,7 @@ class AuthorizationStateRoutingTest {
   }
 
   @Test
-  void authenticatedOidcSessionRoundTripsThroughRedis() {
+  void authenticatedOidcSessionRoundTripsThroughRedis() throws Exception {
     InMemoryRedisByteStore bytes = new InMemoryRedisByteStore();
     AuthorizationStateManager state = manager(bytes, properties(AuthorizationStateProperties.Role.CLOUD, 1),
         new MutableClock());
@@ -90,7 +92,8 @@ class AuthorizationStateRoutingTest {
     var session = sessions.createSession();
     Instant issuedAt = Instant.parse("2026-09-15T12:00:00Z");
     Map<String, Object> claims = Map.of("sub", "google-subject", "email", "admin@example.test",
-        "email_verified", true);
+        "email_verified", true, "aud", List.of("google-client"), "picture",
+        URI.create("https://example.test/avatar").toURL());
     OidcIdToken idToken = new OidcIdToken("id-token", issuedAt, issuedAt.plusSeconds(300), claims);
     DefaultOidcUser principal = new DefaultOidcUser(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN")), idToken,
         new OidcUserInfo(claims), "sub");

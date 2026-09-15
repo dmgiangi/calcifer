@@ -1,5 +1,6 @@
 package tech.calcifer.auth.state;
 
+import java.io.NotSerializableException;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
@@ -54,8 +55,8 @@ final class RoutingSessionRepository implements SessionRepository<MapSession> {
       throw exception;
     } catch (RuntimeException exception) {
       if (route.owner() == StateRoute.Owner.REDIS) state.connectedOperationFailed();
-      log.warn("authorization_session_operation_failed operation=save owner={} reason={}",
-          route.owner(), exception.getClass().getSimpleName());
+      log.warn("authorization_session_operation_failed operation=save owner={} reason={} missing_type={}",
+          route.owner(), exception.getClass().getSimpleName(), serializationFailureType(exception));
       throw new StateUnavailableException("Session state operation failed", exception);
     }
   }
@@ -124,6 +125,24 @@ final class RoutingSessionRepository implements SessionRepository<MapSession> {
 
   private MapSession copy(MapSession session) {
     return session == null ? null : new MapSession(session);
+  }
+
+  private String serializationFailureType(Throwable failure) {
+    for (Throwable current = failure; current != null; current = current.getCause()) {
+      String message = current.getMessage();
+      if (message == null) continue;
+      String marker = "declaringClass: ";
+      int start = message.indexOf(marker);
+      if (start >= 0) {
+        start += marker.length();
+        int end = message.indexOf(' ', start);
+        String type = end < 0 ? message.substring(start) : message.substring(start, end);
+        if (type.matches("[A-Za-z0-9_.$\\[;]+")) return type;
+      }
+      if (current instanceof NotSerializableException
+          && message.matches("[A-Za-z0-9_.$\\[;]+")) return message;
+    }
+    return "unknown";
   }
 
   private String key(StateRoute route, String id) {

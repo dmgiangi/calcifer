@@ -1,5 +1,6 @@
 package tech.calcifer.auth.state;
 
+import java.net.URL;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
@@ -28,6 +29,13 @@ final class AuthorizationStateRuntimeHints implements RuntimeHintsRegistrar {
     hints.serialization().registerType(TypeReference.of(Instant.class));
     hints.serialization().registerType(TypeReference.of(Duration.class));
     hints.serialization().registerType(TypeReference.of("java.time.Ser"));
+    hints.serialization().registerType(TypeReference.of(Boolean.class));
+    hints.serialization().registerType(TypeReference.of(Integer.class));
+    hints.serialization().registerType(TypeReference.of(Long.class));
+    hints.serialization().registerType(TypeReference.of(Double.class));
+    hints.serialization().registerType(TypeReference.of(URL.class));
+    hints.serialization().registerType(TypeReference.of(String[].class));
+    hints.serialization().registerType(TypeReference.of("java.util.CollSer"));
     hints.serialization().registerType(TypeReference.of(HashMap.class));
     hints.serialization().registerType(TypeReference.of(HashSet.class));
     hints.serialization().registerType(TypeReference.of(LinkedHashMap.class));

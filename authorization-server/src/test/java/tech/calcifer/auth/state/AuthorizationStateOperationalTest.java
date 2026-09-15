@@ -6,6 +6,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.validation.Validation;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -152,7 +153,9 @@ class AuthorizationStateOperationalTest {
                 OAuth2AuthorizationResponseType.class.getName(), Collections.unmodifiableMap(new HashMap<>()).getClass().getName(),
                 Collections.unmodifiableSet(new HashSet<>()).getClass().getName(), OAuth2AuthenticationToken.class.getName(),
                 AbstractOAuth2Token.class.getName(), OidcIdToken.class.getName(), OidcUserInfo.class.getName(),
-                DefaultOAuth2User.class.getName(), DefaultOidcUser.class.getName());
+                DefaultOAuth2User.class.getName(), DefaultOidcUser.class.getName(), Boolean.class.getName(),
+                Integer.class.getName(), Long.class.getName(), Double.class.getName(), URL.class.getName(),
+                String[].class.getTypeName(), "java.util.CollSer");
     }
 
     @Test
