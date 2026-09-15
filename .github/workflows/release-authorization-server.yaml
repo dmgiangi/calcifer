@@ -38,6 +38,10 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Test and compile native executable
         working-directory: authorization-server
+        env:
+          # Spring AOT evaluates identity.state.enabled while generating the
+          # native bean graph; production overlays enable resilient state.
+          AUTH_STATE_ENABLED: 'true'
         run: mvn -B -s .mvn/settings.xml -Pnative test native:compile
       - name: Validate GitOps overlays
         run: |
