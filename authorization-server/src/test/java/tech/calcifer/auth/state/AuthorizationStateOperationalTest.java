@@ -11,7 +11,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
@@ -22,6 +24,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationResponseType;
 import org.springframework.session.MapSession;
 
 class AuthorizationStateOperationalTest {
@@ -117,8 +120,10 @@ class AuthorizationStateOperationalTest {
         assertThat(hints.serialization().javaSerializationHints())
             .extracting(hint -> hint.getType().getName())
             .contains(MapSession.class.getName(), Instant.class.getName(), Duration.class.getName(), HashMap.class.getName(),
-                LinkedHashMap.class.getName(), AuthorizationGrantType.class.getName(), OAuth2AuthorizationRequest.class.getName(),
-                Collections.unmodifiableMap(new HashMap<>()).getClass().getName());
+                HashSet.class.getName(), LinkedHashMap.class.getName(), LinkedHashSet.class.getName(),
+                AuthorizationGrantType.class.getName(), OAuth2AuthorizationRequest.class.getName(),
+                OAuth2AuthorizationResponseType.class.getName(), Collections.unmodifiableMap(new HashMap<>()).getClass().getName(),
+                Collections.unmodifiableSet(new HashSet<>()).getClass().getName());
     }
 
     @Test
