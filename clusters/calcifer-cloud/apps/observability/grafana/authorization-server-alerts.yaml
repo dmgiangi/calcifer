@@ -32,9 +32,11 @@ spec:
               type: prometheus
               uid: thanos
             editorMode: code
+            instant: true
+            range: false
             # This rule is intentionally single-dimensional: Grafana evaluates
             # it as one alert that fires when either cluster is unavailable.
-            expr: min(up{namespace="authorization"}) < 1
+            expr: count(up{namespace="authorization",pod=~"authorization-server-.*"} == 1) < bool 2
             intervalMs: 1000
             maxDataPoints: 43200
             refId: A
@@ -60,7 +62,9 @@ spec:
               type: prometheus
               uid: thanos
             editorMode: code
-            expr: sum by (cluster) (rate(http_server_requests_seconds_count{namespace="authorization",status=~"5.."}[5m])) / clamp_min(sum by (cluster) (rate(http_server_requests_seconds_count{namespace="authorization"}[5m])), 1) > 0.05
+            instant: true
+            range: false
+            expr: sum by (cluster) (rate(http_server_requests_seconds_count{namespace="authorization",status=~"5.."}[5m])) / clamp_min(sum by (cluster) (rate(http_server_requests_seconds_count{namespace="authorization"}[5m])), 1) > bool 0.05
             intervalMs: 1000
             maxDataPoints: 43200
             refId: A
