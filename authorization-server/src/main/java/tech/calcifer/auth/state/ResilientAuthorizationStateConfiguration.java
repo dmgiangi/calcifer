@@ -104,7 +104,7 @@ class ResilientAuthorizationStateConfiguration {
     return registration;
   }
 
-  @Bean
+  @Bean("authorizationState")
   AuthorizationStateHealthIndicator authorizationStateHealthIndicator(AuthorizationStateManager state) {
     return new AuthorizationStateHealthIndicator(state);
   }
