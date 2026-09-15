@@ -20,6 +20,7 @@ import org.springframework.boot.actuate.health.Status;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.session.MapSession;
 
@@ -116,7 +117,7 @@ class AuthorizationStateOperationalTest {
         assertThat(hints.serialization().javaSerializationHints())
             .extracting(hint -> hint.getType().getName())
             .contains(MapSession.class.getName(), Instant.class.getName(), Duration.class.getName(), HashMap.class.getName(),
-                LinkedHashMap.class.getName(), OAuth2AuthorizationRequest.class.getName(),
+                LinkedHashMap.class.getName(), AuthorizationGrantType.class.getName(), OAuth2AuthorizationRequest.class.getName(),
                 Collections.unmodifiableMap(new HashMap<>()).getClass().getName());
     }
 
