@@ -8,7 +8,7 @@ spec:
   resyncPeriod: 5m
   plugins:
     - name: prometheus
-      version: 13.1.9
+      version: 13.1.7
   instanceSelector:
     matchLabels:
       dashboards: grafana
