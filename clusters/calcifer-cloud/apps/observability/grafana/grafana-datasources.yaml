@@ -6,6 +6,9 @@ metadata:
 spec:
   uid: thanos
   resyncPeriod: 5m
+  plugins:
+    - name: prometheus
+      version: 13.1.9
   instanceSelector:
     matchLabels:
       dashboards: grafana
