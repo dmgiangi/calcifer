@@ -47,3 +47,27 @@ spec:
     jsonData:
       maxLines: 1000
       timeout: 60
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: tempo
+  namespace: monitoring
+spec:
+  uid: tempo
+  resyncPeriod: 1m
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  datasource:
+    name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tempo.monitoring.svc.cluster.local:3200
+    editable: false
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: loki
+        filterByTraceID: true
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m

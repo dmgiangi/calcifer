@@ -31,6 +31,17 @@ spec:
     headerField: X-Home-Loki-Ingest
 ---
 apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: home-tempo-ingest-auth
+  namespace: monitoring
+spec:
+  basicAuth:
+    secret: tempo-home-ingest-auth
+    removeHeader: true
+    headerField: X-Home-Tempo-Ingest
+---
+apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: home-thanos-ingest
@@ -69,3 +80,23 @@ spec:
           port: 3100
   tls:
     secretName: loki-home-ingest-tls
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: home-tempo-ingest
+  namespace: monitoring
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`tempo-ingest.calcifer.tech`) && Path(`/v1/traces`)
+      kind: Rule
+      middlewares:
+        - name: home-ingest-wireguard-source
+        - name: home-tempo-ingest-auth
+      services:
+        - name: tempo
+          port: 4318
+  tls:
+    secretName: tempo-home-ingest-tls

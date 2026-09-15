@@ -1,6 +1,10 @@
 server:
   forward-headers-strategy: framework
 management:
+  opentelemetry:
+    resource-attributes:
+      "cluster.name": ${AUTH_STATE_ROLE:LOCAL}
+      "deployment.environment.name": homelab
   endpoints:
     web:
       exposure:
@@ -18,6 +22,8 @@ management:
     tags:
       application: authorization-server
 spring:
+  application:
+    name: authorization-server
   security:
     oauth2:
       client:

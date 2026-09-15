@@ -13,3 +13,6 @@ data:
   GRAFANA_API_REDIRECT_URI: https://grafana.calcifer.tech
   GRAFANA_API_AUDIENCE: grafana
   AUTH_LOCAL_LOGIN_ENABLED: "false"
+  MANAGEMENT_OTLP_TRACING_ENDPOINT: "http://alloy.monitoring.svc.cluster.local:4318/v1/traces"
+  MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED: "true"
+  MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "1.0"
