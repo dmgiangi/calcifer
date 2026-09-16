@@ -1,3 +1,8 @@
+## RENAMED Requirements
+
+- FROM: `### Requirement: LogQL log queries`
+- TO: `### Requirement: LogsQL log queries`
+
 ## MODIFIED Requirements
 
 ### Requirement: Kubernetes workload log collection
@@ -11,7 +16,7 @@ The system SHALL collect stdout and stderr logs from Kubernetes workloads on `ca
 - **WHEN** Kubernetes recreates a workload pod
 - **THEN** Alloy SHALL continue collecting logs from the replacement pod without manual configuration.
 
-### Requirement: LogQL log queries
+### Requirement: LogsQL log queries
 The system SHALL expose VictoriaLogs as a log query datasource to Grafana while keeping the VictoriaLogs API private to the cluster.
 
 #### Scenario: Querying workload logs in Grafana

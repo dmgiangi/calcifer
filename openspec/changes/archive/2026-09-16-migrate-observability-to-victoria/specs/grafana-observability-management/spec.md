@@ -1,3 +1,8 @@
+## RENAMED Requirements
+
+- FROM: `### Requirement: Open-source Loki and Thanos dashboards`
+- TO: `### Requirement: Community observability dashboards`
+
 ## MODIFIED Requirements
 
 ### Requirement: Provisioned observability datasources
@@ -7,7 +12,14 @@ The system SHALL provision VictoriaMetrics as a Prometheus-compatible datasource
 - **WHEN** the Grafana instance and backend Services are ready
 - **THEN** Grafana SHALL contain queryable VictoriaMetrics, VictoriaLogs, and VictoriaTraces datasources.
 
-### Requirement: Open-source Loki and Thanos dashboards
+### Requirement: Declarative baseline dashboard
+The system SHALL provision a declarative baseline dashboard set covering cluster metrics, workload logs, and the health of Grafana, Grafana Operator, Alloy, VictoriaMetrics, VictoriaLogs, and VictoriaTraces without manual Grafana UI configuration.
+
+#### Scenario: Grafana dashboard reconciliation
+- **WHEN** Grafana Operator reconciles the declared dashboard resources
+- **THEN** the Grafana instance SHALL contain the baseline observability dashboards.
+
+### Requirement: Community observability dashboards
 The system SHALL provision standard community dashboards from Grafana.com via Grafana Operator `GrafanaDashboard` resources, covering Kubernetes cluster views, Node Exporter, VictoriaTraces, and Victoria operational health.
 
 #### Scenario: Declarative dashboard provisioning

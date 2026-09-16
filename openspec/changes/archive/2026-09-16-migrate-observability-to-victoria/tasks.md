@@ -54,3 +54,9 @@
 - [x] 8.1 Expose Home log ingestion at `/api/v1/push` and keep the VictoriaLogs-compatible backend path internal to Traefik
 - [x] 8.2 Exclude the VictoriaLogs `server-volume` from Velero/Kopia backups to Azure Blob
 - [x] 8.3 Validate manifests, OpenSpec artifacts, and live reconciliation on both clusters
+
+## 9. Backup Scope & Restore Validation
+
+- [x] 9.1 Restrict Velero/Kopia File System Backup opt-in to VictoriaMetrics and VictoriaTraces data volumes
+- [x] 9.2 Validate backup and restore of a disposable PVC marker through Kopia
+- [x] 9.3 Remove the historical backup containing VictoriaLogs data from Azure Blob

@@ -158,6 +158,8 @@ spec:
       replicaCount: 1
       retentionPeriod: 7d
       retentionDiskSpaceUsage: 8
+      podAnnotations:
+        backup.velero.io/backup-volumes: server-volume
       podLabels:
         observability.calcifer.tech/trace-backend: victoria-traces
       persistentVolume:
@@ -206,6 +208,8 @@ spec:
       fullnameOverride: victoria-metrics
       replicaCount: 1
       retentionPeriod: 365d
+      podAnnotations:
+        backup.velero.io/backup-volumes: server-volume
       podLabels:
         observability.calcifer.tech/metrics-backend: victoria-metrics
       persistentVolume:
@@ -633,7 +637,7 @@ spec:
             storageAccountURI: https://calciferobs.blob.core.windows.net
             useAAD: "true"
       uploaderType: kopia
-      defaultVolumesToFsBackup: true
+      defaultVolumesToFsBackup: false
     snapshotsEnabled: false
     deployNodeAgent: true
     nodeAgent:
@@ -648,10 +652,10 @@ spec:
     resources:
       requests:
         cpu: 25m
-        memory: 96Mi
+        memory: 128Mi
       limits:
         cpu: 200m
-        memory: 256Mi
+        memory: 512Mi
     schedules:
       daily-observability:
         schedule: "0 2 * * *"
@@ -663,5 +667,5 @@ spec:
             - persistentvolumes
             - pods
           snapshotVolumes: false
-          defaultVolumesToFsBackup: true
+          defaultVolumesToFsBackup: false
           ttl: 720h0m0s
