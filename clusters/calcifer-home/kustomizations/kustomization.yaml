@@ -8,3 +8,4 @@ resources:
   - lan-dns-install.yaml
   - home-apps.yaml
   - authorization-server.yaml
+  - homepage.yaml

@@ -79,3 +79,6 @@ to authenticate again.
 - Access tokens remain short-lived at five minutes; refresh tokens remain
   disabled. Generation recovery invalidates stored grants and sessions but does
   not revoke an already issued unexpired JWT.
+- Follow `docs/homepage-operations.md` when adding a declarative client. Client
+  metadata belongs in `clients.yaml`, secrets remain SOPS-encrypted, and Secret
+  changes require an explicit Deployment revision bump.

@@ -29,6 +29,8 @@ management:
 spring:
   application:
     name: authorization-server
+  config:
+    import: optional:file:/etc/calcifer/identity/clients.yaml
   security:
     oauth2:
       client:

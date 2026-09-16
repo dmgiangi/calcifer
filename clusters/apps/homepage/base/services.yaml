@@ -1,0 +1,11 @@
+- Core:
+    - Authorization Server:
+        href: https://auth.calcifer.tech
+        description: Calcifer OAuth 2.0 and OpenID Connect provider
+        icon: mdi-shield-account
+        siteMonitor: https://auth.calcifer.tech/actuator/health/readiness
+    - Grafana:
+        href: https://grafana.calcifer.tech
+        description: Metrics, logs and traces
+        icon: grafana.png
+        siteMonitor: https://grafana.calcifer.tech/api/health

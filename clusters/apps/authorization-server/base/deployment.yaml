@@ -18,6 +18,7 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/path: /actuator/prometheus
         prometheus.io/port: "8080"
+        calcifer.tech/authorization-secrets-revision: "1"
     spec:
       serviceAccountName: authorization-server
       securityContext:
@@ -69,12 +70,18 @@ spec:
           readinessProbe:
             httpGet: {path: /actuator/health/readiness, port: http}
           volumeMounts:
+            - name: client-config
+              mountPath: /etc/calcifer/identity
+              readOnly: true
             - name: signing-key
               mountPath: /var/run/secrets/authorization-server
               readOnly: true
             - name: tmp
               mountPath: /tmp
       volumes:
+        - name: client-config
+          configMap:
+            name: authorization-server-clients
         - name: signing-key
           secret:
             secretName: authorization-server-secrets

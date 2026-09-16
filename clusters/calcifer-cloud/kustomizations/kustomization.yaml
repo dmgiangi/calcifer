@@ -8,4 +8,5 @@ resources:
   - cert-manager-config.yaml
   - cloud-apps.yaml
   - authorization-server.yaml
+  - homepage.yaml
   - observability-grafana.yaml

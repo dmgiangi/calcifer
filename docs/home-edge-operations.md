@@ -64,6 +64,8 @@ Encrypted secret locations are:
 - `clusters/calcifer-home/apps/edge-test/basic-auth.sops.yaml`
 - `clusters/calcifer-cloud/apps/edge-test/basic-auth.sops.yaml`
 - `clusters/apps/authorization-server/overlays/home/authorization-server-secrets.sops.yaml`
+- `clusters/apps/homepage/overlays/home/homepage-secrets.sops.yaml`
+- `clusters/apps/homepage/overlays/cloud/homepage-secrets.sops.yaml`
 - `clusters/calcifer-cloud/apps/authorization-state/redis-auth.sops.yaml`
 - `clusters/apps/authorization-server/overlays/home/redis-auth.sops.yaml`
 
@@ -96,6 +98,7 @@ Useful checks from a LAN client are:
 ```sh
 dig @192.168.0.102 edge-test.calcifer.tech A
 dig @192.168.0.102 auth.calcifer.tech A
+dig @192.168.0.102 calcifer.tech A
 dig @192.168.0.102 example.com A
 ```
 
@@ -114,6 +117,10 @@ or print those credentials during operational checks.
 The retired `auth-cloud.calcifer.tech` and `auth-home.calcifer.tech` names are
 not certificate or ingress aliases. Do not add them back as OAuth endpoint
 profiles or DNS overrides.
+
+Homepage uses the same split-horizon pattern: public `calcifer.tech` resolves
+to Cloud, while the Home `DNSEndpoint` resolves it to `192.168.0.102`. See
+`docs/homepage-operations.md` for catalog, OIDC client, and rollout procedures.
 
 ## Azure DNS and certificates
 
