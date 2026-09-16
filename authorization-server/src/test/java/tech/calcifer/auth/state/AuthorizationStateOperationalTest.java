@@ -15,6 +15,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
@@ -26,12 +28,19 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.AbstractOAuth2Token;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.OAuth2AccessToken;
+import org.springframework.security.oauth2.core.OAuth2DeviceCode;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2RefreshToken;
+import org.springframework.security.oauth2.core.OAuth2UserCode;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationResponseType;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationCode;
 import org.springframework.session.MapSession;
 
 class AuthorizationStateOperationalTest {
@@ -155,7 +164,14 @@ class AuthorizationStateOperationalTest {
                 AbstractOAuth2Token.class.getName(), OidcIdToken.class.getName(), OidcUserInfo.class.getName(),
                 DefaultOAuth2User.class.getName(), DefaultOidcUser.class.getName(), Boolean.class.getName(),
                 Integer.class.getName(), Long.class.getName(), Double.class.getName(), URL.class.getName(),
-                String[].class.getTypeName(), "java.util.CollSer");
+                String[].class.getTypeName(), "java.util.CollSer", OAuth2Error.class.getName(),
+                OAuth2Authorization.class.getName(), OAuth2Authorization.Token.class.getName(),
+                OAuth2AuthorizationCode.class.getName(), OAuth2AccessToken.class.getName(),
+                OAuth2AccessToken.TokenType.class.getName(), OAuth2RefreshToken.class.getName(),
+                OAuth2DeviceCode.class.getName(), OAuth2UserCode.class.getName(), List.of().getClass().getName(),
+                List.of("value").getClass().getName(), Map.of().getClass().getName(),
+                Map.of("key", "value").getClass().getName(), Set.of().getClass().getName(),
+                Set.of("value").getClass().getName());
     }
 
     @Test

@@ -42,7 +42,12 @@ jobs:
           # Spring AOT evaluates identity.state.enabled while generating the
           # native bean graph; production overlays enable resilient state.
           AUTH_STATE_ENABLED: 'true'
-        run: mvn -B -s .mvn/settings.xml -Pnative test native:compile
+        run: |
+          mvn -B -s .mvn/settings.xml -Pnative native:compile -DskipTests
+          mvn -B -s .mvn/settings.xml -PnativeTest \
+            '-Dtest=RedisOAuth2AuthorizationStoreTest,AuthorizationStateRoutingTest#authenticatedOidcSessionRoundTripsThroughRedis' \
+            test
+          mvn -B -s .mvn/settings.xml test
       - name: Validate GitOps overlays
         run: |
           for overlay in \
