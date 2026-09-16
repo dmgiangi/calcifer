@@ -27,6 +27,12 @@ spec:
         - name: homepage
           image: ghcr.io/gethomepage/homepage:v2.2.0
           imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              rm -f /app/.next/server/pages/en.html /app/.next/server/pages/en.json
+              exec /usr/local/bin/docker-entrypoint.sh node server.js
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -122,6 +128,10 @@ spec:
             - name: config
               mountPath: /app/config/kubernetes.yaml
               subPath: kubernetes.yaml
+              readOnly: true
+            - name: config
+              mountPath: /app/config/custom.css
+              subPath: custom.css
               readOnly: true
             - name: logs
               mountPath: /app/config/logs

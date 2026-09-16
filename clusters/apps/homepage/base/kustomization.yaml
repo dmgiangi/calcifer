@@ -10,6 +10,7 @@ configMapGenerator:
       - widgets.yaml
       - docker.yaml
       - kubernetes.yaml
+      - custom.css
 resources:
   - namespace.yaml
   - deployment.yaml
