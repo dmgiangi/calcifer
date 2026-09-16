@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -163,7 +164,7 @@ class AuthorizationStateOperationalTest {
                 Collections.unmodifiableSet(new HashSet<>()).getClass().getName(), OAuth2AuthenticationToken.class.getName(),
                 AbstractOAuth2Token.class.getName(), OidcIdToken.class.getName(), OidcUserInfo.class.getName(),
                 DefaultOAuth2User.class.getName(), DefaultOidcUser.class.getName(), Boolean.class.getName(),
-                Integer.class.getName(), Long.class.getName(), Double.class.getName(), URL.class.getName(),
+                Integer.class.getName(), Long.class.getName(), Double.class.getName(), Date.class.getName(), URL.class.getName(),
                 String[].class.getTypeName(), "java.util.CollSer", OAuth2Error.class.getName(),
                 OAuth2Authorization.class.getName(), OAuth2Authorization.Token.class.getName(),
                 OAuth2AuthorizationCode.class.getName(), OAuth2AccessToken.class.getName(),

@@ -4,6 +4,7 @@ import java.net.URL;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -43,6 +44,7 @@ final class AuthorizationStateRuntimeHints implements RuntimeHintsRegistrar {
     hints.serialization().registerType(TypeReference.of(Integer.class));
     hints.serialization().registerType(TypeReference.of(Long.class));
     hints.serialization().registerType(TypeReference.of(Double.class));
+    hints.serialization().registerType(TypeReference.of(Date.class));
     hints.serialization().registerType(TypeReference.of(URL.class));
     hints.serialization().registerType(TypeReference.of(String[].class));
     hints.serialization().registerType(TypeReference.of("java.util.CollSer"));

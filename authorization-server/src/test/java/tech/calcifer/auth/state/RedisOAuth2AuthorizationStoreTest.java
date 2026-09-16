@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,8 @@ class RedisOAuth2AuthorizationStoreTest {
     OAuth2UserCode user = new OAuth2UserCode("secret-user", issued, issued.plusSeconds(600));
     OAuth2Error error = new OAuth2Error("authorization_pending", "Waiting for user authorization", null);
     OidcIdToken idToken = OidcIdToken.withTokenValue("secret-id").issuedAt(issued)
-        .expiresAt(issued.plusSeconds(300)).subject("user:admin").claim("roles", Set.of("admin")).build();
+        .expiresAt(issued.plusSeconds(300)).subject("user:admin").claim("roles", Set.of("admin"))
+        .claim("auth_time", Date.from(issued)).build();
     OAuth2Authorization authorization = authorizationBuilder().token(code).accessToken(access).refreshToken(refresh)
         .token(device).token(user).attribute("oauth2.error", error)
         .token(idToken, metadata -> metadata.put(OAuth2Authorization.Token.CLAIMS_METADATA_NAME,
@@ -46,6 +48,7 @@ class RedisOAuth2AuthorizationStoreTest {
     OAuth2Authorization restored = store.findById(7, "authorization-1");
     assertEquals(issued.plusSeconds(60), restored.getToken(OAuth2AuthorizationCode.class).getToken().getExpiresAt());
     assertEquals(Map.of("nonce", "present"), restored.getAttribute("oidc"));
+    assertEquals(Date.from(issued), restored.getToken(OidcIdToken.class).getToken().getClaim("auth_time"));
     assertThat(restored.<OAuth2Error>getAttribute("oauth2.error").getErrorCode())
         .isEqualTo("authorization_pending");
     assertThat(store.findByToken(7, "secret-code", new OAuth2TokenType("code")).getId())
