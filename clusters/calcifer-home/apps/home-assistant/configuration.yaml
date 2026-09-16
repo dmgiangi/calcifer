@@ -4,12 +4,6 @@ homeassistant:
   auth_providers:
     - type: homeassistant
 
-http:
-  use_x_forwarded_for: true
-  trusted_proxies:
-    - 10.42.0.0/16
-    - 192.168.0.102
-
 auth_oidc:
   client_id: home-assistant
   client_secret: !secret oidc_client_secret
@@ -18,6 +12,7 @@ auth_oidc:
   additional_scopes:
     - email
   features:
+    default_redirect: true
     include_groups_scope: false
     force_https: true
   claims:

@@ -29,6 +29,24 @@ Home Assistant UI and `/api/websocket` use valid TLS and remain connected.
 Confirm that Home Assistant appears with a healthy status dot on the Homepage
 dashboard at `https://calcifer.tech` from both LAN and public networks.
 
+## Initial onboarding and authentication
+
+On a fresh PVC, complete Home Assistant's one-time onboarding from a LAN client
+and create the native owner account. Store those credentials as the emergency
+break-glass account; Home Assistant does not permit OIDC to replace this initial
+owner bootstrap.
+
+After onboarding, normal visits redirect to Calcifer Authorization Server via
+OIDC. To use the local break-glass login while the identity provider is
+unavailable, open
+`https://home.calcifer.tech/?skip_oidc_redirect=true` from the LAN.
+
+Home Assistant 2026.9 stores reverse-proxy settings in `.storage/http` rather
+than `configuration.yaml`. The `configure-http` init container maintains the
+trusted Traefik networks as stable configuration before Core starts, preventing
+the five-minute pending-configuration rollback. Do not add the deprecated
+`http:` block back to `configuration.yaml`.
+
 ## Backup operations
 
 The `home-assistant-backup` CronJob runs daily at 02:30 Europe/Rome. It copies
