@@ -10,7 +10,7 @@
 - Replace Thanos and Loki with single-node VictoriaMetrics and VictoriaLogs, creating a unified Victoria observability suite with VictoriaTraces.
 - Run all three databases exclusively on local `local-path` ext4 PVCs, decoupling database operations from cloud object storage latency.
 - Unify cross-cluster ingestion in Grafana Alloy (`calcifer-cloud` and `calcifer-home`) targeting Victoria endpoints.
-- Unify disaster recovery using Velero File System Backup (FSB) with Kopia into Azure Blob (`calciferobs`).
+- Provide disaster recovery for metrics and traces using Velero File System Backup (FSB) with Kopia into Azure Blob (`calciferobs`), while keeping logs local-only.
 - Replace custom Grafana dashboards with standard Grafana.com community dashboards via Grafana Operator.
 - Safely decommission Thanos and Loki resources without disrupting cluster operations.
 
@@ -38,7 +38,7 @@
 
 ### 3. Unified Disaster Recovery via Velero and Kopia
 - **Choice**: Deploy Velero with `velero-plugin-for-microsoft-azure` and Kopia-backed node-agent for File System Backup (FSB) to Azure Blob container `calciferobs/backups`.
-- **Rationale**: Provides an identical, declarative backup and restore mechanism across all three observability PVCs with client-side encryption and deduplication.
+- **Rationale**: Provides a declarative backup and restore mechanism for long-lived metrics and traces with client-side encryption and deduplication. VictoriaLogs is intentionally excluded because its short 14-day retention and high volume do not justify offsite propagation.
 - **Alternatives considered**:
   - *Separate tools (`vmbackup` + `rclone`)*: Fractured operations; `vmbackup` only works for VictoriaMetrics, leaving Logs and Traces to manual scripts.
   - *AzCopy sync*: Lacks point-in-time consistency, deduplication, and Kubernetes-aware metadata restoration.

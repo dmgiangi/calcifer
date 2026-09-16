@@ -32,10 +32,10 @@ The system SHALL provide an HTTPS endpoint on `calcifer-cloud` at the private Wi
 - **THEN** the endpoint SHALL reject the request before it reaches VictoriaMetrics.
 
 ### Requirement: Private logs ingest endpoint
-The system SHALL provide an HTTPS endpoint on `calcifer-cloud` at the private WireGuard-only Traefik NodePort `32443` (`logs-ingest.calcifer.tech`) that accepts Loki push requests from the authenticated Home Alloy and routes them to VictoriaLogs.
+The system SHALL provide an HTTPS endpoint on `calcifer-cloud` at the private WireGuard-only Traefik NodePort `32443` (`logs-ingest.calcifer.tech`) that accepts log push requests at the vendor-neutral `/api/v1/push` path from the authenticated Home Alloy and routes them to VictoriaLogs.
 
 #### Scenario: Authenticated Home log forwarding
-- **WHEN** Alloy Home sends a valid Loki push request over WireGuard with the configured TLS and BasicAuth credentials
+- **WHEN** Alloy Home sends a valid log push request to `/api/v1/push` over WireGuard with the configured TLS and BasicAuth credentials
 - **THEN** the endpoint SHALL forward the request to VictoriaLogs and return the backend result.
 
 #### Scenario: Unauthenticated log forwarding

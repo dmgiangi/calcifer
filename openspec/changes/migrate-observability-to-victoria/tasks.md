@@ -48,3 +48,9 @@
 - [x] 7.4 Reconfigure `calcifer-home` Alloy hostAliases, environment variables, and push endpoints to use `metrics-ingest.calcifer.tech`, `logs-ingest.calcifer.tech`, and `traces-ingest.calcifer.tech`
 - [x] 7.5 Decommission legacy certificate, secret, and route manifests (`thanos-home-ingest-*`, `loki-home-ingest-*`, `tempo-home-ingest-*`)
 - [x] 7.6 Validate Flux reconciliation, certificate issuance, and live cross-cluster ingestion
+
+## 8. Generic Log Path & Local-Only Log Storage
+
+- [x] 8.1 Expose Home log ingestion at `/api/v1/push` and keep the VictoriaLogs-compatible backend path internal to Traefik
+- [x] 8.2 Exclude the VictoriaLogs `server-volume` from Velero/Kopia backups to Azure Blob
+- [x] 8.3 Validate manifests, OpenSpec artifacts, and live reconciliation on both clusters

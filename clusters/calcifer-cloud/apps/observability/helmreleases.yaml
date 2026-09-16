@@ -257,6 +257,8 @@ spec:
       retentionDiskSpaceUsage: 8
       podLabels:
         observability.calcifer.tech/logs-backend: victoria-logs
+      podAnnotations:
+        backup.velero.io/backup-volumes-excludes: server-volume
       persistentVolume:
         enabled: true
         storageClassName: local-path

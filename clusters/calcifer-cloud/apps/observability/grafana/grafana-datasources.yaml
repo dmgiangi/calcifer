@@ -53,6 +53,9 @@ metadata:
 spec:
   uid: victoria-traces
   resyncPeriod: 1m
+  plugins:
+    - name: jaeger
+      version: 13.0.1
   instanceSelector:
     matchLabels:
       dashboards: grafana

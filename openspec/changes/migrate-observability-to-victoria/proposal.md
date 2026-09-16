@@ -12,13 +12,13 @@ The current observability deployment on `calcifer-cloud` is fragmented across Th
 - Modernize private WireGuard ingest routes, TLS certificates, and auth middleware on `calcifer-cloud` to generic signal-based hostnames (`metrics-ingest.calcifer.tech`, `logs-ingest.calcifer.tech`, `traces-ingest.calcifer.tech`), replacing legacy Thanos, Loki, and Tempo names.
 - Update Grafana datasources (`GrafanaDatasource`) to connect to VictoriaMetrics (Prometheus type), VictoriaLogs, and update trace-to-logs correlation in VictoriaTraces.
 - Adopt standard Grafana.com community dashboards (`GrafanaDashboard` with `grafanaCom`) for Kubernetes views, Node Exporter, VictoriaTraces, and VictoriaMetrics/VictoriaLogs operational visibility.
-- Install and configure Velero with the Microsoft Azure plugin and Kopia node-agent to perform scheduled, deduplicated, and encrypted File System Backups of observability PVCs to Azure Blob Storage.
+- Install and configure Velero with the Microsoft Azure plugin and Kopia node-agent to perform scheduled, deduplicated, and encrypted File System Backups of metrics and traces PVCs to Azure Blob Storage, while excluding VictoriaLogs data.
 - Decommission and remove Thanos and Loki Helm releases, associated PVCs, network policies, and obsolete live object store secrets.
 
 ## Capabilities
 
 ### New Capabilities
-- `observability-backup-recovery`: Schedule, execute, and restore unified file-system backups of local observability PVCs (VictoriaMetrics, VictoriaLogs, VictoriaTraces) to Azure Blob Storage using Velero and Kopia.
+- `observability-backup-recovery`: Schedule, execute, and restore file-system backups of the local VictoriaMetrics and VictoriaTraces PVCs to Azure Blob Storage using Velero and Kopia; VictoriaLogs remains local-only.
 
 ### Modified Capabilities
 - `cloud-metrics-observability`: Ingest Kubernetes metrics into VictoriaMetrics via Prometheus remote write, store them on local ext4 PVC, and expose PromQL queries to Grafana.

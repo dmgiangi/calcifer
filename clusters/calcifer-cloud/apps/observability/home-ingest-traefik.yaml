@@ -58,7 +58,7 @@ metadata:
   namespace: monitoring
 spec:
   replacePathRegex:
-    regex: ^/loki/api/v1/push$
+    regex: ^/api/v1/push$
     replacement: /insert/loki/api/v1/push
 ---
 apiVersion: traefik.io/v1alpha1
@@ -101,7 +101,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`logs-ingest.calcifer.tech`) && (Path(`/loki/api/v1/push`) || Path(`/insert/loki/api/v1/push`))
+    - match: Host(`logs-ingest.calcifer.tech`) && Path(`/api/v1/push`)
       kind: Rule
       middlewares:
         - name: home-ingest-wireguard-source

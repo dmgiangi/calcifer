@@ -6,8 +6,8 @@ VictoriaTraces, Grafana Operator, and Velero in the `monitoring` namespace.
 Deployment settings:
 
 - Grafana hostname: `grafana.calcifer.tech`
-- Metrics retention: 30 days on local ext4 persistent volume, enforced by VictoriaMetrics.
-- Logs retention: 30 days on local ext4 persistent volume, enforced by VictoriaLogs.
+- Metrics retention: 365 days on local ext4 persistent volume, enforced by VictoriaMetrics.
+- Logs retention: 14 days on local ext4 persistent volume, enforced by VictoriaLogs (excluded from remote Velero backup).
 - Trace retention: 7 days with an 8 GiB data cap on a 10 GiB local persistent
   volume, enforced by VictoriaTraces.
 - Disaster recovery: Velero with Kopia File System Backup schedules daily backups
