@@ -44,7 +44,7 @@
 
 - [x] 7.1 Configure both overlays with the same Redis namespace and role-specific behavior, using the private Redis endpoint only from Home and no Cloud fallback.
 - [x] 7.2 Verify short access-token lifetimes and add tests that refresh-token grant and `offline_access` requests remain rejected.
-- [ ] 7.3 Configure only `https://auth.calcifer.tech/login/oauth2/code/google`, remove the `-cloud` and `-home` callback registrations and OAuth endpoint profiles, and test canonical login through both split-horizon paths.
+- [x] 7.3 Configure only `https://auth.calcifer.tech/login/oauth2/code/google`, remove the `-cloud` and `-home` callback registrations and OAuth endpoint profiles, and test canonical login through both split-horizon paths.
 - [x] 7.4 Update authorization integration and operations documentation for isolated password login, unavailable offline Google login, automatic forced reauthentication, residual JWT lifetime, and rollback.
 - [x] 7.5 Add a canonical root redirect, authenticated session/logout page, and tests proving direct canonical login can supply the authorization-server session used by subsequent OAuth requests.
 
@@ -59,10 +59,10 @@
 
 - [x] 9.1 Run authorization-server unit and integration tests plus manifest rendering/validation for both cluster overlays.
 - [x] 9.2 Deploy Redis infrastructure first and verify persistence, ACL enforcement, private reachability, and denied public reachability before connecting authorization servers.
-- [ ] 9.3 Roll out Cloud resilient state and verify password/Google login, authorization-code exchange, client credentials, restart persistence, metrics, and rollback mode.
-- [ ] 9.4 Roll out Home and verify the canonical Google callback through split-horizon DNS, connected session persistence, LAN password login, and rejection of retired endpoint-specific OAuth hosts.
-- [ ] 9.5 Perform the acceptance outage test: interrupt private transit, confirm fresh Home isolation and Cloud continuity, restore connectivity, observe automatic generation recovery, and complete a fresh login without administrative recovery commands.
-- [ ] 9.6 Verify an ambiguous connected Redis mutation fails without local retry and that pre-recovery sessions/codes are rejected while unexpired JWTs retain their documented validity.
+- [x] 9.3 Roll out Cloud resilient state and verify password/Google login, authorization-code exchange, client credentials, restart persistence, metrics, and rollback mode.
+- [x] 9.4 Roll out Home and verify the canonical Google callback through split-horizon DNS, connected session persistence, LAN password login, and rejection of retired endpoint-specific OAuth hosts.
+- [x] 9.5 Perform the acceptance outage test: interrupt private transit, confirm fresh Home isolation and Cloud continuity, restore connectivity, observe automatic generation recovery, and complete a fresh login without administrative recovery commands.
+- [x] 9.6 Verify an ambiguous connected Redis mutation fails without local retry and that pre-recovery sessions/codes are rejected while unexpired JWTs retain their documented validity.
 
 ## 10. Execute final end-to-end verification on both clusters
 
@@ -71,14 +71,14 @@
 - [x] 10.3 Verify rendered manifests and live resources for both overlays: authorization-server Deployments/Pods, Services, IngressRoutes, NetworkPolicies, ServiceAccounts, Redis resources, PVC, probes, resource limits, and mode-aware configuration are present only in their intended cluster.
 - [x] 10.4 Verify authorization-server health and observability from both edges: TLS certificate and hostname, OIDC discovery, canonical issuer, JWKS, liveness, readiness, Prometheus metrics, structured logs, and absence of credentials, tokens, authorization codes, session IDs, password data, and user labels from diagnostics.
 - [x] 10.5 Verify canonical-only OAuth routing: `auth.calcifer.tech` resolves to Cloud from the public path and to Home from the LAN path; the canonical Google callback is the only registered callback; `auth-cloud.calcifer.tech` and `auth-home.calcifer.tech` are absent from client, Grafana, ingress, and Google configuration and cannot be used as OAuth endpoint profiles.
-- [ ] 10.6 Verify connected authentication end to end from both network locations: password login, Google login, authorization-code exchange, PKCE/state validation, client credentials, canonical claims, Grafana OIDC login, and resource-server JWT validation all succeed through the canonical hostname.
+- [x] 10.6 Verify connected authentication end to end from both network locations: password login, Google login, authorization-code exchange, PKCE/state validation, client credentials, canonical claims, Grafana OIDC login, and resource-server JWT validation all succeed through the canonical hostname.
 - [x] 10.7 Verify Redis safety and persistence without exposing credentials or values: ACL authentication and key restrictions work, `noeviction` and memory limits are active, AOF/PVC persistence is healthy, restart persistence preserves an unexpired connected flow, generation-scoped keys are used, and old-generation cleanup cannot affect control or active-generation keys.
 - [x] 10.8 From both nodes, verify WireGuard peer identity, recent handshake, tunnel addresses, routes, firewall rules, and listening sockets with `wg`, `ip`, and host firewall tooling; confirm only the declared Home-to-Cloud Redis flow is permitted and no Pod/Service CIDR is routed across the tunnel.
 - [x] 10.9 From an allowed Home path, verify Redis connectivity through the private endpoint; from an Internet host and from undeclared node ports, verify the Redis endpoint is unreachable. Record only reachability and exit status, never credentials, command arguments containing secrets, or stored values.
 - [x] 10.10 Run the controlled outage scenario using node-level SSH and Kubernetes observation: interrupt Home private transit, wait for failure hysteresis, verify Home enters `ISOLATED` with a fresh epoch and retains LAN password login while Google fails closed, verify Cloud remains connected and usable, and confirm liveness/readiness and alerts match the specification.
 - [x] 10.11 Restore private transit and verify automatic recovery without `kubectl apply`, pod restart, Redis flush, manual generation change, or other operator recovery command: observe the stable-success window, recovery lease/gate, temporary stateful unavailability, exactly one generation advance, discarded Home-local state, return to `CONNECTED`, and successful fresh authentication.
-- [ ] 10.12 Verify failure and fencing semantics: ambiguous Redis mutations fail without local retry, pre-recovery sessions and authorization codes are rejected, isolated state never appears in Redis, old generations are inaccessible, already issued short-lived JWTs remain valid only until expiry, refresh tokens remain disabled, and recovery owner/gate TTLs release safely after a simulated owner crash.
-- [ ] 10.13 Produce a sanitized verification record containing cluster contexts, Git/Flux revisions, resource and probe status, connectivity results, observed state transitions, generation transition count, alert outcomes, and test timestamps; explicitly mark every item in this section passed before closing the change.
+- [x] 10.12 Verify failure and fencing semantics: ambiguous Redis mutations fail without local retry, pre-recovery sessions and authorization codes are rejected, isolated state never appears in Redis, old generations are inaccessible, already issued short-lived JWTs remain valid only until expiry, refresh tokens remain disabled, and recovery owner/gate TTLs release safely after a simulated owner crash.
+- [x] 10.13 Produce a sanitized verification record containing cluster contexts, Git/Flux revisions, resource and probe status, connectivity results, observed state transitions, generation transition count, alert outcomes, and test timestamps; explicitly mark every item in this section passed before closing the change.
 
 ### Verification note
 

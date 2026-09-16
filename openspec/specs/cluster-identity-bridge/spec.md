@@ -81,9 +81,12 @@ login is enabled. The password form SHALL retain CSRF protection.
 
 ### Requirement: Tokens are interoperable and scoped
 Cloud and Home SHALL use equivalent registered clients, audiences, scopes,
-roles, token lifetimes, and signing material required for interoperability.
-Issued JWTs SHALL contain issuer, subject, expiry, audience, scopes, and only
-the configured authorization claims. They SHALL not contain cluster identity.
+roles, short access-token lifetimes, and signing material required for
+interoperability. Issued JWTs SHALL contain issuer, subject, expiry, audience,
+scopes, and only the configured authorization claims. They SHALL not contain
+cluster identity. The authorization server SHALL expose only authorization-code
+and client-credentials grants and SHALL NOT issue refresh tokens in this
+version.
 
 #### Scenario: Client credentials work against either edge
 - **WHEN** a configured private client requests an allowed scope through
@@ -94,6 +97,10 @@ the configured authorization claims. They SHALL not contain cluster identity.
 #### Scenario: Unauthorized scope is requested
 - **WHEN** a client requests a scope not registered for it
 - **THEN** both instances SHALL deny the request without issuing a JWT
+
+#### Scenario: Client requests a refresh token
+- **WHEN** a client requests the refresh-token grant or the `offline_access` scope
+- **THEN** the authorization server SHALL deny the request without issuing a refresh token
 
 ### Requirement: Identity secrets remain encrypted and equivalent
 Signing keys, Google secrets, client secrets, and password hashes SHALL be
@@ -113,17 +120,20 @@ emitted by diagnostics.
   authorization codes, access tokens, and signing-key contents
 
 ### Requirement: OAuth state locality is explicit
-The v1 system SHALL keep an authorization-code flow and browser session on the
-identity instance selected by the application's pinned endpoint profile. It
-SHALL not claim replicated cross-cluster browser sessions or seamless
-continuation after a path change.
+The system SHALL use shared generation-scoped Redis authorization and
+browser-session state while Cloud and Home are connected. During Home
+isolation, new Home flows SHALL remain local to the active isolation epoch. No
+flow SHALL be promised seamless continuation across an endpoint hostname,
+store owner, isolation epoch, or Redis generation change.
 
-#### Scenario: Normal Home application login
-- **WHEN** a user starts and completes a Home application's OAuth flow through
-  the Home endpoint profile
-- **THEN** authorization and token exchange SHALL be handled through Home
+#### Scenario: Normal Home application login while connected
+- **WHEN** a user starts and completes a Home application's OAuth flow through the Home endpoint profile while Redis is available
+- **THEN** Home SHALL handle the flow using the active shared Redis generation
 
-#### Scenario: Path changes during an active flow
-- **WHEN** an active OAuth flow changes endpoint profile
-- **THEN** the flow MAY require restarting authentication rather than relying
-  on unsynchronized in-memory state
+#### Scenario: Home application login while isolated
+- **WHEN** a user starts a Home application's OAuth flow after Home has entered isolation
+- **THEN** Home SHALL handle the complete flow only through the active local isolation epoch
+
+#### Scenario: Path or state generation changes during an active flow
+- **WHEN** an active OAuth flow changes endpoint profile, store owner, isolation epoch, or Redis generation
+- **THEN** the flow SHALL require restarting authentication rather than searching unsynchronized or obsolete state

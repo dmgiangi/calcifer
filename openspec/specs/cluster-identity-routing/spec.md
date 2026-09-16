@@ -7,38 +7,33 @@ DNS, and TLS/ingress behavior for Cloud and Home identity access.
 
 ## Requirements
 
-### Requirement: Canonical issuer and stateful endpoint profiles are separate
-The system SHALL retain `https://auth.calcifer.tech` as the sole token issuer.
-It SHALL expose `auth-cloud.calcifer.tech` as a public Cloud stateful OAuth
-endpoint and `auth-home.calcifer.tech` as a Home-LAN stateful OAuth endpoint.
-Cloud application deployments SHALL use the Cloud endpoint for authorization,
-token, and user-info requests; Home application deployments SHALL use the Home
-endpoint. Neither endpoint SHALL create a second issuer.
-
-#### Scenario: LAN browser signs in to a Cloud application
-- **WHEN** a LAN browser starts a Cloud application's OAuth flow
-- **THEN** its authorization request and the Cloud backend's token exchange
-  SHALL both reach the Cloud authorization-server through
-  `auth-cloud.calcifer.tech`
-
-#### Scenario: LAN browser signs in to a Home application
-- **WHEN** a LAN browser starts a Home application's OAuth flow
-- **THEN** its authorization request and the Home backend's token exchange
-  SHALL both reach the Home authorization-server through
-  `auth-home.calcifer.tech` without requiring Internet access
-
-### Requirement: Compatibility hostname remains split-horizon
+### Requirement: Canonical hostname is the only stateful OAuth profile
 The system SHALL ensure that public DNS resolves `auth.calcifer.tech` to the
-Cloud edge, while Home
-split-horizon DNS SHALL resolve it to the Home edge. This hostname SHALL remain
-valid for issuer and JWKS validation compatibility, but applications whose
-browser and backend can have different network locality SHALL NOT use it as a
-stateful OAuth endpoint profile.
+Cloud edge, while Home split-horizon DNS SHALL resolve it to the Home edge.
+`auth.calcifer.tech` SHALL remain the sole token issuer, stateful OAuth
+hostname, and authorized Google callback. An anonymous request to its root
+SHALL redirect to `/login`; an authenticated request SHALL reach a session page
+with logout. The canonical authorization-server session SHALL be reused when a
+later OAuth client starts its authorization request, but SHALL not be shared as
+an application-domain cookie. The `auth-cloud.calcifer.tech` and
+`auth-home.calcifer.tech` hostnames SHALL not be advertised or used as OAuth
+endpoint profiles.
 
-#### Scenario: Issuer validation uses the compatibility hostname
+#### Scenario: Issuer and OAuth endpoints use the canonical hostname
 - **WHEN** an application validates a token issued through either endpoint
-- **THEN** it SHALL accept the canonical issuer `https://auth.calcifer.tech`
-  without depending on the endpoint hostname that issued the token
+- **THEN** it SHALL use and accept `https://auth.calcifer.tech` for issuer, authorization, token, user-info, and callback URLs
+
+#### Scenario: LAN user starts Google login on the canonical hostname
+- **WHEN** a LAN browser initiates Google login through `auth.calcifer.tech` and Internet access remains available
+- **THEN** Google SHALL return to `https://auth.calcifer.tech/login/oauth2/code/google` and split-horizon DNS SHALL route the callback to Home
+
+#### Scenario: User starts Google login through either network location
+- **WHEN** a browser initiates Google login through the canonical hostname from Cloud or Home
+- **THEN** Google SHALL return to `https://auth.calcifer.tech/login/oauth2/code/google`, with split-horizon DNS selecting the reachable local edge
+
+#### Scenario: Direct canonical login enables client SSO
+- **WHEN** an anonymous browser visits `https://auth.calcifer.tech/`
+- **THEN** it SHALL be redirected to `/login`; after successful direct password or Google authentication it SHALL reach an authenticated session page, and a later `/oauth2/authorize` request for a registered client SHALL complete without another credential prompt while the same fenced authorization-server session remains valid
 
 ### Requirement: Home identity access is independent of the Internet
 The Home identity access path SHALL continue to operate when Home cannot reach
@@ -54,14 +49,24 @@ temporary outage if the current certificate remains valid.
   locally and complete password authentication
 
 ### Requirement: Identity routing does not depend on the private transit tunnel
-Normal Cloud authentication SHALL be served by the Cloud authorization-server
-instance, and normal Home authentication SHALL be served by the Home instance.
-Neither path SHALL require the Cloud/Home WireGuard tunnel to be available.
+Cloud and Home identity endpoints SHALL remain independently reachable through
+their local ingress paths. Home MAY use the private transit tunnel for connected
+Redis state, but loss of that dependency SHALL automatically move Home to
+isolated local state after failure hysteresis; Cloud SHALL continue through
+Redis when available. During generation recovery, stateful endpoints MAY return
+temporary unavailability and SHALL resume without operator action.
 
 #### Scenario: Home tunnel is down
-- **WHEN** the Cloud/Home private transit tunnel is unavailable
-- **THEN** Cloud public authentication and Home LAN authentication SHALL remain
-  independently reachable through their local edges
+- **WHEN** the Cloud/Home private transit tunnel becomes unavailable long enough to cross the failure threshold
+- **THEN** Cloud public authentication SHALL remain available through Redis and Home LAN password authentication SHALL resume through fresh isolated state
+
+#### Scenario: Home tunnel returns
+- **WHEN** private transit and Redis remain healthy for the configured recovery window
+- **THEN** automatic generation recovery SHALL complete and the canonical endpoint SHALL resume connected operation after affected users restart authentication
+
+#### Scenario: Recovery is in progress
+- **WHEN** the expiring recovery gate is active
+- **THEN** stateful identity endpoints SHALL return temporary unavailability rather than writing authorization state during the generation transition
 
 ### Requirement: Both paths enforce equivalent TLS and ingress protection
 Cloud and Home SHALL serve valid certificates for their endpoint profile and
