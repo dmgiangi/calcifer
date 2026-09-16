@@ -11,6 +11,7 @@ Home authentication currently keeps OAuth grants and browser sessions in process
 - Automatically recover after stable Redis connectivity returns by acquiring a lease, atomically advancing a Redis generation, discarding Home-local state, and requiring affected browser flows to authenticate again.
 - Keep Cloud fail-closed when Redis is unavailable and expose temporary recovery unavailability rather than creating a second autonomous writer.
 - Persist connected browser sessions in Redis and make `https://auth.calcifer.tech` the only supported stateful OAuth hostname and Google callback URI. Retire the `auth-cloud.calcifer.tech` and `auth-home.calcifer.tech` OAuth endpoints and callbacks. Google login remains unavailable when Home has no Internet, while local password login remains available.
+- Make the canonical root a safe interactive entry point: anonymous requests to `/` go to `/login`, authenticated requests reach an account/session page with logout, and an authentication established directly there is reused by later OAuth authorization requests.
 - Add health, metrics, logs, alerts, and acceptance tests for mode transitions, Redis availability, recovery, interrupted OAuth flows, and tunnel loss without exposing credentials or token material.
 - **BREAKING**: OAuth flows and browser sessions active before isolation or generation recovery are invalidated and must restart; the former guarantee of always process-local authorization state is removed.
 

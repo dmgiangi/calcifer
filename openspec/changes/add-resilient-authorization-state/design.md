@@ -62,6 +62,12 @@ The Google OAuth client authorizes only `https://auth.calcifer.tech/login/oauth2
 
 The canonical hostname may resolve to a different authorization instance when the client changes network locality. Connected Redis state permits normal cross-instance completion, but no flow is promised to survive a mode or generation change. During complete Home Internet loss, Google login cannot complete and the local password path is used.
 
+### Make direct canonical login a safe SSO entry point
+
+The canonical root distinguishes anonymous and authenticated users. An anonymous `GET /` redirects to `/login`; an authenticated request redirects to an authenticated session page that offers logout. Both password and Google login retain Spring Security's saved-request behavior: an OAuth authorization request resumes after authentication, while a direct login without a saved authorization request lands on the session page.
+
+The authorization-server session is the SSO session, not an application-domain cookie. A later client redirects to `/oauth2/authorize`, which sees the authenticated canonical session and issues that client a fresh authorization code without prompting for credentials. No arbitrary post-login return URL is accepted. The existing generation and isolation fencing still applies, so direct-login SSO is invalidated by an isolation epoch or generation change.
+
 ### Bound residual token validity
 
 Generation recovery invalidates stored grants and sessions but cannot revoke self-contained JWTs already issued. Authorization-code and client-credentials access tokens therefore keep a short configured lifetime, and this change does not enable refresh tokens. Signing keys are not rotated during recovery.

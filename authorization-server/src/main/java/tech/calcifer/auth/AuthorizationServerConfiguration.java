@@ -85,7 +85,7 @@ class AuthorizationServerConfiguration {
       AuthenticationSuccessHandler oauth2LoginSuccessHandler) throws Exception {
     http.authorizeHttpRequests(authorize -> authorize
         .requestMatchers("/actuator/health/**", "/actuator/prometheus", "/internal/traefik/forward-auth",
-            "/error", "/login", "/login.html", "/login.css", "/login.js", "/google-mark.svg", "/login/config",
+            "/", "/error", "/login", "/login.html", "/login.css", "/login.js", "/google-mark.svg", "/login/config",
             "/login/csrf", "/oauth2/**", "/login/oauth2/**").permitAll()
             .anyRequest().authenticated())
         .requestCache(cache -> cache.requestCache(authorizationRequestCache()))
@@ -98,7 +98,8 @@ class AuthorizationServerConfiguration {
       // With multiple filter chains, do not rely on the global manager discovery
       // to attach the conditional local UserDetailsService to form login.
       http.authenticationProvider(localPasswordProvider.getObject());
-      http.formLogin(form -> form.loginPage("/login").permitAll());
+      http.formLogin(form -> form.loginPage("/login")
+          .successHandler(oauth2LoginSuccessHandler).permitAll());
     }
     return http.build();
   }
@@ -115,6 +116,7 @@ class AuthorizationServerConfiguration {
   AuthenticationSuccessHandler oauth2LoginSuccessHandler(RequestCache authorizationRequestCache) {
     SavedRequestAwareAuthenticationSuccessHandler handler = new SavedRequestAwareAuthenticationSuccessHandler();
     handler.setRequestCache(authorizationRequestCache);
+    handler.setDefaultTargetUrl("/");
     return handler;
   }
 

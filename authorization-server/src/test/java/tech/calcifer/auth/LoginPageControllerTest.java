@@ -3,6 +3,7 @@ package tech.calcifer.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.TestingAuthenticationToken;
 
 class LoginPageControllerTest {
   private static final IdentityProperties BASE = new IdentityProperties(
@@ -14,8 +15,20 @@ class LoginPageControllerTest {
   @Test
   void alwaysOffersGoogleAndHidesPasswordUntilEnabled() {
     var controller = new LoginPageController(BASE);
-    assertThat(controller.login()).isEqualTo("forward:/login.html");
+    assertThat(controller.root(null)).isEqualTo("redirect:/login");
+    assertThat(controller.login(null)).isEqualTo("forward:/login.html");
     assertThat(controller.loginConfig()).containsEntry("passwordEnabled", false);
+  }
+
+  @Test
+  void authenticatedCanonicalRootAndLoginLeadToSessionPage() {
+    var controller = new LoginPageController(BASE);
+    var authentication = new TestingAuthenticationToken("user:admin", "ignored", "ROLE_ADMIN");
+    authentication.setAuthenticated(true);
+
+    assertThat(controller.root(authentication)).isEqualTo("redirect:/session");
+    assertThat(controller.login(authentication)).isEqualTo("redirect:/session");
+    assertThat(controller.session()).isEqualTo("forward:/session.html");
   }
 
   @Test

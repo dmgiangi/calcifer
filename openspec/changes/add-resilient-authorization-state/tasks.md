@@ -46,6 +46,7 @@
 - [x] 7.2 Verify short access-token lifetimes and add tests that refresh-token grant and `offline_access` requests remain rejected.
 - [ ] 7.3 Configure only `https://auth.calcifer.tech/login/oauth2/code/google`, remove the `-cloud` and `-home` callback registrations and OAuth endpoint profiles, and test canonical login through both split-horizon paths.
 - [x] 7.4 Update authorization integration and operations documentation for isolated password login, unavailable offline Google login, automatic forced reauthentication, residual JWT lifetime, and rollback.
+- [x] 7.5 Add a canonical root redirect, authenticated session/logout page, and tests proving direct canonical login can supply the authorization-server session used by subsequent OAuth requests.
 
 ## 8. Add observability and operational safeguards
 

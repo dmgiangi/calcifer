@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Canonical hostname is the only stateful OAuth profile
-The system SHALL ensure that public DNS resolves `auth.calcifer.tech` to the Cloud edge, while Home split-horizon DNS SHALL resolve it to the Home edge. `auth.calcifer.tech` SHALL remain the sole token issuer, stateful OAuth hostname, and authorized Google callback. The `auth-cloud.calcifer.tech` and `auth-home.calcifer.tech` hostnames SHALL not be advertised or used as OAuth endpoint profiles.
+The system SHALL ensure that public DNS resolves `auth.calcifer.tech` to the Cloud edge, while Home split-horizon DNS SHALL resolve it to the Home edge. `auth.calcifer.tech` SHALL remain the sole token issuer, stateful OAuth hostname, and authorized Google callback. An anonymous request to its root SHALL redirect to `/login`; an authenticated request SHALL reach a session page with logout. The canonical authorization-server session SHALL be reused when a later OAuth client starts its authorization request, but SHALL not be shared as an application-domain cookie. The `auth-cloud.calcifer.tech` and `auth-home.calcifer.tech` hostnames SHALL not be advertised or used as OAuth endpoint profiles.
 
 #### Scenario: Issuer and OAuth endpoints use the canonical hostname
 - **WHEN** an application validates a token issued through either endpoint
@@ -14,6 +14,10 @@ The system SHALL ensure that public DNS resolves `auth.calcifer.tech` to the Clo
 #### Scenario: User starts Google login through either network location
 - **WHEN** a browser initiates Google login through the canonical hostname from Cloud or Home
 - **THEN** Google SHALL return to `https://auth.calcifer.tech/login/oauth2/code/google`, with split-horizon DNS selecting the reachable local edge
+
+#### Scenario: Direct canonical login enables client SSO
+- **WHEN** an anonymous browser visits `https://auth.calcifer.tech/`
+- **THEN** it SHALL be redirected to `/login`; after successful direct password or Google authentication it SHALL reach an authenticated session page, and a later `/oauth2/authorize` request for a registered client SHALL complete without another credential prompt while the same fenced authorization-server session remains valid
 
 ### Requirement: Identity routing does not depend on the private transit tunnel
 Cloud and Home identity endpoints SHALL remain independently reachable through their local ingress paths. Home MAY use the private transit tunnel for connected Redis state, but loss of that dependency SHALL automatically move Home to isolated local state after failure hysteresis; Cloud SHALL continue through Redis when available. During generation recovery, stateful endpoints MAY return temporary unavailability and SHALL resume without operator action.

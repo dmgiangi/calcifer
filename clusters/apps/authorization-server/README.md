@@ -56,6 +56,14 @@ outage and never merges isolated state back into Redis. The retired
 `auth-cloud.calcifer.tech` and `auth-home.calcifer.tech` names are not supported
 OAuth endpoints.
 
+Visiting `https://auth.calcifer.tech/` anonymously redirects to `/login`.
+After a direct password or Google login, the canonical root leads to an
+authenticated session page with logout. This is central SSO: an application
+still owns its own cookie, but its later `/oauth2/authorize` request reuses the
+valid authorization-server session and receives a fresh authorization code
+without another credential prompt. Isolation epochs and Redis-generation
+recovery deliberately invalidate that session and require a fresh login.
+
 Both overlays enable resilient state with the same `auth` Redis namespace and a
 five-minute access-token lifetime. Cloud fails closed when Redis is unavailable;
 Home keeps local password login available after failure hysteresis and recovers
