@@ -23,10 +23,10 @@ The system SHALL expose current and historical metrics through a Prometheus-comp
 - **THEN** VictoriaMetrics SHALL return matching samples within its configured retention period.
 
 ### Requirement: Metrics retention ownership
-The system SHALL enforce retention of persisted metric data through VictoriaMetrics runtime retention settings on its local persistent volume.
+The system SHALL enforce retention of persisted metric data through VictoriaMetrics runtime retention settings on its local persistent volume configured to a 365-day retention period (`retentionPeriod: 365d`).
 
 #### Scenario: Samples exceed configured retention
-- **WHEN** persisted metric parts exceed the configured retention period
+- **WHEN** persisted metric parts exceed the configured 365-day retention period
 - **THEN** VictoriaMetrics SHALL prune expired data partitions during background merge operations.
 
 ### Requirement: Observability platform meta-monitoring

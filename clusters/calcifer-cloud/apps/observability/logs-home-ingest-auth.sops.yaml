@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: logs-home-ingest-auth
+    namespace: monitoring
+stringData:
+    users: ENC[AES256_GCM,data:F9TxNlXQnHPkqxcpHyyPJgfqzkVPMmupCfteii50Pi7yWNsn9SW7Ge8eUO4tDyiPE9w5WWux2xw5tPE0rnDwsnTBRKXwrHo=,iv:65SsvxcDrPqaPbfV7DDKKx+PH8ejPllVeZBTgFZHVWg=,tag:rAGE5z24pz9aSo9HuikDzA==,type:str]
+type: Opaque
+sops:
+    age:
+        - recipient: age1zrcssj5duesp5x4pnp5rxk96dy378fg68ntpvlyxdhwzcchrvsgqcc9uqn
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBuM0trWDZ5TlgyQjJIR2hx
+            b3pxR3hHcXdoYkRNUXYwdVZtdFRFdG1mbnpzCkYrTlRhM0hHbnRvaHlxdmNUcnJM
+            c2k2ZFdJbU81b0p4VkJiL0RRWnhwbUUKLS0tIHNQbi9FL2J5Q2N6dDNodTZqTExv
+            YWNXQlBIZnB3Z3R5V2taejAwYjdobFEKjSz74AkGLyXamLo3/CwRTi68pM9XiySe
+            PZEwSItjIg4AM+JMFKo3AibdI0DVhhIAClxpPo6zpUvqojFgNeys2A==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-09-16T09:32:54Z"
+    mac: ENC[AES256_GCM,data:/NwE2flxyVwzmtmoEWV9Z9YTPuMdE+toOInQ3sbSIMVZ3j1EfmEFTAhM5RMzZNsxO32lAjAaO9+z2bVXof/GK9boBiV+W0RDnRf0AtCFA9xA4OQCamJ865z9eU2dFMpl5R2zW88XxZmJ0nD4ceomEF6IBzu4gZhufVb7ZfgKvFA=,iv:Io81Ubcix/Qea/S4OXNk7vEHZTrt0bzoG7wtzcMzJC4=,tag:i2qyDL9x5w2itdnDyW29ng==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.12.2

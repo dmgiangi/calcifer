@@ -205,7 +205,7 @@ spec:
     server:
       fullnameOverride: victoria-metrics
       replicaCount: 1
-      retentionPeriod: 30d
+      retentionPeriod: 365d
       podLabels:
         observability.calcifer.tech/metrics-backend: victoria-metrics
       persistentVolume:
@@ -253,7 +253,7 @@ spec:
     server:
       fullnameOverride: victoria-logs
       replicaCount: 1
-      retentionPeriod: 30d
+      retentionPeriod: 14d
       retentionDiskSpaceUsage: 8
       podLabels:
         observability.calcifer.tech/logs-backend: victoria-logs

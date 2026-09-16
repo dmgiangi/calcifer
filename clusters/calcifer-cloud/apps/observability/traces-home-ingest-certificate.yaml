@@ -1,12 +1,12 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: loki-home-ingest
+  name: traces-home-ingest
   namespace: monitoring
 spec:
-  secretName: loki-home-ingest-tls
+  secretName: traces-home-ingest-tls
   dnsNames:
-    - loki-ingest.calcifer.tech
+    - traces-ingest.calcifer.tech
   issuerRef:
     kind: ClusterIssuer
     name: letsencrypt-production-azure

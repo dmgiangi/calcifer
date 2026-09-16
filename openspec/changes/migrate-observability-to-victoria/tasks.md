@@ -39,3 +39,12 @@
 - [x] 6.1 Validate Flux reconciliation and health of all observability pods across `calcifer-cloud` and `calcifer-home`
 - [x] 6.2 Execute acceptance queries via Grafana HTTP API validating PromQL (VictoriaMetrics), logs (VictoriaLogs), and traces (VictoriaTraces)
 - [x] 6.3 Execute a test Velero backup and verify backup completion status and data upload in Azure Blob
+
+## 7. Retention Configuration & Ingestion Endpoint Modernization
+
+- [ ] 7.1 Configure VictoriaMetrics retention to 365d and VictoriaLogs retention to 14d in `clusters/calcifer-cloud/apps/observability/helmreleases.yaml`
+- [ ] 7.2 Provision TLS certificates (`metrics-home-ingest`, `logs-home-ingest`, `traces-home-ingest`) and update IngressRoutes/middlewares in `clusters/calcifer-cloud/apps/observability/home-ingest-traefik.yaml`
+- [ ] 7.3 Update BasicAuth secrets on Cloud (`metrics-home-ingest-auth`, `logs-home-ingest-auth`, `traces-home-ingest-auth`) and credentials on Home (`home-ingest-credentials`)
+- [ ] 7.4 Reconfigure `calcifer-home` Alloy hostAliases, environment variables, and push endpoints to use `metrics-ingest.calcifer.tech`, `logs-ingest.calcifer.tech`, and `traces-ingest.calcifer.tech`
+- [ ] 7.5 Decommission legacy certificate, secret, and route manifests (`thanos-home-ingest-*`, `loki-home-ingest-*`, `tempo-home-ingest-*`)
+- [ ] 7.6 Validate Flux reconciliation, certificate issuance, and live cross-cluster ingestion

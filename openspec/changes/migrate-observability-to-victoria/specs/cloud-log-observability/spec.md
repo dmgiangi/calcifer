@@ -23,8 +23,8 @@ The system SHALL expose VictoriaLogs as a log query datasource to Grafana while 
 - **THEN** the request SHALL not reach a publicly exposed VictoriaLogs Service or Ingress.
 
 ### Requirement: Durable log storage
-The system SHALL persist log data on a local ext4 PersistentVolumeClaim attached to VictoriaLogs, managed through built-in retention partitioning.
+The system SHALL persist log data on a local ext4 PersistentVolumeClaim attached to VictoriaLogs, managed through built-in retention partitioning configured to a 14-day retention period (`retentionPeriod: 14d`).
 
 #### Scenario: Log retention expiration
-- **WHEN** log data partitions exceed the configured retention period
+- **WHEN** log data partitions exceed the configured 14-day retention period
 - **THEN** VictoriaLogs SHALL prune the expired daily partitions from local storage.

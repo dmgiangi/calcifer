@@ -6,12 +6,12 @@ resources:
   - helmreleases.yaml
   - grafana-admin.sops.yaml
   - velero-credentials.sops.yaml
-  - thanos-home-ingest-certificate.yaml
-  - loki-home-ingest-certificate.yaml
-  - tempo-home-ingest-certificate.yaml
-  - thanos-home-ingest-auth.sops.yaml
-  - loki-home-ingest-auth.sops.yaml
-  - tempo-home-ingest-auth.sops.yaml
+  - metrics-home-ingest-certificate.yaml
+  - logs-home-ingest-certificate.yaml
+  - traces-home-ingest-certificate.yaml
+  - metrics-home-ingest-auth.sops.yaml
+  - logs-home-ingest-auth.sops.yaml
+  - traces-home-ingest-auth.sops.yaml
   - home-ingest-traefik.yaml
   - home-ingest-nodeport.yaml
   - victoria-traces-ingress-network-policy.yaml

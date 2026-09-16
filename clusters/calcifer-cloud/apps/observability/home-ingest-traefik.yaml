@@ -11,35 +11,35 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: home-thanos-ingest-auth
+  name: home-metrics-ingest-auth
   namespace: monitoring
 spec:
   basicAuth:
-    secret: thanos-home-ingest-auth
+    secret: metrics-home-ingest-auth
     removeHeader: true
-    headerField: X-Home-Thanos-Ingest
+    headerField: X-Home-Metrics-Ingest
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: home-loki-ingest-auth
+  name: home-logs-ingest-auth
   namespace: monitoring
 spec:
   basicAuth:
-    secret: loki-home-ingest-auth
+    secret: logs-home-ingest-auth
     removeHeader: true
-    headerField: X-Home-Loki-Ingest
+    headerField: X-Home-Logs-Ingest
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: home-tempo-ingest-auth
+  name: home-traces-ingest-auth
   namespace: monitoring
 spec:
   basicAuth:
-    secret: tempo-home-ingest-auth
+    secret: traces-home-ingest-auth
     removeHeader: true
-    headerField: X-Home-Tempo-Ingest
+    headerField: X-Home-Traces-Ingest
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
@@ -74,62 +74,62 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: home-thanos-ingest
+  name: home-metrics-ingest
   namespace: monitoring
 spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`thanos-ingest.calcifer.tech`) && (Path(`/api/v1/receive`) || Path(`/api/v1/write`))
+    - match: Host(`metrics-ingest.calcifer.tech`) && (Path(`/api/v1/receive`) || Path(`/api/v1/write`))
       kind: Rule
       middlewares:
         - name: home-ingest-wireguard-source
-        - name: home-thanos-ingest-auth
+        - name: home-metrics-ingest-auth
         - name: home-victoria-metrics-path
       services:
         - name: victoria-metrics
           port: 8428
   tls:
-    secretName: thanos-home-ingest-tls
+    secretName: metrics-home-ingest-tls
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: home-loki-ingest
+  name: home-logs-ingest
   namespace: monitoring
 spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`loki-ingest.calcifer.tech`) && (Path(`/loki/api/v1/push`) || Path(`/insert/loki/api/v1/push`))
+    - match: Host(`logs-ingest.calcifer.tech`) && (Path(`/loki/api/v1/push`) || Path(`/insert/loki/api/v1/push`))
       kind: Rule
       middlewares:
         - name: home-ingest-wireguard-source
-        - name: home-loki-ingest-auth
+        - name: home-logs-ingest-auth
         - name: home-victoria-logs-path
       services:
         - name: victoria-logs
           port: 9428
   tls:
-    secretName: loki-home-ingest-tls
+    secretName: logs-home-ingest-tls
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: home-tempo-ingest
+  name: home-traces-ingest
   namespace: monitoring
 spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`tempo-ingest.calcifer.tech`) && Path(`/v1/traces`)
+    - match: Host(`traces-ingest.calcifer.tech`) && (Path(`/v1/traces`) || Path(`/insert/opentelemetry/v1/traces`))
       kind: Rule
       middlewares:
         - name: home-ingest-wireguard-source
-        - name: home-tempo-ingest-auth
+        - name: home-traces-ingest-auth
         - name: home-victoria-traces-path
       services:
         - name: victoria-traces
           port: 10428
   tls:
-    secretName: tempo-home-ingest-tls
+    secretName: traces-home-ingest-tls

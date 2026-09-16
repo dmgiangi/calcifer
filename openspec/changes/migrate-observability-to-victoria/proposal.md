@@ -4,12 +4,12 @@ The current observability deployment on `calcifer-cloud` is fragmented across Th
 
 ## What Changes
 
-- Replace Thanos with single-node VictoriaMetrics (`victoria-metrics-single` Helm release) as the primary metrics ingest (`/api/v1/write`) and PromQL-compatible query engine.
-- Replace Loki with single-node VictoriaLogs (`victoria-logs-single` Helm release) for log collection via Loki push protocol (`/insert/loki/api/v1/push`) and LogsQL querying.
-- Retain VictoriaTraces (`victoria-traces-single` Helm release) on local ext4 storage, preserving OpenTelemetry trace ingestion and Jaeger-compatible query endpoints.
+- Replace Thanos with single-node VictoriaMetrics (`victoria-metrics-single` Helm release) as the primary metrics ingest (`/api/v1/write`) and PromQL-compatible query engine, configured with 365-day retention.
+- Replace Loki with single-node VictoriaLogs (`victoria-logs-single` Helm release) for log collection via Loki push protocol (`/insert/loki/api/v1/push`) and LogsQL querying, configured with 14-day retention.
+- Retain VictoriaTraces (`victoria-traces-single` Helm release) on local ext4 storage, preserving OpenTelemetry trace ingestion and Jaeger-compatible query endpoints, configured with 7-day retention.
 - Configure all three backends to use `local-path` ext4 PVCs for active runtime data, removing active Azure Blob storage requirements from database runtimes.
-- Reconfigure Grafana Alloy on `calcifer-cloud` and `calcifer-home` to ship metrics to VictoriaMetrics and logs to VictoriaLogs.
-- Update Traefik private WireGuard ingest routes and auth middleware on `calcifer-cloud` to forward Home metrics and logs to the new Victoria services.
+- Reconfigure Grafana Alloy on `calcifer-cloud` and `calcifer-home` to ship metrics to VictoriaMetrics, logs to VictoriaLogs, and traces to VictoriaTraces.
+- Modernize private WireGuard ingest routes, TLS certificates, and auth middleware on `calcifer-cloud` to generic signal-based hostnames (`metrics-ingest.calcifer.tech`, `logs-ingest.calcifer.tech`, `traces-ingest.calcifer.tech`), replacing legacy Thanos, Loki, and Tempo names.
 - Update Grafana datasources (`GrafanaDatasource`) to connect to VictoriaMetrics (Prometheus type), VictoriaLogs, and update trace-to-logs correlation in VictoriaTraces.
 - Adopt standard Grafana.com community dashboards (`GrafanaDashboard` with `grafanaCom`) for Kubernetes views, Node Exporter, VictoriaTraces, and VictoriaMetrics/VictoriaLogs operational visibility.
 - Install and configure Velero with the Microsoft Azure plugin and Kopia node-agent to perform scheduled, deduplicated, and encrypted File System Backups of observability PVCs to Azure Blob Storage.

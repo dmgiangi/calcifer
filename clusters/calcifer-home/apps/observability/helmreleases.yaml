@@ -141,40 +141,40 @@ spec:
       hostAliases:
         - ip: 172.31.255.1
           hostnames:
-            - thanos-ingest.calcifer.tech
-            - loki-ingest.calcifer.tech
-            - tempo-ingest.calcifer.tech
+            - metrics-ingest.calcifer.tech
+            - logs-ingest.calcifer.tech
+            - traces-ingest.calcifer.tech
       extraEnv:
-        - name: THANOS_INGEST_USERNAME
+        - name: METRICS_INGEST_USERNAME
           valueFrom:
             secretKeyRef:
               name: home-ingest-credentials
-              key: THANOS_INGEST_USERNAME
-        - name: THANOS_INGEST_PASSWORD
+              key: METRICS_INGEST_USERNAME
+        - name: METRICS_INGEST_PASSWORD
           valueFrom:
             secretKeyRef:
               name: home-ingest-credentials
-              key: THANOS_INGEST_PASSWORD
-        - name: LOKI_INGEST_USERNAME
+              key: METRICS_INGEST_PASSWORD
+        - name: LOGS_INGEST_USERNAME
           valueFrom:
             secretKeyRef:
               name: home-ingest-credentials
-              key: LOKI_INGEST_USERNAME
-        - name: LOKI_INGEST_PASSWORD
+              key: LOGS_INGEST_USERNAME
+        - name: LOGS_INGEST_PASSWORD
           valueFrom:
             secretKeyRef:
               name: home-ingest-credentials
-              key: LOKI_INGEST_PASSWORD
-        - name: TEMPO_INGEST_USERNAME
+              key: LOGS_INGEST_PASSWORD
+        - name: TRACES_INGEST_USERNAME
           valueFrom:
             secretKeyRef:
               name: home-ingest-credentials
-              key: TEMPO_INGEST_USERNAME
-        - name: TEMPO_INGEST_PASSWORD
+              key: TRACES_INGEST_USERNAME
+        - name: TRACES_INGEST_PASSWORD
           valueFrom:
             secretKeyRef:
               name: home-ingest-credentials
-              key: TEMPO_INGEST_PASSWORD
+              key: TRACES_INGEST_PASSWORD
       mounts:
         extra:
           - name: alloy-data
@@ -199,23 +199,23 @@ spec:
             timeout         = "1s"
             send_batch_size = 128
             output {
-              traces = [otelcol.exporter.otlphttp.tempo.input]
+              traces = [otelcol.exporter.otlphttp.traces.input]
             }
           }
 
-          otelcol.auth.basic "tempo" {
+          otelcol.auth.basic "traces" {
             // Alloy v1.19.2 accepts client_auth during validation but cannot
             // build it at runtime; use the compatible form until it is upgraded.
-            username = sys.env("TEMPO_INGEST_USERNAME")
-            password = sys.env("TEMPO_INGEST_PASSWORD")
+            username = sys.env("TRACES_INGEST_USERNAME")
+            password = sys.env("TRACES_INGEST_PASSWORD")
           }
 
-          otelcol.exporter.otlphttp "tempo" {
+          otelcol.exporter.otlphttp "traces" {
             client {
-              endpoint = "https://tempo-ingest.calcifer.tech:32443"
-              auth     = otelcol.auth.basic.tempo.handler
+              endpoint = "https://traces-ingest.calcifer.tech:32443"
+              auth     = otelcol.auth.basic.traces.handler
               tls {
-                server_name = "tempo-ingest.calcifer.tech"
+                server_name = "traces-ingest.calcifer.tech"
               }
             }
           }
@@ -420,13 +420,13 @@ spec:
               cluster = "calcifer-home",
             }
             endpoint {
-              url = "https://thanos-ingest.calcifer.tech:32443/api/v1/write"
+              url = "https://metrics-ingest.calcifer.tech:32443/api/v1/write"
               basic_auth {
-                username = sys.env("THANOS_INGEST_USERNAME")
-                password = sys.env("THANOS_INGEST_PASSWORD")
+                username = sys.env("METRICS_INGEST_USERNAME")
+                password = sys.env("METRICS_INGEST_PASSWORD")
               }
               tls_config {
-                server_name = "thanos-ingest.calcifer.tech"
+                server_name = "metrics-ingest.calcifer.tech"
               }
               queue_config {
                 max_backoff = "5m"
@@ -440,13 +440,13 @@ spec:
               cluster = "calcifer-home",
             }
             endpoint {
-              url = "https://loki-ingest.calcifer.tech:32443/insert/loki/api/v1/push"
+              url = "https://logs-ingest.calcifer.tech:32443/insert/loki/api/v1/push"
               basic_auth {
-                username = sys.env("LOKI_INGEST_USERNAME")
-                password = sys.env("LOKI_INGEST_PASSWORD")
+                username = sys.env("LOGS_INGEST_USERNAME")
+                password = sys.env("LOGS_INGEST_PASSWORD")
               }
               tls_config {
-                server_name = "loki-ingest.calcifer.tech"
+                server_name = "logs-ingest.calcifer.tech"
               }
               queue_config {
                 capacity = "32MiB"

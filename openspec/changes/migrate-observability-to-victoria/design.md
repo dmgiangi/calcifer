@@ -47,6 +47,14 @@
 - **Choice**: Use Grafana Operator `GrafanaDashboard` CRDs with `spec.grafanaCom.id` to provision official/community dashboards (DotDC K8s cluster views, Node Exporter Full 1860, VictoriaTraces 24136, VictoriaMetrics/VictoriaLogs overviews).
 - **Rationale**: Eliminates custom JSON ConfigMap maintenance and aligns with upstream dashboards maintained by component authors.
 
+### 5. Differentiated Retention Policies
+- **Choice**: Configure 365-day retention for metrics (`victoria-metrics`: `365d`), 14-day retention for logs (`victoria-logs`: `14d`), and 7-day retention for traces (`victoria-traces`: `7d`).
+- **Rationale**: Metrics require long-term capacity planning and trend analysis with low per-sample storage overhead (~1 byte/sample). Logs have higher volume and decay rapidly in operational value beyond incident investigation windows.
+
+### 6. Generic Signal-Based Ingestion Endpoints
+- **Choice**: Name private WireGuard ingress hostnames, certs, and secrets by telemetry signal: `metrics-ingest.calcifer.tech`, `logs-ingest.calcifer.tech`, and `traces-ingest.calcifer.tech`.
+- **Rationale**: Vendor-neutral and decoupled from underlying database implementations. Eliminates legacy Thanos/Loki/Tempo naming while ensuring complete architectural consistency.
+
 ## Risks / Trade-offs
 
 - **[Telemetry loss during migration]** → Accepted by user; telemetry is ephemeral and non-critical.
