@@ -14,6 +14,7 @@ data:
     PostUp = iptables -C INPUT -p udp --dport 51820 -j ACCEPT || iptables -I INPUT -p udp --dport 51820 -j ACCEPT
     PostUp = iptables -t mangle -N CALCIFER_PRIVATE_INGEST || true
     PostUp = iptables -t mangle -F CALCIFER_PRIVATE_INGEST
+    PostUp = iptables -t mangle -A CALCIFER_PRIVATE_INGEST -i %i -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
     PostUp = iptables -t mangle -A CALCIFER_PRIVATE_INGEST -i %i -s 172.31.255.2/32 -p tcp --dport 32443 -j ACCEPT
     PostUp = iptables -t mangle -A CALCIFER_PRIVATE_INGEST -i %i -s 172.31.255.2/32 -p tcp --dport 16379 -j ACCEPT
     PostUp = iptables -t mangle -A CALCIFER_PRIVATE_INGEST -i %i -s 172.31.255.2/32 -p tcp --dport 3128 -j ACCEPT
