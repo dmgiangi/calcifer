@@ -122,6 +122,33 @@ class RegisteredClientConfigurationTest {
     }
 
     @Test
+    void registersHomeAssistantAsConfidentialPkceClient() {
+        var homeAssistant = new IdentityProperties.ClientDefinition(
+            "home-assistant",
+            "home-assistant-secret",
+            Set.of("https://home.calcifer.tech/auth/oidc/callback"),
+            Set.of("openid", "profile", "email"),
+            Set.of("authorization_code"),
+            Set.of("client_secret_post"),
+            "home-assistant",
+            true,
+            null
+        );
+        var repository = new AuthorizationServerConfiguration().registeredClientRepository(
+            withClients(Map.of("home-assistant", homeAssistant)),
+            PasswordEncoderFactories.createDelegatingPasswordEncoder(),
+            STATE
+        );
+
+        var client = repository.findByClientId("home-assistant");
+
+        assertThat(client.getRedirectUris()).containsExactly("https://home.calcifer.tech/auth/oidc/callback");
+        assertThat(client.getScopes()).containsExactlyInAnyOrder("openid", "profile", "email");
+        assertThat(client.getClientAuthenticationMethods()).containsExactly(ClientAuthenticationMethod.CLIENT_SECRET_POST);
+        assertThat(client.getClientSettings().isRequireProofKey()).isTrue();
+    }
+
+    @Test
     void rejectsUnresolvedSecretsAndInvalidDefinitions() {
         var unresolved = new IdentityProperties.ClientDefinition(
             "homepage",
@@ -174,4 +201,5 @@ class RegisteredClientConfigurationTest {
             STATE
         );
     }
+
 }

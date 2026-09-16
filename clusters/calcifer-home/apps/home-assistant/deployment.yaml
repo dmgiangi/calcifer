@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: home-assistant
+  namespace: home-assistant
+  labels:
+    app.kubernetes.io/name: home-assistant
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: home-assistant
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: home-assistant
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: install-oidc-component
+          image: ghcr.io/home-assistant/home-assistant:2026.9.2@sha256:a1bc133af84ee6505fe2c266d9805b7c75b780dfdc188edfee3b11e8f3cd8efe
+          imagePullPolicy: IfNotPresent
+          command:
+            - python3
+            - -c
+            - |
+              import hashlib
+              from pathlib import Path
+              import urllib.request
+              import zipfile
+
+              archive = Path("/tmp/hass-oidc-auth.zip")
+              url = "https://github.com/christiaangoossens/hass-oidc-auth/releases/download/v1.2.1/hass-oidc-auth.zip"
+              with urllib.request.urlopen(url, timeout=60) as response, archive.open("wb") as output:
+                  output.write(response.read())
+              digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+              if digest != "e5badaaacaa63cfd6fe733924a05e76d75058836190398598fb24de57cd47ccd":
+                  raise RuntimeError("hass-oidc-auth checksum mismatch")
+              with zipfile.ZipFile(archive) as bundle:
+                  bundle.extractall("/component")
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: oidc-component
+              mountPath: /component
+            - name: temporary
+              mountPath: /tmp
+      containers:
+        - name: home-assistant
+          image: ghcr.io/home-assistant/home-assistant:2026.9.2@sha256:a1bc133af84ee6505fe2c266d9805b7c75b780dfdc188edfee3b11e8f3cd8efe
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: 8123
+              protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            failureThreshold: 60
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: configuration
+              mountPath: /config/configuration.yaml
+              subPath: configuration.yaml
+              readOnly: true
+            - name: secrets
+              mountPath: /config/secrets.yaml
+              subPath: secrets.yaml
+              readOnly: true
+            - name: oidc-component
+              mountPath: /config/custom_components/auth_oidc
+              readOnly: true
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: home-assistant-config
+        - name: configuration
+          configMap:
+            name: home-assistant-configuration
+        - name: secrets
+          secret:
+            secretName: home-assistant-secrets
+        - name: oidc-component
+          emptyDir:
+            sizeLimit: 5Mi
+        - name: temporary
+          emptyDir:
+            sizeLimit: 5Mi

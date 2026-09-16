@@ -28,6 +28,7 @@ class IdentityPropertiesBindingTest {
             "identity.local-login.enabled=false",
             "identity.local-login.username=admin@example.com",
             "HOMEPAGE_OIDC_CLIENT_SECRET=resolved-secret",
+            "HOME_ASSISTANT_OIDC_CLIENT_SECRET=home-assistant-secret",
             "identity.clients.homepage.id=homepage",
             "identity.clients.homepage.secret=${HOMEPAGE_OIDC_CLIENT_SECRET}",
             "identity.clients.homepage.redirect-uris[0]=https://calcifer.tech/api/auth/callback/homepage-oidc",
@@ -37,7 +38,16 @@ class IdentityPropertiesBindingTest {
             "identity.clients.homepage.authentication-methods[0]=client_secret_post",
             "identity.clients.homepage.audience=homepage",
             "identity.clients.homepage.require-proof-key=true",
-            "identity.clients.homepage.access-token-ttl=2m"
+            "identity.clients.homepage.access-token-ttl=2m",
+            "identity.clients.home-assistant.id=home-assistant",
+            "identity.clients.home-assistant.secret=${HOME_ASSISTANT_OIDC_CLIENT_SECRET}",
+            "identity.clients.home-assistant.redirect-uris[0]=https://home.calcifer.tech/auth/oidc/callback",
+            "identity.clients.home-assistant.scopes[0]=openid",
+            "identity.clients.home-assistant.scopes[1]=profile",
+            "identity.clients.home-assistant.scopes[2]=email",
+            "identity.clients.home-assistant.grant-types[0]=authorization_code",
+            "identity.clients.home-assistant.authentication-methods[0]=client_secret_post",
+            "identity.clients.home-assistant.require-proof-key=true"
         );
 
     @Test
@@ -48,6 +58,10 @@ class IdentityPropertiesBindingTest {
             assertThat(homepage.secret()).isEqualTo("resolved-secret");
             assertThat(homepage.accessTokenTtl()).hasMinutes(2);
             assertThat(homepage.requireProofKey()).isTrue();
+            var homeAssistant = context.getBean(IdentityProperties.class).clients().get("home-assistant");
+            assertThat(homeAssistant.secret()).isEqualTo("home-assistant-secret");
+            assertThat(homeAssistant.redirectUris()).containsExactly("https://home.calcifer.tech/auth/oidc/callback");
+            assertThat(homeAssistant.requireProofKey()).isTrue();
         });
     }
 

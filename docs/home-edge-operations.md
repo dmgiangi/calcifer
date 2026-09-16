@@ -45,6 +45,12 @@ cluster transit: Home may connect to Cloud `172.31.255.1:16379` only through
 startup and DNATs only source `172.31.255.2` on port `16379` to Service port
 `6379`. No Pod or Service CIDR route is added.
 
+Home Assistant backup egress is also deliberately narrow: Home may use the
+HTTP CONNECT proxy at Cloud `172.31.255.1:3128` only through `wg0`. Envoy binds
+only to the Cloud tunnel address, accepts only source `172.31.255.2`, and
+permits only `calciferobs.blob.core.windows.net:443`. It does not terminate TLS
+or expose a general-purpose forward proxy.
+
 ## Flux, SOPS, and secret locations
 
 Provision the existing repository age private key out-of-band as the Secret

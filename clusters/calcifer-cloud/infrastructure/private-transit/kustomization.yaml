@@ -5,3 +5,4 @@ resources:
   - wireguard-private-key.sops.yaml
   - wireguard-config.yaml
   - wireguard-daemonset.yaml
+  - azure-backup-egress-proxy.yaml
