@@ -4,10 +4,8 @@ resources:
   - namespace.yaml
   - helmrepositories.yaml
   - helmreleases.yaml
-  - thanos-objstore.sops.yaml
-  - loki-objstore.sops.yaml
   - grafana-admin.sops.yaml
-  - thanos-receive-network-policy.yaml
+  - velero-credentials.sops.yaml
   - thanos-home-ingest-certificate.yaml
   - loki-home-ingest-certificate.yaml
   - tempo-home-ingest-certificate.yaml
@@ -16,5 +14,6 @@ resources:
   - tempo-home-ingest-auth.sops.yaml
   - home-ingest-traefik.yaml
   - home-ingest-nodeport.yaml
-  - loki-ingress-network-policy.yaml
   - victoria-traces-ingress-network-policy.yaml
+  - victoria-metrics-ingress-network-policy.yaml
+  - victoria-logs-ingress-network-policy.yaml

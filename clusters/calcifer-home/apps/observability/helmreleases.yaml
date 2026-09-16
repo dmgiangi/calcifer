@@ -259,7 +259,7 @@ spec:
 
           prometheus.scrape "pod_metrics" {
             targets    = discovery.relabel.pod_metrics.output
-            forward_to = [prometheus.remote_write.thanos.receiver]
+            forward_to = [prometheus.remote_write.victoriametrics.receiver]
           }
 
           discovery.kubernetes "services" {
@@ -307,7 +307,7 @@ spec:
 
           prometheus.scrape "service_metrics" {
             targets    = discovery.relabel.service_metrics.output
-            forward_to = [prometheus.remote_write.thanos.receiver]
+            forward_to = [prometheus.remote_write.victoriametrics.receiver]
           }
 
           discovery.kubernetes "nodes" {
@@ -343,7 +343,7 @@ spec:
             tls_config {
               insecure_skip_verify = true
             }
-            forward_to = [prometheus.remote_write.thanos.receiver]
+            forward_to = [prometheus.remote_write.victoriametrics.receiver]
           }
 
           discovery.relabel "cadvisor" {
@@ -375,7 +375,7 @@ spec:
             tls_config {
               insecure_skip_verify = true
             }
-            forward_to = [prometheus.remote_write.thanos.receiver]
+            forward_to = [prometheus.remote_write.victoriametrics.receiver]
           }
 
           loki.process "pod_logs" {
@@ -387,7 +387,7 @@ spec:
                 container = "container",
               }
             }
-            forward_to = [loki.write.loki.receiver]
+            forward_to = [loki.write.victorialogs.receiver]
           }
 
           discovery.relabel "pod_logs" {
@@ -415,12 +415,12 @@ spec:
             forward_to = [loki.process.pod_logs.receiver]
           }
 
-          prometheus.remote_write "thanos" {
+          prometheus.remote_write "victoriametrics" {
             external_labels = {
               cluster = "calcifer-home",
             }
             endpoint {
-              url = "https://thanos-ingest.calcifer.tech:32443/api/v1/receive"
+              url = "https://thanos-ingest.calcifer.tech:32443/api/v1/write"
               basic_auth {
                 username = sys.env("THANOS_INGEST_USERNAME")
                 password = sys.env("THANOS_INGEST_PASSWORD")
@@ -435,12 +435,12 @@ spec:
             }
           }
 
-          loki.write "loki" {
+          loki.write "victorialogs" {
             external_labels = {
               cluster = "calcifer-home",
             }
             endpoint {
-              url = "https://loki-ingest.calcifer.tech:32443/loki/api/v1/push"
+              url = "https://loki-ingest.calcifer.tech:32443/insert/loki/api/v1/push"
               basic_auth {
                 username = sys.env("LOKI_INGEST_USERNAME")
                 password = sys.env("LOKI_INGEST_PASSWORD")

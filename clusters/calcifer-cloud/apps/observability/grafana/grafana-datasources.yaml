@@ -1,10 +1,10 @@
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDatasource
 metadata:
-  name: thanos
+  name: victoriametrics
   namespace: monitoring
 spec:
-  uid: thanos
+  uid: victoriametrics
   resyncPeriod: 5m
   plugins:
     - name: prometheus
@@ -13,10 +13,10 @@ spec:
     matchLabels:
       dashboards: grafana
   datasource:
-    name: Thanos
+    name: VictoriaMetrics
     type: prometheus
     access: proxy
-    url: http://thanos-v2-query.monitoring.svc.cluster.local:9090
+    url: http://victoria-metrics.monitoring.svc.cluster.local:8428
     isDefault: true
     editable: false
     jsonData:
@@ -27,26 +27,22 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDatasource
 metadata:
-  name: loki
+  name: victoria-logs
   namespace: monitoring
 spec:
-  uid: loki
+  uid: victoria-logs
   resyncPeriod: 1m
   plugins:
-    - name: loki
-      version: 13.1.0
+    - name: victoriametrics-logs-datasource
   instanceSelector:
     matchLabels:
       dashboards: grafana
   datasource:
-    name: Loki
-    type: loki
+    name: VictoriaLogs
+    type: victoriametrics-logs-datasource
     access: proxy
-    url: http://loki.monitoring.svc.cluster.local:3100
+    url: http://victoria-logs.monitoring.svc.cluster.local:9428
     editable: false
-    jsonData:
-      maxLines: 1000
-      timeout: 60
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDatasource
@@ -67,7 +63,7 @@ spec:
     editable: false
     jsonData:
       tracesToLogsV2:
-        datasourceUid: loki
+        datasourceUid: victoria-logs
         filterByTraceID: true
         spanStartTimeShift: -5m
         spanEndTimeShift: 5m

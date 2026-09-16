@@ -44,6 +44,26 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
+  name: home-victoria-metrics-path
+  namespace: monitoring
+spec:
+  replacePathRegex:
+    regex: ^/api/v1/receive$
+    replacement: /api/v1/write
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: home-victoria-logs-path
+  namespace: monitoring
+spec:
+  replacePathRegex:
+    regex: ^/loki/api/v1/push$
+    replacement: /insert/loki/api/v1/push
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
   name: home-victoria-traces-path
   namespace: monitoring
 spec:
@@ -60,14 +80,15 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`thanos-ingest.calcifer.tech`) && Path(`/api/v1/receive`)
+    - match: Host(`thanos-ingest.calcifer.tech`) && (Path(`/api/v1/receive`) || Path(`/api/v1/write`))
       kind: Rule
       middlewares:
         - name: home-ingest-wireguard-source
         - name: home-thanos-ingest-auth
+        - name: home-victoria-metrics-path
       services:
-        - name: thanos-v2-receive
-          port: 10908
+        - name: victoria-metrics
+          port: 8428
   tls:
     secretName: thanos-home-ingest-tls
 ---
@@ -80,14 +101,15 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`loki-ingest.calcifer.tech`) && Path(`/loki/api/v1/push`)
+    - match: Host(`loki-ingest.calcifer.tech`) && (Path(`/loki/api/v1/push`) || Path(`/insert/loki/api/v1/push`))
       kind: Rule
       middlewares:
         - name: home-ingest-wireguard-source
         - name: home-loki-ingest-auth
+        - name: home-victoria-logs-path
       services:
-        - name: loki
-          port: 3100
+        - name: victoria-logs
+          port: 9428
   tls:
     secretName: loki-home-ingest-tls
 ---

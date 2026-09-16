@@ -50,152 +50,6 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: thanos
-  namespace: monitoring
-spec:
-  interval: 30m
-  timeout: 15m
-  install:
-    remediation:
-      retries: 3
-  upgrade:
-    force: true
-    remediation:
-      retries: 3
-      remediateLastFailure: true
-  rollback:
-    cleanupOnFail: true
-    recreate: true
-  chart:
-    spec:
-      chart: thanos
-      version: 0.43.0
-      sourceRef:
-        kind: HelmRepository
-        name: thanos-community
-        namespace: monitoring
-  values:
-    fullnameOverride: thanos-v2
-    global:
-      objstore:
-        createSecret: false
-        secretName: thanos-objstore
-        secretKey: objstore.yml
-      resources:
-        requests:
-          cpu: 25m
-          memory: 96Mi
-        limits:
-          cpu: 200m
-          memory: 256Mi
-      storageClass: local-path
-      thanosRules:
-        enabled: false
-    bucket:
-      enabled: false
-    query:
-      enabled: true
-      replicaCount: 1
-      endpoints:
-        autogen:
-          enabled: true
-      service:
-        type: ClusterIP
-        annotations:
-          prometheus.io/scrape: "true"
-          prometheus.io/path: /metrics
-          prometheus.io/port: "9090"
-      resources:
-        requests:
-          cpu: 50m
-          memory: 128Mi
-        limits:
-          cpu: 300m
-          memory: 384Mi
-    receive:
-      enabled: true
-      mode: standalone
-      replicaCount: 1
-      tsdb:
-        retention: 48h
-      extraArgs:
-        - --tsdb.out-of-order.time-window=2h
-      persistence:
-        enabled: true
-        size: 8Gi
-        storageClass: local-path
-      service:
-        type: ClusterIP
-        annotations:
-          prometheus.io/scrape: "true"
-          prometheus.io/path: /metrics
-          prometheus.io/port: "10902"
-      resources:
-        requests:
-          cpu: 50m
-          memory: 256Mi
-        limits:
-          cpu: 300m
-          memory: 1Gi
-    storegateway:
-      enabled: true
-      replicaCount: 1
-      service:
-        type: ClusterIP
-        annotations:
-          prometheus.io/scrape: "true"
-          prometheus.io/path: /metrics
-          prometheus.io/port: "10902"
-      persistence:
-        enabled: true
-        storageClass: local-path
-        size: 4Gi
-      resources:
-        requests:
-          cpu: 25m
-          memory: 128Mi
-        limits:
-          cpu: 250m
-          memory: 384Mi
-    compactor:
-      enabled: true
-      retention:
-        resolutionRaw: 30d
-        resolution5m: 30d
-        resolution1h: 365d
-      extraArgs:
-        - --log.level=info
-        - --log.format=logfmt
-        - --consistency-delay=30m
-      service:
-        type: ClusterIP
-        annotations:
-          prometheus.io/scrape: "true"
-          prometheus.io/path: /metrics
-          prometheus.io/port: "10902"
-      persistence:
-        enabled: true
-        storageClass: local-path
-        size: 4Gi
-      resources:
-        requests:
-          cpu: 25m
-          memory: 128Mi
-        limits:
-          cpu: 250m
-          memory: 384Mi
-    queryFrontend:
-      enabled: false
-    ruler:
-      enabled: false
-    rustfs:
-      enabled: false
-    kube-prometheus-stack:
-      enabled: false
----
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
-metadata:
   name: kube-state-metrics
   namespace: monitoring
 spec:
@@ -278,186 +132,6 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: loki
-  namespace: monitoring
-spec:
-  interval: 30m
-  timeout: 15m
-  install:
-    remediation:
-      retries: 3
-  upgrade:
-    remediation:
-      retries: 3
-      remediateLastFailure: true
-  rollback:
-    cleanupOnFail: true
-    recreate: true
-  chart:
-    spec:
-      chart: loki
-      version: 18.13.0
-      sourceRef:
-        kind: HelmRepository
-        name: grafana-community
-        namespace: monitoring
-  values:
-    deploymentMode: Monolithic
-    gateway:
-      enabled: false
-    lokiCanary:
-      enabled: false
-    test:
-      enabled: false
-    minio:
-      enabled: false
-    rollout_operator:
-      enabled: false
-    chunksCache:
-      enabled: false
-    resultsCache:
-      enabled: false
-    ruler:
-      enabled: false
-    read:
-      enabled: false
-      replicas: 0
-    write:
-      enabled: false
-      replicas: 0
-    backend:
-      enabled: false
-      replicas: 0
-    defaults:
-      extraArgs:
-        - -config.expand-env=true
-      extraEnvFrom:
-        - secretRef:
-            name: loki-objstore
-    loki:
-      structuredConfig:
-        auth_enabled: false
-        server:
-          http_listen_port: 3100
-          grpc_listen_port: 9095
-          log_level: info
-        common:
-          path_prefix: /var/loki
-          compactor_grpc_address: loki.monitoring.svc.cluster.local:9095
-          replication_factor: 1
-          storage:
-            azure:
-              account_name: calciferobs
-              container_name: loki
-              use_service_principal: true
-              tenant_id: ${AZURE_TENANT_ID}
-              client_id: ${AZURE_CLIENT_ID}
-              client_secret: ${AZURE_CLIENT_SECRET}
-        schema_config:
-          configs:
-            - from: "2024-04-01"
-              store: tsdb
-              object_store: azure
-              schema: v13
-              index:
-                prefix: loki_index_
-                period: 24h
-        limits_config:
-          retention_period: 720h
-          reject_old_samples: true
-          reject_old_samples_max_age: 168h
-          max_cache_freshness_per_query: 10m
-          split_queries_by_interval: 15m
-        runtime_config:
-          file: /etc/loki/runtime-config/runtime-config.yaml
-        compactor:
-          working_directory: /var/loki/compactor
-          retention_enabled: true
-          delete_request_store: azure
-          retention_delete_delay: 2h
-          retention_delete_worker_count: 1
-        storage_config:
-          azure:
-            account_name: calciferobs
-            container_name: loki
-            use_service_principal: true
-            tenant_id: ${AZURE_TENANT_ID}
-            client_id: ${AZURE_CLIENT_ID}
-            client_secret: ${AZURE_CLIENT_SECRET}
-            request_timeout: 0
-          tsdb_shipper:
-            active_index_directory: /var/loki/tsdb-shipper-active
-            cache_location: /var/loki/tsdb-shipper-cache
-          use_thanos_objstore: false
-      auth_enabled: false
-      commonConfig:
-        replication_factor: 1
-      server:
-        log_level: info
-        http_listen_port: 3100
-      schemaConfig:
-        configs:
-          - from: "2024-04-01"
-            store: tsdb
-            object_store: azure
-            schema: v13
-            index:
-              prefix: loki_index_
-              period: 24h
-      storage:
-        type: azure
-        bucketNames:
-          chunks: loki
-          ruler: loki
-        azure:
-          accountName: calciferobs
-      limits_config:
-        retention_period: 720h
-        reject_old_samples: true
-        reject_old_samples_max_age: 168h
-        max_cache_freshness_per_query: 10m
-        split_queries_by_interval: 15m
-      compactor:
-        working_directory: /var/loki/compactor
-        retention_enabled: true
-        delete_request_store: azure
-        retention_delete_delay: 2h
-        retention_delete_worker_count: 1
-      storage_config:
-        tsdb_shipper:
-          active_index_directory: /var/loki/tsdb-shipper-active
-          cache_location: /var/loki/tsdb-shipper-cache
-      service:
-        annotations:
-          prometheus.io/scrape: "true"
-          prometheus.io/path: /metrics
-          prometheus.io/port: "3100"
-      extraArgs:
-        - -config.expand-env=true
-    singleBinary:
-      enabled: true
-      replicas: 1
-      persistence:
-        enabled: true
-        storageClass: local-path
-        size: 8Gi
-      service:
-        type: ClusterIP
-        annotations:
-          prometheus.io/scrape: "true"
-          prometheus.io/path: /metrics
-          prometheus.io/port: "3100"
-      resources:
-        requests:
-          cpu: 75m
-          memory: 256Mi
-        limits:
-          cpu: 400m
-          memory: 768Mi
----
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
-metadata:
   name: victoria-traces
   namespace: monitoring
 spec:
@@ -503,6 +177,103 @@ spec:
         limits:
           cpu: 300m
           memory: 384Mi
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: victoria-metrics
+  namespace: monitoring
+spec:
+  interval: 30m
+  timeout: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  chart:
+    spec:
+      chart: victoria-metrics-single
+      version: 0.46.0
+      sourceRef:
+        kind: HelmRepository
+        name: victoria-metrics
+        namespace: monitoring
+  values:
+    server:
+      fullnameOverride: victoria-metrics
+      replicaCount: 1
+      retentionPeriod: 30d
+      podLabels:
+        observability.calcifer.tech/metrics-backend: victoria-metrics
+      persistentVolume:
+        enabled: true
+        storageClassName: local-path
+        size: 8Gi
+      service:
+        clusterIP: ""
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/path: /metrics
+          prometheus.io/port: "8428"
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 300m
+          memory: 512Mi
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: victoria-logs
+  namespace: monitoring
+spec:
+  interval: 30m
+  timeout: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  chart:
+    spec:
+      chart: victoria-logs-single
+      version: 0.13.9
+      sourceRef:
+        kind: HelmRepository
+        name: victoria-metrics
+        namespace: monitoring
+  values:
+    server:
+      fullnameOverride: victoria-logs
+      replicaCount: 1
+      retentionPeriod: 30d
+      retentionDiskSpaceUsage: 8
+      podLabels:
+        observability.calcifer.tech/logs-backend: victoria-logs
+      persistentVolume:
+        enabled: true
+        storageClassName: local-path
+        size: 8Gi
+      service:
+        clusterIP: ""
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/path: /metrics
+          prometheus.io/port: "9428"
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 300m
+          memory: 512Mi
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -621,7 +392,7 @@ spec:
 
           prometheus.scrape "pod_metrics" {
             targets    = discovery.relabel.pod_metrics.output
-            forward_to = [prometheus.remote_write.thanos.receiver]
+            forward_to = [prometheus.remote_write.victoriametrics.receiver]
           }
 
           discovery.kubernetes "services" {
@@ -669,7 +440,7 @@ spec:
 
           prometheus.scrape "service_metrics" {
             targets    = discovery.relabel.service_metrics.output
-            forward_to = [prometheus.remote_write.thanos.receiver]
+            forward_to = [prometheus.remote_write.victoriametrics.receiver]
           }
 
           discovery.kubernetes "nodes" {
@@ -705,7 +476,7 @@ spec:
             tls_config {
               insecure_skip_verify = true
             }
-            forward_to = [prometheus.remote_write.thanos.receiver]
+            forward_to = [prometheus.remote_write.victoriametrics.receiver]
           }
 
           discovery.relabel "cadvisor" {
@@ -737,7 +508,7 @@ spec:
             tls_config {
               insecure_skip_verify = true
             }
-            forward_to = [prometheus.remote_write.thanos.receiver]
+            forward_to = [prometheus.remote_write.victoriametrics.receiver]
           }
 
           loki.process "pod_logs" {
@@ -749,7 +520,7 @@ spec:
                 container = "container",
               }
             }
-            forward_to = [loki.write.loki.receiver]
+            forward_to = [loki.write.victorialogs.receiver]
           }
 
           discovery.relabel "pod_logs" {
@@ -777,21 +548,21 @@ spec:
             forward_to = [loki.process.pod_logs.receiver]
           }
 
-          prometheus.remote_write "thanos" {
+          prometheus.remote_write "victoriametrics" {
             external_labels = {
               cluster = "calcifer-cloud",
             }
             endpoint {
-              url = "http://thanos-v2-receive.monitoring.svc.cluster.local:10908/api/v1/receive"
+              url = "http://victoria-metrics.monitoring.svc.cluster.local:8428/api/v1/write"
             }
           }
 
-          loki.write "loki" {
+          loki.write "victorialogs" {
             external_labels = {
               cluster = "calcifer-cloud",
             }
             endpoint {
-              url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+              url = "http://victoria-logs.monitoring.svc.cluster.local:9428/insert/loki/api/v1/push"
             }
           }
       resources:
@@ -810,3 +581,85 @@ spec:
             - nodes/proxy
           verbs:
             - get
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: velero
+  namespace: monitoring
+spec:
+  interval: 30m
+  timeout: 15m
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  chart:
+    spec:
+      chart: velero
+      version: 12.2.0
+      sourceRef:
+        kind: HelmRepository
+        name: vmware-tanzu
+        namespace: monitoring
+  values:
+    upgradeCRDs: false
+    initContainers:
+      - name: velero-plugin-for-microsoft-azure
+        image: velero/velero-plugin-for-microsoft-azure:v1.14.0
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+          - mountPath: /target
+            name: plugins
+    credentials:
+      useSecret: true
+      existingSecret: velero-credentials
+    configuration:
+      backupStorageLocation:
+        - name: default
+          provider: azure
+          bucket: backups
+          default: true
+          config:
+            resourceGroup: rg-calcifer-westeurope-001
+            storageAccount: calciferobs
+            storageAccountURI: https://calciferobs.blob.core.windows.net
+            useAAD: "true"
+      uploaderType: kopia
+      defaultVolumesToFsBackup: true
+    snapshotsEnabled: false
+    deployNodeAgent: true
+    nodeAgent:
+      podVolumePath: /var/lib/kubelet/pods
+      resources:
+        requests:
+          cpu: 25m
+          memory: 96Mi
+        limits:
+          cpu: 200m
+          memory: 384Mi
+    resources:
+      requests:
+        cpu: 25m
+        memory: 96Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    schedules:
+      daily-observability:
+        schedule: "0 2 * * *"
+        template:
+          includedNamespaces:
+            - monitoring
+          includedResources:
+            - persistentvolumeclaims
+            - persistentvolumes
+            - pods
+          snapshotVolumes: false
+          defaultVolumesToFsBackup: true
+          ttl: 720h0m0s

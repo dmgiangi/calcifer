@@ -23,14 +23,14 @@ spec:
         summary: A Calcifer authorization-server instance is unavailable
       data:
         - refId: A
-          datasourceUid: thanos
+          datasourceUid: victoriametrics
           relativeTimeRange:
             from: 300
             to: 0
           model:
             datasource:
               type: prometheus
-              uid: thanos
+              uid: victoriametrics
             editorMode: code
             instant: true
             range: false
@@ -53,14 +53,14 @@ spec:
         summary: Authorization server HTTP 5xx rate is elevated
       data:
         - refId: A
-          datasourceUid: thanos
+          datasourceUid: victoriametrics
           relativeTimeRange:
             from: 300
             to: 0
           model:
             datasource:
               type: prometheus
-              uid: thanos
+              uid: victoriametrics
             editorMode: code
             instant: true
             range: false

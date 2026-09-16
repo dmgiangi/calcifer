@@ -10,15 +10,6 @@ spec:
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
-  name: grafana-community
-  namespace: monitoring
-spec:
-  interval: 1h
-  url: https://grafana-community.github.io/helm-charts
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
-metadata:
   name: victoria-metrics
   namespace: monitoring
 spec:
@@ -38,17 +29,17 @@ spec:
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
-  name: thanos-community
-  namespace: monitoring
-spec:
-  interval: 1h
-  url: https://thanos-community.github.io/helm-charts
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
-metadata:
   name: prometheus-community
   namespace: monitoring
 spec:
   interval: 1h
   url: https://prometheus-community.github.io/helm-charts
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: vmware-tanzu
+  namespace: monitoring
+spec:
+  interval: 1h
+  url: https://vmware-tanzu.github.io/helm-charts

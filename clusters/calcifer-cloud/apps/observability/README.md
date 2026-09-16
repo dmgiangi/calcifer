@@ -1,39 +1,31 @@
 # Cloud observability
 
-The cloud observability stack uses Grafana Alloy, Thanos, Loki, VictoriaTraces,
-and Grafana Operator in the `monitoring` namespace.
+The cloud observability stack uses Grafana Alloy, VictoriaMetrics, VictoriaLogs,
+VictoriaTraces, Grafana Operator, and Velero in the `monitoring` namespace.
 
 Deployment settings:
 
 - Grafana hostname: `grafana.calcifer.tech`
-- Metrics retention: 30 days at raw and 5-minute resolution; 1 hour blocks are
-  retained for 1 year.
-- Logs retention: 30 days, enforced by Loki compactor.
+- Metrics retention: 30 days on local ext4 persistent volume, enforced by VictoriaMetrics.
+- Logs retention: 30 days on local ext4 persistent volume, enforced by VictoriaLogs.
 - Trace retention: 7 days with an 8 GiB data cap on a 10 GiB local persistent
   volume, enforced by VictoriaTraces.
-- Azure containers: private `thanos` and `loki` containers in `calciferobs`.
-- Azure lifecycle deletion is intentionally not configured; Thanos Compactor
-  and Loki retention own deletion for their respective data.
-- Thanos uses its container-scoped SAS credential. Loki uses a dedicated Azure
-  service principal with `Storage Blob Data Contributor` scoped to only the
-  `loki` container because the pinned Loki Azure client has an upstream SAS
-  connection-string bug; all identity credentials remain SOPS-encrypted.
+- Disaster recovery: Velero with Kopia File System Backup schedules daily backups
+  of observability PVCs to the private `backups` container in `calciferobs`.
+- Azure credentials for Velero use a dedicated service principal with
+  `Storage Blob Data Contributor` scoped to the `backups` container; all
+  credentials remain SOPS-encrypted.
 
-The Grafana Operator, Alloy, Loki, VictoriaTraces, and Thanos Community charts
-are pinned to the versions in `helmrepositories.yaml`/`helmreleases.yaml`. The local
-dashboards are version-matched operational fallbacks: the Thanos dashboard
-targets Thanos v0.42.4, while the Loki dashboard targets Loki v3.7.7.
-Upstream Loki/Thanos mixin dashboards were not vendored because their
-recording rules and component panels assume
-components not deployed on this single-node cluster. The fallback dashboards
-use only metrics and labels collected here and are provisioned in the
-`Observability` folder.
+The Grafana Operator, Alloy, VictoriaMetrics, VictoriaLogs, VictoriaTraces, and
+Velero charts are pinned to the versions in `helmrepositories.yaml`/`helmreleases.yaml`.
+Official community dashboards from Grafana.com are declaratively imported via
+Grafana Operator (`GrafanaDashboard` with `grafanaCom`).
 
 Authorization-server traces use OTLP/HTTP to the Alloy instance in each
 cluster. Home Alloy forwards them through the private WireGuard path with TLS,
 source-IP allowlisting, and dedicated SOPS-encrypted basic-auth credentials.
-The existing `tempo-ingest.calcifer.tech` endpoint name remains as a compatibility
-alias; Traefik rewrites its standard OTLP path for VictoriaTraces.
+Traefik rewrites ingress paths to route Home metrics, logs, and traces to their
+respective Victoria services.
 
 The service-account token is generated at runtime by Grafana Operator in the
 `monitoring` namespace. Rotate it by changing the token expiry in
