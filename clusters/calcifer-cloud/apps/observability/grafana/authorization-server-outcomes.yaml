@@ -17,9 +17,9 @@ data:
       "time": {"from": "now-6h", "to": "now"},
       "templating": {"list": [{"name": "cluster", "label": "Cluster", "type": "query", "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "query": "label_values(up{namespace=\"authorization\"}, cluster)", "includeAll": true, "multi": true, "current": {"text": "All", "value": ["$__all"]}}]},
       "panels": [
-        {"id": 1, "type": "timeseries", "title": "Authentication successes", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}, "datasource": {"type": "loki", "uid": "loki"}, "targets": [{"refId": "A", "expr": "count_over_time({cluster=~\"$cluster\",namespace=\"authorization\"} |= \"authentication_success\" [5m])"}]},
-        {"id": 2, "type": "timeseries", "title": "Authentication failures", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}, "datasource": {"type": "loki", "uid": "loki"}, "targets": [{"refId": "A", "expr": "count_over_time({cluster=~\"$cluster\",namespace=\"authorization\"} |= \"authentication_failure\" [5m])"}]},
-        {"id": 3, "type": "timeseries", "title": "ForwardAuth decisions", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}, "datasource": {"type": "loki", "uid": "loki"}, "targets": [{"refId": "A", "expr": "count_over_time({cluster=~\"$cluster\",namespace=\"authorization\"} |= \"forward_auth_outcome\" [5m])"}]},
+        {"id": 1, "type": "timeseries", "title": "Authentication successes", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}, "datasource": {"type": "victoriametrics-logs-datasource", "uid": "victoria-logs"}, "targets": [{"refId": "A", "expr": "namespace:authorization \"authentication_success\""}]},
+        {"id": 2, "type": "timeseries", "title": "Authentication failures", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}, "datasource": {"type": "victoriametrics-logs-datasource", "uid": "victoria-logs"}, "targets": [{"refId": "A", "expr": "namespace:authorization \"authentication_failure\""}]},
+        {"id": 3, "type": "timeseries", "title": "ForwardAuth decisions", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}, "datasource": {"type": "victoriametrics-logs-datasource", "uid": "victoria-logs"}, "targets": [{"refId": "A", "expr": "namespace:authorization \"forward_auth_outcome\""}]},
         {"id": 4, "type": "timeseries", "title": "HTTP 5xx rate", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "sum(rate(http_server_requests_seconds_count{cluster=~\"$cluster\",namespace=\"authorization\",status=~\"5..\"}[5m])) by (cluster)"}]}
       ]
     }
