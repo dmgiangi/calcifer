@@ -97,6 +97,8 @@ spec:
               cpu: 500m
               memory: 512Mi
           volumeMounts:
+            - name: config-workdir
+              mountPath: /app/config
             - name: config
               mountPath: /app/config/services.yaml
               subPath: services.yaml
@@ -124,6 +126,9 @@ spec:
             - name: logs
               mountPath: /app/config/logs
       volumes:
+        - name: config-workdir
+          emptyDir:
+            sizeLimit: 128Mi
         - name: config
           configMap:
             name: homepage-config
