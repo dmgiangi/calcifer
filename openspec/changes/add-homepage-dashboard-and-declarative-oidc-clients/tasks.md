@@ -24,5 +24,5 @@
 
 - [x] 4.1 Run Authorization Server unit tests and build checks, then validate the generated native image configuration if applicable.
 - [x] 4.2 Validate Kustomize rendering for both Cloud and Home overlays and inspect rendered manifests for secrets, hostname and rollout wiring.
-- [ ] 4.3 Verify OIDC login, split-horizon LAN access and HTTP monitors in both cluster environments.
+- [x] 4.3 Verify OIDC login, split-horizon LAN access and HTTP monitors in both cluster environments.
 - [x] 4.4 Document operational steps for adding a future Homepage service and a future declarative OIDC client.
