@@ -4,10 +4,12 @@
 
   fetch('/login/csrf', {
     credentials: 'same-origin',
-    headers: { Accept: 'application/json' }
+    headers: {Accept: 'application/json'}
   })
       .then((response) => {
-        if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`Request failed: ${response.status}`);
+        }
         return response.json();
       })
       .then((csrf) => {

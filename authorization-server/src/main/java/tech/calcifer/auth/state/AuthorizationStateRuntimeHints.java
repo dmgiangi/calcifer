@@ -33,50 +33,56 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationCode;
 import org.springframework.session.MapSession;
 
+
 final class AuthorizationStateRuntimeHints implements RuntimeHintsRegistrar {
-  @Override
-  public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
-    hints.serialization().registerType(TypeReference.of(MapSession.class));
-    hints.serialization().registerType(TypeReference.of(Instant.class));
-    hints.serialization().registerType(TypeReference.of(Duration.class));
-    hints.serialization().registerType(TypeReference.of("java.time.Ser"));
-    hints.serialization().registerType(TypeReference.of(Boolean.class));
-    hints.serialization().registerType(TypeReference.of(Integer.class));
-    hints.serialization().registerType(TypeReference.of(Long.class));
-    hints.serialization().registerType(TypeReference.of(Double.class));
-    hints.serialization().registerType(TypeReference.of(Date.class));
-    hints.serialization().registerType(TypeReference.of(URL.class));
-    hints.serialization().registerType(TypeReference.of(String[].class));
-    hints.serialization().registerType(TypeReference.of("java.util.CollSer"));
-    hints.serialization().registerType(TypeReference.of(HashMap.class));
-    hints.serialization().registerType(TypeReference.of(HashSet.class));
-    hints.serialization().registerType(TypeReference.of(LinkedHashMap.class));
-    hints.serialization().registerType(TypeReference.of(LinkedHashSet.class));
-    hints.serialization().registerType(TypeReference.of(AuthorizationGrantType.class));
-    hints.serialization().registerType(TypeReference.of(OAuth2Error.class));
-    hints.serialization().registerType(TypeReference.of(OAuth2AuthorizationRequest.class));
-    hints.serialization().registerType(TypeReference.of(OAuth2AuthorizationResponseType.class));
-    hints.serialization().registerType(TypeReference.of(OAuth2AuthenticationToken.class));
-    hints.serialization().registerType(TypeReference.of(AbstractOAuth2Token.class));
-    hints.serialization().registerType(TypeReference.of(OAuth2Authorization.class));
-    hints.serialization().registerType(TypeReference.of(OAuth2Authorization.Token.class));
-    hints.serialization().registerType(TypeReference.of(OAuth2AuthorizationCode.class));
-    hints.serialization().registerType(TypeReference.of(OAuth2AccessToken.class));
-    hints.serialization().registerType(TypeReference.of(OAuth2AccessToken.TokenType.class));
-    hints.serialization().registerType(TypeReference.of(OAuth2RefreshToken.class));
-    hints.serialization().registerType(TypeReference.of(OAuth2DeviceCode.class));
-    hints.serialization().registerType(TypeReference.of(OAuth2UserCode.class));
-    hints.serialization().registerType(TypeReference.of(OidcIdToken.class));
-    hints.serialization().registerType(TypeReference.of(OidcUserInfo.class));
-    hints.serialization().registerType(TypeReference.of(DefaultOAuth2User.class));
-    hints.serialization().registerType(TypeReference.of(DefaultOidcUser.class));
-    hints.serialization().registerType(TypeReference.of(Collections.unmodifiableMap(new HashMap<>()).getClass()));
-    hints.serialization().registerType(TypeReference.of(Collections.unmodifiableSet(new HashSet<>()).getClass()));
-    hints.serialization().registerType(TypeReference.of(List.of().getClass()));
-    hints.serialization().registerType(TypeReference.of(List.of("value").getClass()));
-    hints.serialization().registerType(TypeReference.of(Map.of().getClass()));
-    hints.serialization().registerType(TypeReference.of(Map.of("key", "value").getClass()));
-    hints.serialization().registerType(TypeReference.of(Set.of().getClass()));
-    hints.serialization().registerType(TypeReference.of(Set.of("value").getClass()));
-  }
+
+    @Override
+    public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+        registerSerialization(hints, TypeReference.of(MapSession.class));
+        registerSerialization(hints, TypeReference.of(Instant.class));
+        registerSerialization(hints, TypeReference.of(Duration.class));
+        registerSerialization(hints, TypeReference.of("java.time.Ser"));
+        registerSerialization(hints, TypeReference.of(Boolean.class));
+        registerSerialization(hints, TypeReference.of(Integer.class));
+        registerSerialization(hints, TypeReference.of(Long.class));
+        registerSerialization(hints, TypeReference.of(Double.class));
+        registerSerialization(hints, TypeReference.of(Date.class));
+        registerSerialization(hints, TypeReference.of(URL.class));
+        registerSerialization(hints, TypeReference.of(String[].class));
+        registerSerialization(hints, TypeReference.of("java.util.CollSer"));
+        registerSerialization(hints, TypeReference.of(HashMap.class));
+        registerSerialization(hints, TypeReference.of(HashSet.class));
+        registerSerialization(hints, TypeReference.of(LinkedHashMap.class));
+        registerSerialization(hints, TypeReference.of(LinkedHashSet.class));
+        registerSerialization(hints, TypeReference.of(AuthorizationGrantType.class));
+        registerSerialization(hints, TypeReference.of(OAuth2Error.class));
+        registerSerialization(hints, TypeReference.of(OAuth2AuthorizationRequest.class));
+        registerSerialization(hints, TypeReference.of(OAuth2AuthorizationResponseType.class));
+        registerSerialization(hints, TypeReference.of(OAuth2AuthenticationToken.class));
+        registerSerialization(hints, TypeReference.of(AbstractOAuth2Token.class));
+        registerSerialization(hints, TypeReference.of(OAuth2Authorization.class));
+        registerSerialization(hints, TypeReference.of(OAuth2Authorization.Token.class));
+        registerSerialization(hints, TypeReference.of(OAuth2AuthorizationCode.class));
+        registerSerialization(hints, TypeReference.of(OAuth2AccessToken.class));
+        registerSerialization(hints, TypeReference.of(OAuth2AccessToken.TokenType.class));
+        registerSerialization(hints, TypeReference.of(OAuth2RefreshToken.class));
+        registerSerialization(hints, TypeReference.of(OAuth2DeviceCode.class));
+        registerSerialization(hints, TypeReference.of(OAuth2UserCode.class));
+        registerSerialization(hints, TypeReference.of(OidcIdToken.class));
+        registerSerialization(hints, TypeReference.of(OidcUserInfo.class));
+        registerSerialization(hints, TypeReference.of(DefaultOAuth2User.class));
+        registerSerialization(hints, TypeReference.of(DefaultOidcUser.class));
+        registerSerialization(hints, TypeReference.of(Collections.unmodifiableMap(new HashMap<>()).getClass()));
+        registerSerialization(hints, TypeReference.of(Collections.unmodifiableSet(new HashSet<>()).getClass()));
+        registerSerialization(hints, TypeReference.of(List.of().getClass()));
+        registerSerialization(hints, TypeReference.of(List.of("value").getClass()));
+        registerSerialization(hints, TypeReference.of(Map.of().getClass()));
+        registerSerialization(hints, TypeReference.of(Map.of("key", "value").getClass()));
+        registerSerialization(hints, TypeReference.of(Set.of().getClass()));
+        registerSerialization(hints, TypeReference.of(Set.of("value").getClass()));
+    }
+
+    private static void registerSerialization(RuntimeHints hints, TypeReference type) {
+        hints.reflection().registerType(type, typeHint -> typeHint.withJavaSerialization(true));
+    }
 }

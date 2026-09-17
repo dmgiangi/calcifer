@@ -1,26 +1,28 @@
 package tech.calcifer.auth.state;
 
 final class RequestStateContext {
-  private static final ThreadLocal<StateRoute> ROUTE = new ThreadLocal<>();
 
-  private RequestStateContext() {}
+    private static final ThreadLocal<StateRoute> ROUTE = new ThreadLocal<>();
 
-  static void bind(StateRoute route) {
-    if (ROUTE.get() != null) {
-      throw new IllegalStateException("A state route is already bound to this request");
+    private RequestStateContext() {
     }
-    ROUTE.set(route);
-  }
 
-  static StateRoute requireRoute() {
-    StateRoute route = ROUTE.get();
-    if (route == null) {
-      throw new StateUnavailableException("No request state route is available");
+    static void bind(StateRoute route) {
+        if (ROUTE.get() != null) {
+            throw new IllegalStateException("A state route is already bound to this request");
+        }
+        ROUTE.set(route);
     }
-    return route;
-  }
 
-  static void clear() {
-    ROUTE.remove();
-  }
+    static StateRoute requireRoute() {
+        StateRoute route = ROUTE.get();
+        if (route == null) {
+            throw new StateUnavailableException("No request state route is available");
+        }
+        return route;
+    }
+
+    static void clear() {
+        ROUTE.remove();
+    }
 }

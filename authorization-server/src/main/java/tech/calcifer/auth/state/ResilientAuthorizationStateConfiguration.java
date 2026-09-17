@@ -24,89 +24,113 @@ import org.springframework.session.MapSession;
 import org.springframework.session.SessionRepository;
 import org.springframework.session.config.annotation.web.http.EnableSpringHttpSession;
 
+
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(prefix = "identity.state", name = "enabled", havingValue = "true")
 @EnableScheduling
 @EnableSpringHttpSession
 class ResilientAuthorizationStateConfiguration {
-  @Bean
-  RedisConnectionFactory authorizationStateRedisConnectionFactory(AuthorizationStateProperties properties) {
-    AuthorizationStateProperties.Redis redis = properties.redis();
-    RedisStandaloneConfiguration standalone = new RedisStandaloneConfiguration(redis.host(), redis.port());
-    standalone.setUsername(redis.username());
-    standalone.setPassword(RedisPassword.of(redis.password()));
-    ClientOptions options = ClientOptions.builder()
-        .timeoutOptions(TimeoutOptions.enabled(properties.probeInterval())).build();
-    LettuceClientConfiguration client = LettuceClientConfiguration.builder()
-        .commandTimeout(properties.probeInterval()).clientOptions(options).build();
-    return new LettuceConnectionFactory(standalone, client);
-  }
 
-  @Bean
-  RedisByteStore authorizationStateRedisByteStore(RedisConnectionFactory connections) {
-    return new RedisByteStore(connections);
-  }
+    @Bean
+    RedisConnectionFactory authorizationStateRedisConnectionFactory(AuthorizationStateProperties properties) {
+        AuthorizationStateProperties.Redis redis = properties.redis();
+        RedisStandaloneConfiguration standalone = new RedisStandaloneConfiguration(redis.host(), redis.port());
+        standalone.setUsername(redis.username());
+        standalone.setPassword(RedisPassword.of(redis.password()));
+        ClientOptions options = ClientOptions
+            .builder()
+            .timeoutOptions(TimeoutOptions.enabled(properties.probeInterval()))
+            .build();
+        LettuceClientConfiguration client = LettuceClientConfiguration
+            .builder()
+            .commandTimeout(properties.probeInterval())
+            .clientOptions(options)
+            .build();
+        return new LettuceConnectionFactory(standalone, client);
+    }
 
-  @Bean
-  RedisControlRepository redisControlRepository(RedisByteStore store, AuthorizationStateProperties properties) {
-    return new RedisControlRepository(store, properties.redis().namespace());
-  }
+    @Bean
+    RedisByteStore authorizationStateRedisByteStore(RedisConnectionFactory connections) {
+        return new RedisByteStore(connections);
+    }
 
-  @Bean
-  RedisGenerationCleanup redisGenerationCleanup(RedisByteStore store, AuthorizationStateProperties properties) {
-    return new RedisGenerationCleanup(store, properties.redis().namespace(), properties.cleanupBatchSize());
-  }
+    @Bean
+    RedisControlRepository redisControlRepository(RedisByteStore store, AuthorizationStateProperties properties) {
+        return new RedisControlRepository(store, properties.redis().namespace());
+    }
 
-  @Bean
-  TaskExecutor authorizationStateCleanupExecutor() {
-    SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("authorization-state-cleanup-");
-    executor.setVirtualThreads(true);
-    executor.setConcurrencyLimit(1);
-    return executor;
-  }
+    @Bean
+    RedisGenerationCleanup redisGenerationCleanup(RedisByteStore store, AuthorizationStateProperties properties) {
+        return new RedisGenerationCleanup(store, properties.redis().namespace(), properties.cleanupBatchSize());
+    }
 
-  @Bean
-  AuthorizationStateTelemetry authorizationStateTelemetry(MeterRegistry meters,
-      AuthorizationStateProperties properties) {
-    return new AuthorizationStateTelemetry(meters, properties);
-  }
+    @Bean
+    TaskExecutor authorizationStateCleanupExecutor() {
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("authorization-state-cleanup-");
+        executor.setVirtualThreads(true);
+        executor.setConcurrencyLimit(1);
+        return executor;
+    }
 
-  @Bean
-  AuthorizationStateManager authorizationStateManager(AuthorizationStateProperties properties,
-      RedisControlRepository control, RedisGenerationCleanup cleanup, AuthorizationStateTelemetry telemetry,
-      TaskExecutor authorizationStateCleanupExecutor) {
-    return new AuthorizationStateManager(properties, control, cleanup, telemetry, Clock.systemUTC(),
-        duration -> Thread.sleep(duration.toMillis()), authorizationStateCleanupExecutor);
-  }
+    @Bean
+    AuthorizationStateTelemetry authorizationStateTelemetry(
+        MeterRegistry meters,
+        AuthorizationStateProperties properties) {
+        return new AuthorizationStateTelemetry(meters, properties);
+    }
 
-  @Bean
-  RedisOAuth2AuthorizationStore redisOAuth2AuthorizationStore(RedisByteStore store,
-      AuthorizationStateProperties properties) {
-    return new RedisOAuth2AuthorizationStore(store, properties.redis().namespace());
-  }
+    @Bean
+    AuthorizationStateManager authorizationStateManager(
+        AuthorizationStateProperties properties,
+        RedisControlRepository control,
+        RedisGenerationCleanup cleanup,
+        AuthorizationStateTelemetry telemetry,
+        TaskExecutor authorizationStateCleanupExecutor) {
+        return new AuthorizationStateManager(
+            properties,
+            control,
+            cleanup,
+            telemetry,
+            Clock.systemUTC(),
+            duration -> Thread.sleep(duration.toMillis()),
+            authorizationStateCleanupExecutor
+        );
+    }
 
-  @Bean
-  OAuth2AuthorizationService resilientAuthorizationService(AuthorizationStateManager state,
-      RedisOAuth2AuthorizationStore redis, ObservationRegistry observations) {
-    return new RoutingOAuth2AuthorizationService(state, redis, observations);
-  }
+    @Bean
+    RedisOAuth2AuthorizationStore redisOAuth2AuthorizationStore(
+        RedisByteStore store,
+        AuthorizationStateProperties properties) {
+        return new RedisOAuth2AuthorizationStore(store, properties.redis().namespace());
+    }
 
-  @Bean
-  SessionRepository<MapSession> resilientSessionRepository(AuthorizationStateManager state,
-      RedisByteStore redis, AuthorizationStateProperties properties) {
-    return new RoutingSessionRepository(state, redis, properties.redis().namespace(), Duration.ofMinutes(30));
-  }
+    @Bean
+    OAuth2AuthorizationService resilientAuthorizationService(
+        AuthorizationStateManager state,
+        RedisOAuth2AuthorizationStore redis,
+        ObservationRegistry observations) {
+        return new RoutingOAuth2AuthorizationService(state, redis, observations);
+    }
 
-  @Bean
-  FilterRegistrationBean<StateRouteFilter> stateRouteFilter(AuthorizationStateManager state) {
-    FilterRegistrationBean<StateRouteFilter> registration = new FilterRegistrationBean<>(new StateRouteFilter(state));
-    registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
-    registration.setName("authorizationStateRouteFilter");
-    return registration;
-  }
+    @Bean
+    SessionRepository<MapSession> resilientSessionRepository(
+        AuthorizationStateManager state,
+        RedisByteStore redis,
+        AuthorizationStateProperties properties) {
+        return new RoutingSessionRepository(state, redis, properties.redis().namespace(), Duration.ofMinutes(30));
+    }
 
-  @Bean
-  AuthorizationStateHealthIndicator authorizationState(AuthorizationStateManager state) {
-    return new AuthorizationStateHealthIndicator(state);
-  }
+    @Bean
+    FilterRegistrationBean<StateRouteFilter> stateRouteFilter(AuthorizationStateManager state) {
+        FilterRegistrationBean<StateRouteFilter> registration
+            = new FilterRegistrationBean<>(new StateRouteFilter(state));
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        registration.setName("authorizationStateRouteFilter");
+        return registration;
+    }
+
+    @Bean
+    AuthorizationStateHealthIndicator authorizationState(AuthorizationStateManager state) {
+        return new AuthorizationStateHealthIndicator(state);
+    }
 }

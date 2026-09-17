@@ -201,5 +201,4 @@ class RegisteredClientConfigurationTest {
             STATE
         );
     }
-
 }

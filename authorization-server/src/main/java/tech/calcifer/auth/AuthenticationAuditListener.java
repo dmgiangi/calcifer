@@ -7,18 +7,23 @@ import org.springframework.security.authentication.event.AbstractAuthenticationF
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
 import org.springframework.stereotype.Component;
 
+
 @Component
 class AuthenticationAuditListener {
-  private static final Logger log = LoggerFactory.getLogger(AuthenticationAuditListener.class);
 
-  @EventListener
-  void successfulAuthentication(AuthenticationSuccessEvent event) {
-    log.info("authentication_success mechanism={}", event.getAuthentication().getClass().getSimpleName());
-  }
+    private static final Logger log = LoggerFactory.getLogger(AuthenticationAuditListener.class);
 
-  @EventListener
-  void failedAuthentication(AbstractAuthenticationFailureEvent event) {
-    log.info("authentication_failure mechanism={} reason={}",
-        event.getAuthentication().getClass().getSimpleName(), event.getException().getClass().getSimpleName());
-  }
+    @EventListener
+    void successfulAuthentication(AuthenticationSuccessEvent event) {
+        log.info("authentication_success mechanism={}", event.getAuthentication().getClass().getSimpleName());
+    }
+
+    @EventListener
+    void failedAuthentication(AbstractAuthenticationFailureEvent event) {
+        log.info(
+            "authentication_failure mechanism={} reason={}",
+            event.getAuthentication().getClass().getSimpleName(),
+            event.getException().getClass().getSimpleName()
+        );
+    }
 }

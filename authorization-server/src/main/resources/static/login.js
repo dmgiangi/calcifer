@@ -14,7 +14,7 @@
   const getJson = async (url) => {
     const response = await fetch(url, {
       credentials: 'same-origin',
-      headers: { Accept: 'application/json' }
+      headers: {Accept: 'application/json'}
     });
     if (!response.ok) {
       throw new Error(`Request failed: ${response.status}`);

@@ -44,6 +44,7 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationCode;
 import org.springframework.session.MapSession;
 
+
 class AuthorizationStateOperationalTest {
 
     @Test
@@ -141,7 +142,11 @@ class AuthorizationStateOperationalTest {
         StateRouteFilter filter = new StateRouteFilter(home);
 
         MockHttpServletResponse googleResponse = new MockHttpServletResponse();
-        filter.doFilter(new MockHttpServletRequest("GET", "/oauth2/authorization/google"), googleResponse, new MockFilterChain());
+        filter.doFilter(
+            new MockHttpServletRequest("GET", "/oauth2/authorization/google"),
+            googleResponse,
+            new MockFilterChain()
+        );
         assertThat(googleResponse.getStatus()).isEqualTo(503);
 
         MockHttpServletResponse loginResponse = new MockHttpServletResponse();
@@ -155,24 +160,52 @@ class AuthorizationStateOperationalTest {
 
         new AuthorizationStateRuntimeHints().registerHints(hints, getClass().getClassLoader());
 
-        assertThat(hints.serialization().javaSerializationHints())
+        assertThat(hints.reflection().typeHints().filter(hint -> hint.hasJavaSerialization()))
             .extracting(hint -> hint.getType().getName())
-            .contains(MapSession.class.getName(), Instant.class.getName(), Duration.class.getName(), "java.time.Ser", HashMap.class.getName(),
-                HashSet.class.getName(), LinkedHashMap.class.getName(), LinkedHashSet.class.getName(),
-                AuthorizationGrantType.class.getName(), OAuth2AuthorizationRequest.class.getName(),
-                OAuth2AuthorizationResponseType.class.getName(), Collections.unmodifiableMap(new HashMap<>()).getClass().getName(),
-                Collections.unmodifiableSet(new HashSet<>()).getClass().getName(), OAuth2AuthenticationToken.class.getName(),
-                AbstractOAuth2Token.class.getName(), OidcIdToken.class.getName(), OidcUserInfo.class.getName(),
-                DefaultOAuth2User.class.getName(), DefaultOidcUser.class.getName(), Boolean.class.getName(),
-                Integer.class.getName(), Long.class.getName(), Double.class.getName(), Date.class.getName(), URL.class.getName(),
-                String[].class.getTypeName(), "java.util.CollSer", OAuth2Error.class.getName(),
-                OAuth2Authorization.class.getName(), OAuth2Authorization.Token.class.getName(),
-                OAuth2AuthorizationCode.class.getName(), OAuth2AccessToken.class.getName(),
-                OAuth2AccessToken.TokenType.class.getName(), OAuth2RefreshToken.class.getName(),
-                OAuth2DeviceCode.class.getName(), OAuth2UserCode.class.getName(), List.of().getClass().getName(),
-                List.of("value").getClass().getName(), Map.of().getClass().getName(),
-                Map.of("key", "value").getClass().getName(), Set.of().getClass().getName(),
-                Set.of("value").getClass().getName());
+            .contains(
+                MapSession.class.getName(),
+                Instant.class.getName(),
+                Duration.class.getName(),
+                "java.time.Ser",
+                HashMap.class.getName(),
+                HashSet.class.getName(),
+                LinkedHashMap.class.getName(),
+                LinkedHashSet.class.getName(),
+                AuthorizationGrantType.class.getName(),
+                OAuth2AuthorizationRequest.class.getName(),
+                OAuth2AuthorizationResponseType.class.getName(),
+                Collections.unmodifiableMap(new HashMap<>()).getClass().getName(),
+                Collections.unmodifiableSet(new HashSet<>()).getClass().getName(),
+                OAuth2AuthenticationToken.class.getName(),
+                AbstractOAuth2Token.class.getName(),
+                OidcIdToken.class.getName(),
+                OidcUserInfo.class.getName(),
+                DefaultOAuth2User.class.getName(),
+                DefaultOidcUser.class.getName(),
+                Boolean.class.getName(),
+                Integer.class.getName(),
+                Long.class.getName(),
+                Double.class.getName(),
+                Date.class.getName(),
+                URL.class.getName(),
+                String[].class.getTypeName(),
+                "java.util.CollSer",
+                OAuth2Error.class.getName(),
+                OAuth2Authorization.class.getName(),
+                OAuth2Authorization.Token.class.getName(),
+                OAuth2AuthorizationCode.class.getName(),
+                OAuth2AccessToken.class.getName(),
+                OAuth2AccessToken.TokenType.class.getName(),
+                OAuth2RefreshToken.class.getName(),
+                OAuth2DeviceCode.class.getName(),
+                OAuth2UserCode.class.getName(),
+                List.of().getClass().getName(),
+                List.of("value").getClass().getName(),
+                Map.of().getClass().getName(),
+                Map.of("key", "value").getClass().getName(),
+                Set.of().getClass().getName(),
+                Set.of("value").getClass().getName()
+            );
     }
 
     @Test

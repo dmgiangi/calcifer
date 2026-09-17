@@ -1,17 +1,17 @@
 {
-  "reflection": [
-    {
-      "type": "tech.calcifer.auth.state.AuthorizationStateProperties",
-      "methods": [
-        {
-          "name": "isEnabledRedisConfigurationValid",
-          "parameterTypes": []
-        },
-        {
-          "name": "isRecoveryTimingValid",
-          "parameterTypes": []
-        }
-      ]
-    }
-  ]
+	"reflection": [
+		{
+			"type": "tech.calcifer.auth.state.AuthorizationStateProperties",
+			"methods": [
+				{
+					"name": "isEnabledRedisConfigurationValid",
+					"parameterTypes": []
+				},
+				{
+					"name": "isRecoveryTimingValid",
+					"parameterTypes": []
+				}
+			]
+		}
+	]
 }

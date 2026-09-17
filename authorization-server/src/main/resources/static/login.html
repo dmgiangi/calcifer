@@ -10,35 +10,35 @@
   <link rel="stylesheet" href="login.css">
 </head>
 <body>
-  <main class="login-shell">
-    <section class="login-card" aria-labelledby="login-title">
-      <div class="wordmark" id="login-title">calcifer</div>
+<main class="login-shell">
+  <section class="login-card" aria-labelledby="login-title">
+    <div class="wordmark" id="login-title">calcifer</div>
 
-      <a class="google-link" href="oauth2/authorization/google" aria-label="Continue with Google">
-        <img src="google-mark.svg" alt="" width="32" height="32" aria-hidden="true">
-      </a>
+    <a class="google-link" href="oauth2/authorization/google" aria-label="Continue with Google">
+      <img src="google-mark.svg" alt="" width="32" height="32" aria-hidden="true">
+    </a>
 
-      <div class="divider" role="separator"><span>or</span></div>
+    <div class="divider" role="separator"><span>or</span></div>
 
-      <section id="password-login" class="password-login" hidden aria-labelledby="password-title">
-        <h2 id="password-title">Sign in with password</h2>
-        <form method="post" action="login" id="password-form">
-          <label for="username">Username</label>
-          <input id="username" name="username" autocomplete="username" required>
+    <section id="password-login" class="password-login" hidden aria-labelledby="password-title">
+      <h2 id="password-title">Sign in with password</h2>
+      <form method="post" action="login" id="password-form">
+        <label for="username">Username</label>
+        <input id="username" name="username" autocomplete="username" required>
 
-          <label for="password">Password</label>
-          <input id="password" type="password" name="password" autocomplete="current-password" required>
+        <label for="password">Password</label>
+        <input id="password" type="password" name="password" autocomplete="current-password" required>
 
-          <button class="password-button" type="submit">Sign in</button>
-        </form>
-        <p id="password-error" class="form-error" role="alert" hidden>
-          Password sign-in is temporarily unavailable.
-        </p>
-      </section>
-
-      <p class="security-note">Access is protected by Calcifer Authorization Server.</p>
+        <button class="password-button" type="submit">Sign in</button>
+      </form>
+      <p id="password-error" class="form-error" role="alert" hidden>
+        Password sign-in is temporarily unavailable.
+      </p>
     </section>
-  </main>
-  <script src="login.js" defer></script>
+
+    <p class="security-note">Access is protected by Calcifer Authorization Server.</p>
+  </section>
+</main>
+<script src="login.js" defer></script>
 </body>
 </html>

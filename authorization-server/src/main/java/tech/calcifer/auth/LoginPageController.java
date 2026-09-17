@@ -9,44 +9,53 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+
 @Controller
 class LoginPageController {
-  private final IdentityProperties properties;
 
-  LoginPageController(IdentityProperties properties) {
-    this.properties = properties;
-  }
+    private final IdentityProperties properties;
 
-  @GetMapping(value = "/", produces = "text/html")
-  String root(Authentication authentication) {
-    return authenticated(authentication) ? "redirect:/session" : "redirect:/login";
-  }
+    LoginPageController(IdentityProperties properties) {
+        this.properties = properties;
+    }
 
-  @GetMapping(value = "/login", produces = "text/html")
-  String login(Authentication authentication) {
-    return authenticated(authentication) ? "redirect:/session" : "forward:/login.html";
-  }
+    @GetMapping(value = "/", produces = "text/html")
+    String root(Authentication authentication) {
+        return authenticated(authentication) ? "redirect:/session" : "redirect:/login";
+    }
 
-  @GetMapping(value = "/session", produces = "text/html")
-  String session() {
-    return "forward:/session.html";
-  }
+    @GetMapping(value = "/login", produces = "text/html")
+    String login(Authentication authentication) {
+        return authenticated(authentication) ? "redirect:/session" : "forward:/login.html";
+    }
 
-  @GetMapping(value = "/login/config", produces = "application/json")
-  @ResponseBody
-  Map<String, Boolean> loginConfig() {
-    return Map.of("passwordEnabled", properties.localLogin().enabled());
-  }
+    @GetMapping(value = "/session", produces = "text/html")
+    String session() {
+        return "forward:/session.html";
+    }
 
-  @GetMapping(value = "/login/csrf", produces = "application/json")
-  @ResponseBody
-  Map<String, String> csrf(@RequestAttribute(name = "_csrf") CsrfToken csrfToken) {
-    return Map.of("parameterName", csrfToken.getParameterName(), "headerName", csrfToken.getHeaderName(),
-        "token", csrfToken.getToken());
-  }
+    @GetMapping(value = "/login/config", produces = "application/json")
+    @ResponseBody
+    Map<String, Boolean> loginConfig() {
+        return Map.of("passwordEnabled", properties.localLogin().enabled());
+    }
 
-  private static boolean authenticated(Authentication authentication) {
-    return authentication != null && authentication.isAuthenticated()
-        && !(authentication instanceof AnonymousAuthenticationToken);
-  }
+    @GetMapping(value = "/login/csrf", produces = "application/json")
+    @ResponseBody
+    Map<String, String> csrf(@RequestAttribute(name = "_csrf") CsrfToken csrfToken) {
+        return Map.of(
+            "parameterName",
+            csrfToken.getParameterName(),
+            "headerName",
+            csrfToken.getHeaderName(),
+            "token",
+            csrfToken.getToken()
+        );
+    }
+
+    private static boolean authenticated(Authentication authentication) {
+        return authentication != null
+            && authentication.isAuthenticated()
+            && !(authentication instanceof AnonymousAuthenticationToken);
+    }
 }

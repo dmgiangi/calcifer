@@ -10,19 +10,19 @@
   <link rel="stylesheet" href="login.css">
 </head>
 <body>
-  <main class="login-shell">
-    <section class="login-card" aria-labelledby="session-title">
-      <div class="wordmark">calcifer</div>
-      <h1 id="session-title">Session active</h1>
-      <p>You can return to an application. Its OAuth authorization request will use this session.</p>
-      <form method="post" action="/logout" id="logout-form" hidden>
-        <button class="password-button" type="submit">Sign out</button>
-      </form>
-      <p id="logout-error" class="form-error" role="alert" hidden>
-        Sign out is temporarily unavailable. Please try again.
-      </p>
-    </section>
-  </main>
-  <script src="session.js" defer></script>
+<main class="login-shell">
+  <section class="login-card" aria-labelledby="session-title">
+    <div class="wordmark">calcifer</div>
+    <h1 id="session-title">Session active</h1>
+    <p>You can return to an application. Its OAuth authorization request will use this session.</p>
+    <form method="post" action="/logout" id="logout-form" hidden>
+      <button class="password-button" type="submit">Sign out</button>
+    </form>
+    <p id="logout-error" class="form-error" role="alert" hidden>
+      Sign out is temporarily unavailable. Please try again.
+    </p>
+  </section>
+</main>
+<script src="session.js" defer></script>
 </body>
 </html>
