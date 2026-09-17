@@ -12,6 +12,350 @@
 					"parameterTypes": []
 				}
 			]
+		},
+		{
+			"type": "org.springframework.session.MapSession",
+			"serializable": true
+		},
+		{
+			"type": "java.time.Instant",
+			"serializable": true
+		},
+		{
+			"type": "java.time.Duration",
+			"serializable": true
+		},
+		{
+			"type": "java.time.Ser",
+			"serializable": true
+		},
+		{
+			"type": "java.lang.Boolean",
+			"serializable": true
+		},
+		{
+			"type": "java.lang.Integer",
+			"serializable": true
+		},
+		{
+			"type": "java.lang.Long",
+			"serializable": true
+		},
+		{
+			"type": "java.lang.Double",
+			"serializable": true
+		},
+		{
+			"type": "java.util.Date",
+			"serializable": true
+		},
+		{
+			"type": "java.net.URL",
+			"serializable": true
+		},
+		{
+			"type": "java.lang.String[]",
+			"serializable": true
+		},
+		{
+			"type": "java.util.CollSer",
+			"serializable": true
+		},
+		{
+			"type": "java.util.HashMap",
+			"serializable": true
+		},
+		{
+			"type": "java.util.HashSet",
+			"serializable": true
+		},
+		{
+			"type": "java.util.LinkedHashMap",
+			"serializable": true
+		},
+		{
+			"type": "java.util.LinkedHashSet",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.AuthorizationGrantType",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.OAuth2Error",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationResponseType",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.AbstractOAuth2Token",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.server.authorization.OAuth2Authorization",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.server.authorization.OAuth2Authorization$Token",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationCode",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.OAuth2AccessToken",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.OAuth2AccessToken$TokenType",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.OAuth2RefreshToken",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.OAuth2DeviceCode",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.OAuth2UserCode",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.oidc.OidcIdToken",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.oidc.OidcUserInfo",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.user.DefaultOAuth2User",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser",
+			"serializable": true
+		},
+		{
+			"type": "java.util.Collections$UnmodifiableMap",
+			"serializable": true
+		},
+		{
+			"type": "java.util.Collections$UnmodifiableSet",
+			"serializable": true
+		},
+		{
+			"type": "java.util.ImmutableCollections$ListN",
+			"serializable": true
+		},
+		{
+			"type": "java.util.ImmutableCollections$List12",
+			"serializable": true
+		},
+		{
+			"type": "java.util.ImmutableCollections$MapN",
+			"serializable": true
+		},
+		{
+			"type": "java.util.ImmutableCollections$Map1",
+			"serializable": true
+		},
+		{
+			"type": "java.util.ImmutableCollections$SetN",
+			"serializable": true
+		},
+		{
+			"type": "java.util.ImmutableCollections$Set12",
+			"serializable": true
+		},
+		{
+			"type": "java.lang.Exception",
+			"serializable": true
+		},
+		{
+			"type": "java.lang.Number",
+			"serializable": true
+		},
+		{
+			"type": "java.lang.RuntimeException",
+			"serializable": true
+		},
+		{
+			"type": "java.lang.StackTraceElement",
+			"serializable": true
+		},
+		{
+			"type": "java.lang.String",
+			"serializable": true
+		},
+		{
+			"type": "java.lang.String$CaseInsensitiveComparator",
+			"serializable": true
+		},
+		{
+			"type": "java.lang.Throwable",
+			"serializable": true
+		},
+		{
+			"type": "java.util.ArrayList",
+			"serializable": true
+		},
+		{
+			"type": "java.util.Collections$EmptyList",
+			"serializable": true
+		},
+		{
+			"type": "java.util.Collections$UnmodifiableCollection",
+			"serializable": true
+		},
+		{
+			"type": "java.util.Collections$UnmodifiableList",
+			"serializable": true
+		},
+		{
+			"type": "java.util.Collections$UnmodifiableRandomAccessList",
+			"serializable": true
+		},
+		{
+			"type": "java.util.Locale",
+			"serializable": true
+		},
+		{
+			"type": "java.util.TreeMap",
+			"serializable": true
+		},
+		{
+			"type": "java.util.TreeSet",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.cache.support.NullValue",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.authentication.AbstractAuthenticationToken",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.authentication.AccountExpiredException",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.authentication.AuthenticationServiceException",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.authentication.BadCredentialsException",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.authentication.CredentialsExpiredException",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.authentication.DisabledException",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.authentication.InsufficientAuthenticationException",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.authentication.LockedException",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.authentication.ProviderNotFoundException",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.authentication.UsernamePasswordAuthenticationToken",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.core.AuthenticationException",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.core.authority.SimpleGrantedAuthority",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.core.context.SecurityContextImpl",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.core.userdetails.User",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.core.userdetails.User$AuthorityComparator",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.core.userdetails.UsernameNotFoundException",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.client.authentication.OAuth2AuthorizationCodeAuthenticationToken",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.client.authentication.OAuth2LoginAuthenticationToken",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.core.OAuth2AuthenticationException",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.oauth2.server.resource.BearerTokenAuthenticationToken",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationException",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.web.authentication.session.SessionAuthenticationException",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.web.authentication.WebAuthenticationDetails",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.web.csrf.DefaultCsrfToken",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.web.savedrequest.DefaultSavedRequest",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.web.savedrequest.SavedCookie",
+			"serializable": true
+		},
+		{
+			"type": "org.springframework.security.web.server.csrf.DefaultCsrfToken",
+			"serializable": true
 		}
 	]
 }
