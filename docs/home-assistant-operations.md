@@ -41,6 +41,13 @@ OIDC. To use the local break-glass login while the identity provider is
 unavailable, open
 `https://home.calcifer.tech/?skip_oidc_redirect=true` from the LAN.
 
+HACS is installed declaratively by the `install-hacs` init container from a
+pinned release with SHA-256 verification. The container installs it only when
+`/config/custom_components/hacs/manifest.json` is absent, so HACS updates made
+from its UI persist in the PVC. After the first deployment, restart Home
+Assistant if needed, perform a hard browser refresh, then add HACS from
+Settings > Devices & services and complete its GitHub device authentication.
+
 Home Assistant 2026.9 stores reverse-proxy settings in `.storage/http` rather
 than `configuration.yaml`. The `configure-http` init container maintains the
 trusted Traefik networks as stable configuration before Core starts, preventing
