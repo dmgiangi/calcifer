@@ -4,4 +4,5 @@ resources:
   - namespace.yaml
   - helmrepositories.yaml
   - helmreleases.yaml
+  - network-prober.yaml
   - home-ingest-credentials.sops.yaml

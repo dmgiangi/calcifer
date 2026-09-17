@@ -378,6 +378,101 @@ spec:
             forward_to = [prometheus.remote_write.victoriametrics.receiver]
           }
 
+          prometheus.exporter.blackbox "host_network" {
+            config = `
+          modules:
+            dns_udp:
+              prober: dns
+              timeout: 5s
+              dns:
+                transport_protocol: udp
+                preferred_ip_protocol: ip4
+                query_name: github.com
+                query_type: A
+                valid_rcodes: [NOERROR]
+            dns_tcp:
+              prober: dns
+              timeout: 5s
+              dns:
+                transport_protocol: tcp
+                preferred_ip_protocol: ip4
+                query_name: github.com
+                query_type: A
+                valid_rcodes: [NOERROR]
+            tcp_connect:
+              prober: tcp
+              timeout: 5s
+            http_2xx:
+              prober: http
+              timeout: 8s
+              http:
+                preferred_ip_protocol: ip4
+                follow_redirects: true
+          `
+
+            target {
+              name = "host-router-dns-udp"
+              address = "192.168.0.1:53"
+              module = "dns_udp"
+              labels = { probe_name = "host-router-dns-udp", origin = "host", endpoint = "router-dns", protocol = "udp" }
+            }
+            target {
+              name = "host-router-dns-tcp"
+              address = "192.168.0.1:53"
+              module = "dns_tcp"
+              labels = { probe_name = "host-router-dns-tcp", origin = "host", endpoint = "router-dns", protocol = "tcp" }
+            }
+            target {
+              name = "host-cloudflare-dns-udp"
+              address = "1.1.1.1:53"
+              module = "dns_udp"
+              labels = { probe_name = "host-cloudflare-dns-udp", origin = "host", endpoint = "cloudflare-dns", protocol = "udp" }
+            }
+            target {
+              name = "host-cloudflare-dns-tcp"
+              address = "1.1.1.1:53"
+              module = "dns_tcp"
+              labels = { probe_name = "host-cloudflare-dns-tcp", origin = "host", endpoint = "cloudflare-dns", protocol = "tcp" }
+            }
+            target {
+              name = "host-cloudflare-https-tcp"
+              address = "1.1.1.1:443"
+              module = "tcp_connect"
+              labels = { probe_name = "host-cloudflare-https-tcp", origin = "host", endpoint = "cloudflare-https", protocol = "tcp" }
+            }
+            target {
+              name = "host-github-https"
+              address = "https://github.com"
+              module = "http_2xx"
+              labels = { probe_name = "host-github-https", origin = "host", endpoint = "github", protocol = "https" }
+            }
+            target {
+              name = "host-private-ingest-tcp"
+              address = "172.31.255.1:32443"
+              module = "tcp_connect"
+              labels = { probe_name = "host-private-ingest-tcp", origin = "host", endpoint = "private-ingest", protocol = "tcp" }
+            }
+          }
+
+          discovery.relabel "host_network_probes" {
+            targets = prometheus.exporter.blackbox.host_network.targets
+            rule {
+              source_labels = ["probe_name"]
+              target_label  = "instance"
+            }
+            rule {
+              source_labels = ["probe_name"]
+              target_label  = "target"
+            }
+          }
+
+          prometheus.scrape "host_network_probes" {
+            targets         = discovery.relabel.host_network_probes.output
+            scrape_interval = "15s"
+            scrape_timeout  = "10s"
+            forward_to      = [prometheus.remote_write.victoriametrics.receiver]
+          }
+
           loki.process "pod_logs" {
             stage.labels {
               values = {
@@ -432,6 +527,10 @@ spec:
                 max_backoff = "5m"
                 sample_age_limit = "48h"
               }
+            }
+            wal {
+              min_keepalive_time = "2h"
+              max_keepalive_time = "48h"
             }
           }
 

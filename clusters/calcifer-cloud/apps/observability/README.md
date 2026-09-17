@@ -21,6 +21,11 @@ Velero charts are pinned to the versions in `helmrepositories.yaml`/`helmrelease
 Official community dashboards from Grafana.com are declaratively imported via
 Grafana Operator (`GrafanaDashboard` with `grafanaCom`).
 
+The `calcifer-home` collectors continuously run DNS, TCP, and HTTPS blackbox
+probes from both the host and Kubernetes Pod network. The imported Prometheus
+Blackbox dashboard provides per-target details, while `Home Network RCA`
+correlates probe failures with CoreDNS SERVFAILs, node drops, and forwarding lag.
+
 Authorization-server traces use OTLP/HTTP to the Alloy instance in each
 cluster. Home Alloy forwards them through the private WireGuard path with TLS,
 source-IP allowlisting, and dedicated SOPS-encrypted basic-auth credentials.

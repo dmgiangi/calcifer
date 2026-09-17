@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: home-network-dashboard
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/managed-by: grafana-operator
+data:
+  json: |
+    {
+      "uid": "home-network-rca",
+      "title": "Home Network RCA",
+      "description": "Correlates host and pod probes with CoreDNS and forwarding health.",
+      "tags": ["calcifer-home", "blackbox", "dns", "network"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "15s",
+      "time": {"from": "now-6h", "to": "now"},
+      "templating": {"list": [
+        {"name": "origin", "label": "Origin", "type": "query", "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "query": "label_values(probe_success{cluster=\"calcifer-home\"}, origin)", "includeAll": true, "multi": true, "current": {"text": "All", "value": ["$__all"]}},
+        {"name": "endpoint", "label": "Endpoint", "type": "query", "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "query": "label_values(probe_success{cluster=\"calcifer-home\"}, endpoint)", "includeAll": true, "multi": true, "current": {"text": "All", "value": ["$__all"]}}
+      ]},
+      "panels": [
+        {"id": 1, "type": "text", "title": "RCA guide", "gridPos": {"h": 5, "w": 24, "x": 0, "y": 0}, "options": {"mode": "markdown", "content": "**Router DNS fails, Cloudflare works:** router DNS proxy.  **Pod fails, host works:** K3s overlay/NAT.  **Host and pod fail:** router/WAN.  **Only CoreDNS fails:** CoreDNS/service path.  **Private ingest alone fails:** WireGuard/private transit."}},
+        {"id": 2, "type": "stat", "title": "Current probe status", "gridPos": {"h": 7, "w": 24, "x": 0, "y": 5}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "min by (instance, origin, endpoint, protocol) (last_over_time(probe_success{cluster=\"calcifer-home\",origin=~\"$origin\",endpoint=~\"$endpoint\"}[5m]))", "legendFormat": "{{origin}} / {{endpoint}} / {{protocol}}"}], "fieldConfig": {"defaults": {"mappings": [{"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}, "1": {"text": "UP", "color": "green"}}}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}}, "options": {"colorMode": "background", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"]}}},
+        {"id": 3, "type": "timeseries", "title": "Probe success history", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "probe_success{cluster=\"calcifer-home\",origin=~\"$origin\",endpoint=~\"$endpoint\"}", "legendFormat": "{{origin}} / {{endpoint}} / {{protocol}}"}], "fieldConfig": {"defaults": {"min": 0, "max": 1, "custom": {"drawStyle": "line", "lineInterpolation": "stepAfter", "spanNulls": false}}}},
+        {"id": 4, "type": "timeseries", "title": "Probe duration", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "probe_duration_seconds{cluster=\"calcifer-home\",origin=~\"$origin\",endpoint=~\"$endpoint\"}", "legendFormat": "{{origin}} / {{endpoint}} / {{protocol}}"}], "fieldConfig": {"defaults": {"unit": "s"}}},
+        {"id": 5, "type": "timeseries", "title": "CoreDNS upstream health-check failures", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "sum by (to) (rate(coredns_proxy_healthcheck_failures_total{cluster=\"calcifer-home\"}[$__rate_interval]))", "legendFormat": "{{to}}"}], "fieldConfig": {"defaults": {"unit": "ops"}}},
+        {"id": 6, "type": "timeseries", "title": "CoreDNS SERVFAIL responses", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "sum(rate(coredns_dns_responses_total{cluster=\"calcifer-home\",rcode=\"SERVFAIL\"}[$__rate_interval]))", "legendFormat": "SERVFAIL/s"}], "fieldConfig": {"defaults": {"unit": "ops"}}},
+        {"id": 7, "type": "timeseries", "title": "Node network drops", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "sum by (device) (rate(node_network_receive_drop_total{cluster=\"calcifer-home\"}[$__rate_interval]) + rate(node_network_transmit_drop_total{cluster=\"calcifer-home\"}[$__rate_interval]))", "legendFormat": "{{device}}"}], "fieldConfig": {"defaults": {"unit": "pps"}}},
+        {"id": 8, "type": "timeseries", "title": "Remote-write delivery lag", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "time() - max(last_over_time(prometheus_remote_storage_queue_highest_sent_timestamp_seconds{cluster=\"calcifer-home\"}[24h]))", "legendFormat": "lag"}], "fieldConfig": {"defaults": {"unit": "s"}}}
+      ],
+      "annotations": {"list": []}
+    }
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: home-network
+  namespace: monitoring
+spec:
+  resyncPeriod: 5m
+  folderRef: observability
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  configMapRef:
+    name: home-network-dashboard
+    key: json

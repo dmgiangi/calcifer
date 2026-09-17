@@ -12,4 +12,5 @@ resources:
   - redis-alerts.yaml
   - authorization-server-outcomes.yaml
   - home-forwarding-dashboard.yaml
+  - home-network-dashboard.yaml
   - grafana-traefik.yaml

@@ -1,0 +1,254 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: network-prober
+  namespace: monitoring
+data:
+  config.alloy: |-
+    logging {
+      level  = "info"
+      format = "logfmt"
+    }
+
+    prometheus.exporter.blackbox "pod_network" {
+      config = `
+    modules:
+      dns_udp:
+        prober: dns
+        timeout: 5s
+        dns:
+          transport_protocol: udp
+          preferred_ip_protocol: ip4
+          query_name: github.com
+          query_type: A
+          valid_rcodes: [NOERROR]
+      dns_tcp:
+        prober: dns
+        timeout: 5s
+        dns:
+          transport_protocol: tcp
+          preferred_ip_protocol: ip4
+          query_name: github.com
+          query_type: A
+          valid_rcodes: [NOERROR]
+      tcp_connect:
+        prober: tcp
+        timeout: 5s
+      http_2xx:
+        prober: http
+        timeout: 8s
+        http:
+          preferred_ip_protocol: ip4
+          follow_redirects: true
+    `
+
+      target {
+        name = "pod-coredns-udp"
+        address = "10.43.0.10:53"
+        module = "dns_udp"
+        labels = { probe_name = "pod-coredns-udp", origin = "pod", endpoint = "coredns", protocol = "udp" }
+      }
+      target {
+        name = "pod-coredns-tcp"
+        address = "10.43.0.10:53"
+        module = "dns_tcp"
+        labels = { probe_name = "pod-coredns-tcp", origin = "pod", endpoint = "coredns", protocol = "tcp" }
+      }
+      target {
+        name = "pod-router-dns-udp"
+        address = "192.168.0.1:53"
+        module = "dns_udp"
+        labels = { probe_name = "pod-router-dns-udp", origin = "pod", endpoint = "router-dns", protocol = "udp" }
+      }
+      target {
+        name = "pod-router-dns-tcp"
+        address = "192.168.0.1:53"
+        module = "dns_tcp"
+        labels = { probe_name = "pod-router-dns-tcp", origin = "pod", endpoint = "router-dns", protocol = "tcp" }
+      }
+      target {
+        name = "pod-cloudflare-dns-udp"
+        address = "1.1.1.1:53"
+        module = "dns_udp"
+        labels = { probe_name = "pod-cloudflare-dns-udp", origin = "pod", endpoint = "cloudflare-dns", protocol = "udp" }
+      }
+      target {
+        name = "pod-cloudflare-dns-tcp"
+        address = "1.1.1.1:53"
+        module = "dns_tcp"
+        labels = { probe_name = "pod-cloudflare-dns-tcp", origin = "pod", endpoint = "cloudflare-dns", protocol = "tcp" }
+      }
+      target {
+        name = "pod-cloudflare-https-tcp"
+        address = "1.1.1.1:443"
+        module = "tcp_connect"
+        labels = { probe_name = "pod-cloudflare-https-tcp", origin = "pod", endpoint = "cloudflare-https", protocol = "tcp" }
+      }
+      target {
+        name = "pod-github-https"
+        address = "https://github.com"
+        module = "http_2xx"
+        labels = { probe_name = "pod-github-https", origin = "pod", endpoint = "github", protocol = "https" }
+      }
+      target {
+        name = "pod-private-ingest-tcp"
+        address = "172.31.255.1:32443"
+        module = "tcp_connect"
+        labels = { probe_name = "pod-private-ingest-tcp", origin = "pod", endpoint = "private-ingest", protocol = "tcp" }
+      }
+    }
+
+    discovery.relabel "pod_network_probes" {
+      targets = prometheus.exporter.blackbox.pod_network.targets
+      rule {
+        source_labels = ["probe_name"]
+        target_label  = "instance"
+      }
+      rule {
+        source_labels = ["probe_name"]
+        target_label  = "target"
+      }
+    }
+
+    prometheus.scrape "pod_network_probes" {
+      targets         = discovery.relabel.pod_network_probes.output
+      scrape_interval = "15s"
+      scrape_timeout  = "10s"
+      forward_to      = [prometheus.remote_write.victoriametrics.receiver]
+    }
+
+    prometheus.remote_write "victoriametrics" {
+      external_labels = { cluster = "calcifer-home" }
+      endpoint {
+        url = "https://metrics-ingest.calcifer.tech:32443/api/v1/write"
+        basic_auth {
+          username = sys.env("METRICS_INGEST_USERNAME")
+          password = sys.env("METRICS_INGEST_PASSWORD")
+        }
+        tls_config {
+          server_name = "metrics-ingest.calcifer.tech"
+        }
+        queue_config {
+          max_backoff      = "5m"
+          sample_age_limit = "48h"
+        }
+      }
+      wal {
+        min_keepalive_time = "2h"
+        max_keepalive_time = "48h"
+      }
+    }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: network-prober-data
+  namespace: monitoring
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: network-prober
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: network-prober
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: network-prober
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: network-prober
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        fsGroup: 65534
+        fsGroupChangePolicy: OnRootMismatch
+      hostAliases:
+        - ip: 172.31.255.1
+          hostnames: [metrics-ingest.calcifer.tech]
+      containers:
+        - name: alloy
+          image: docker.io/grafana/alloy:v1.19.2@sha256:b8ec653c44235fbe910879145dac3597d66b0aaecf60bcbbe82580767771a839
+          imagePullPolicy: IfNotPresent
+          args:
+            - run
+            - /etc/alloy/config.alloy
+            - --storage.path=/var/lib/alloy
+            - --server.http.listen-addr=0.0.0.0:12345
+            - --disable-reporting
+          ports:
+            - name: http
+              containerPort: 12345
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          env:
+            - name: METRICS_INGEST_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: home-ingest-credentials
+                  key: METRICS_INGEST_USERNAME
+            - name: METRICS_INGEST_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: home-ingest-credentials
+                  key: METRICS_INGEST_PASSWORD
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+            runAsGroup: 65534
+            runAsNonRoot: true
+            runAsUser: 65534
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 150m
+              memory: 192Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alloy
+              readOnly: true
+            - name: data
+              mountPath: /var/lib/alloy
+      volumes:
+        - name: config
+          configMap:
+            name: network-prober
+        - name: data
+          persistentVolumeClaim:
+            claimName: network-prober-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: network-prober
+  namespace: monitoring
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "12345"
+spec:
+  selector:
+    app.kubernetes.io/name: network-prober
+  ports:
+    - name: http
+      port: 12345
+      targetPort: http
