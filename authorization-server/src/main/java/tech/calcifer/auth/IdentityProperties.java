@@ -24,7 +24,7 @@ public record IdentityProperties(
     @Valid Client grafana,
     @Valid Client grafanaApi,
     @Valid LocalLogin localLogin,
-    @Valid Map<String, @Valid ClientDefinition> clients
+    Map<String, @Valid ClientDefinition> clients
 ) {
 
     @ConstructorBinding

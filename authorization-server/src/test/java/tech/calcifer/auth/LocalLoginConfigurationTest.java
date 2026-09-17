@@ -33,8 +33,7 @@ class LocalLoginConfigurationTest {
   @Test
   void rejectsBadPassword() {
     BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-    DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-    provider.setUserDetailsService(new AuthorizationServerConfiguration()
+    DaoAuthenticationProvider provider = new DaoAuthenticationProvider(new AuthorizationServerConfiguration()
         .localAdministrator(properties(encoder.encode("correct-password"))));
     provider.setPasswordEncoder(encoder);
     assertThatThrownBy(() -> provider.authenticate(

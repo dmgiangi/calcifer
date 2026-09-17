@@ -1,7 +1,7 @@
 package tech.calcifer.auth.state;
 
-import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.boot.health.contributor.Health;
+import org.springframework.boot.health.contributor.HealthIndicator;
 
 final class AuthorizationStateHealthIndicator implements HealthIndicator {
   private final AuthorizationStateManager state;
