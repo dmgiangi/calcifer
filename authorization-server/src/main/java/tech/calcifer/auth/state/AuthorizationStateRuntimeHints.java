@@ -1,6 +1,7 @@
 package tech.calcifer.auth.state;
 
 import java.net.URL;
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
@@ -14,10 +15,12 @@ import java.util.Map;
 import java.util.Set;
 import org.hibernate.validator.internal.util.logging.Log_$logger;
 import org.hibernate.validator.internal.util.logging.Messages_$bundle;
+import org.springframework.aot.hint.ExecutableMode;
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.aot.hint.TypeReference;
+import tech.calcifer.auth.IdentityProperties;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.AbstractOAuth2Token;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -42,6 +45,13 @@ final class AuthorizationStateRuntimeHints implements RuntimeHintsRegistrar {
     @Override
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
         hints.reflection().registerType(Log_$logger.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
+        registerPublicMethods(hints, AuthorizationStateProperties.class);
+        hints
+            .reflection()
+            .registerType(AuthorizationStateProperties.Redis.class, MemberCategory.ACCESS_DECLARED_FIELDS);
+        hints.reflection().registerType(IdentityProperties.Client.class, MemberCategory.ACCESS_DECLARED_FIELDS);
+        hints.reflection().registerType(IdentityProperties.LocalLogin.class, MemberCategory.ACCESS_DECLARED_FIELDS);
+        registerPublicMethods(hints, IdentityProperties.ClientDefinition.class);
         for (var field : Messages_$bundle.class.getFields()) {
             if (field.getName().equals("INSTANCE")) {
                 hints.reflection().registerField(field);
@@ -89,6 +99,14 @@ final class AuthorizationStateRuntimeHints implements RuntimeHintsRegistrar {
         registerSerialization(hints, TypeReference.of(Map.of("key", "value").getClass()));
         registerSerialization(hints, TypeReference.of(Set.of().getClass()));
         registerSerialization(hints, TypeReference.of(Set.of("value").getClass()));
+    }
+
+    private static void registerPublicMethods(RuntimeHints hints, Class<?> type) {
+        for (Method method : type.getMethods()) {
+            if (method.getDeclaringClass().equals(type)) {
+                hints.reflection().registerMethod(method, ExecutableMode.INVOKE);
+            }
+        }
     }
 
     private static void registerSerialization(RuntimeHints hints, TypeReference type) {
