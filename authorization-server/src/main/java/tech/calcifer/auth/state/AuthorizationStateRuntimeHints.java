@@ -12,6 +12,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.hibernate.validator.internal.util.logging.Log_$logger;
+import org.hibernate.validator.internal.util.logging.Messages_$bundle;
+import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.aot.hint.TypeReference;
@@ -38,6 +41,12 @@ final class AuthorizationStateRuntimeHints implements RuntimeHintsRegistrar {
 
     @Override
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+        hints.reflection().registerType(Log_$logger.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
+        for (var field : Messages_$bundle.class.getFields()) {
+            if (field.getName().equals("INSTANCE")) {
+                hints.reflection().registerField(field);
+            }
+        }
         registerSerialization(hints, TypeReference.of(MapSession.class));
         registerSerialization(hints, TypeReference.of(Instant.class));
         registerSerialization(hints, TypeReference.of(Duration.class));
