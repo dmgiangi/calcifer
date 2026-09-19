@@ -368,6 +368,10 @@
 			"serializable": true
 		},
 		{
+			"type": "org.springframework.security.core.authority.FactorGrantedAuthority",
+			"serializable": true
+		},
+		{
 			"type": "org.springframework.security.core.authority.SimpleGrantedAuthority",
 			"serializable": true
 		},

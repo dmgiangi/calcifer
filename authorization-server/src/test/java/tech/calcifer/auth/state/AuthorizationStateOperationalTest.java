@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.predicate.RuntimeHintsPredicates;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -189,6 +190,7 @@ class AuthorizationStateOperationalTest {
                 OidcUserInfo.class.getName(),
                 DefaultOAuth2User.class.getName(),
                 DefaultOidcUser.class.getName(),
+                FactorGrantedAuthority.class.getName(),
                 Boolean.class.getName(),
                 Integer.class.getName(),
                 Long.class.getName(),

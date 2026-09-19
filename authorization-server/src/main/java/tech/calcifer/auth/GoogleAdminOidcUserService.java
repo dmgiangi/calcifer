@@ -3,6 +3,7 @@ package tech.calcifer.auth;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
@@ -36,10 +37,10 @@ class GoogleAdminOidcUserService implements OAuth2UserService<OidcUserRequest, O
             throw new AccessDeniedException("Google identity is not authorized");
         }
         return new DefaultOidcUser(
-            Set.of(new SimpleGrantedAuthority("ROLE_ADMIN")),
-            user.getIdToken(),
-            user.getUserInfo(),
-            "sub"
+            Set.of(
+                new SimpleGrantedAuthority("ROLE_ADMIN"),
+                FactorGrantedAuthority.fromAuthority(FactorGrantedAuthority.AUTHORIZATION_CODE_AUTHORITY)
+            ), user.getIdToken(), user.getUserInfo(), "sub"
         );
     }
 }

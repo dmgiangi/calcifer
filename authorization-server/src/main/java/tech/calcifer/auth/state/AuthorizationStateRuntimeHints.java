@@ -41,6 +41,7 @@ import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationCode;
 import org.springframework.session.MapSession;
@@ -111,6 +112,7 @@ final class AuthorizationStateRuntimeHints implements RuntimeHintsRegistrar {
         registerSerialization(hints, TypeReference.of(OidcUserInfo.class));
         registerSerialization(hints, TypeReference.of(DefaultOAuth2User.class));
         registerSerialization(hints, TypeReference.of(DefaultOidcUser.class));
+        registerSerialization(hints, TypeReference.of(FactorGrantedAuthority.class));
         registerSerialization(hints, TypeReference.of(Collections.unmodifiableMap(new HashMap<>()).getClass()));
         registerSerialization(hints, TypeReference.of(Collections.unmodifiableSet(new HashSet<>()).getClass()));
         registerSerialization(hints, TypeReference.of(List.of().getClass()));
