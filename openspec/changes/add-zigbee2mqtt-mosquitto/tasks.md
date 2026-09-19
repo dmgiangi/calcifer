@@ -23,7 +23,7 @@
 ## 4. Validate deployment and Home Assistant integration
 
 - [x] 4.1 Render and validate all Kustomize manifests, including hostPath, Service, Secret, PVC, and scheduling fields.
-- [ ] 4.2 Reconcile the Home Flux resources and verify internal DNS resolution, broker authentication, and connectivity on `mosquitto.mqtt.svc.cluster.local:1883`.
+- [x] 4.2 Reconcile the Home Flux resources and verify internal DNS resolution, broker authentication, and connectivity on `mosquitto.mqtt.svc.cluster.local:1883`.
 - [x] 4.3 Verify Zigbee2MQTT starts on `calcifer-home`, opens the mounted coordinator, connects to Mosquitto, and publishes retained discovery and availability topics.
 - [ ] 4.4 Configure Home Assistant's MQTT integration through its supported config flow and verify discovery, state updates, commands, and availability.
 - [x] 4.5 Test restart and recovery scenarios for Mosquitto, Zigbee2MQTT, and Home Assistant, including retained discovery after broker restart and coordinator state preservation.
