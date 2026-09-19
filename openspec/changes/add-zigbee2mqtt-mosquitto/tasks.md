@@ -19,6 +19,8 @@
 - [x] 3.2 Mount the exact SONOFF `/dev/serial/by-id` path as a `hostPath` character device at `/dev/ttyUSB0`, add supplemental group GID 20, and configure the TI Z-Stack adapter.
 - [x] 3.3 Configure Zigbee2MQTT to authenticate to the internal Mosquitto Service, use the `zigbee2mqtt` base topic, enable Home Assistant discovery, and keep secrets out of plaintext configuration.
 - [x] 3.4 Include Zigbee2MQTT resources in the application Kustomization and Flux root without changing the existing Home Assistant workload unnecessarily.
+- [x] 3.5 Register a `zigbee2mqtt` Authorization Code client with PKCE and place the identical generated client secret in both authorization-server overlays and the Zigbee2MQTT SOPS Secret.
+- [x] 3.6 Add the pinned OAuth2 Proxy sidecar, proxy-only Service, Traefik HTTPS route, public Certificate, LAN split-horizon DNSEndpoint, and ingress restriction without exposing frontend port 8080.
 
 ## 4. Validate deployment and Home Assistant integration
 
@@ -28,3 +30,5 @@
 - [ ] 4.4 Configure Home Assistant's MQTT integration through its supported config flow and verify discovery, state updates, commands, and availability.
 - [x] 4.5 Test restart and recovery scenarios for Mosquitto, Zigbee2MQTT, and Home Assistant, including retained discovery after broker restart and coordinator state preservation.
 - [x] 4.6 Document normal rollback and recovery, including preserving both PVCs and avoiding simultaneous access to the coordinator.
+- [x] 4.7 Render and validate both authorization-server overlays and the Zigbee2MQTT manifests, including secret references, PKCE metadata, probes, and proxy-only routing.
+- [ ] 4.8 Reconcile the affected Flux resources and verify certificate readiness, LAN DNS, unauthenticated OIDC redirect, authenticated frontend access, and continued internal-only MQTT operation.

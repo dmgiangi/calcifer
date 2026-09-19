@@ -21,6 +21,10 @@ physically hosts it.
 - Configure Zigbee2MQTT for the Texas Instruments coordinator and MQTT Home
   Assistant discovery, and document the Home Assistant MQTT integration and
   validation procedure.
+- Expose only the Zigbee2MQTT web frontend at `https://zigbee.calcifer.tech`
+  through Traefik, a public cert-manager certificate, LAN split-horizon DNS,
+  and an OAuth2 Proxy sidecar authenticated by the Calcifer authorization
+  server.
 - Keep MQTT unexposed outside the cluster; a future external endpoint would
   require a separately reviewed TLS and DNS design.
 
@@ -41,12 +45,12 @@ None.
 
 - Adds manifests under `clusters/calcifer-home/apps` and corresponding Flux
   application reconciliation resources.
-- Adds Service, PVC, Secret, Deployment or StatefulSet, and Kustomize resources
-  for the new workloads.
-- Requires the existing `local-path` storage class, SOPS age key, and schedulable
-  node `calcifer-home`.
-- Adds no new external dependency or operator; container image versions will be
-  pinned to the latest stable releases selected during implementation.
+- Adds Service, PVC, Secret, Deployment, Traefik IngressRoute, Certificate,
+  DNSEndpoint, NetworkPolicy, and Kustomize resources for the new workloads.
+- Requires the existing `local-path` storage class, SOPS age key, production
+  ClusterIssuer, LAN DNS controller, authorization server, and schedulable node
+  `calcifer-home`.
+- Adds the pinned OAuth2 Proxy sidecar image but no new operator.
 - Home Assistant MQTT integration onboarding remains a config-flow operation;
   the change supplies the broker endpoint, credentials, and discovery settings
   needed for that integration.

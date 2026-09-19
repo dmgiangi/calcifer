@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: zigbee2mqtt
+  namespace: zigbee2mqtt
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: zigbee2mqtt
+  ports:
+    - name: https-edge
+      port: 4180
+      targetPort: oauth2-proxy

@@ -23,6 +23,8 @@ or Zigbee workload is currently deployed.
   operator, while constraining Zigbee2MQTT to `calcifer-home`.
 - Enable MQTT Home Assistant discovery and provide a repeatable validation and
   rollback procedure.
+- Publish the Zigbee2MQTT browser frontend through a canonical HTTPS hostname
+  protected by the existing Calcifer identity plane.
 
 **Non-Goals:**
 
@@ -31,6 +33,8 @@ or Zigbee workload is currently deployed.
 - Deploying an MQTT operator, a multi-node broker cluster, or Internet-facing
   MQTT access.
 - Fully automating Home Assistant's MQTT config-flow onboarding.
+- Publishing the MQTT listener or the raw Zigbee2MQTT frontend directly outside
+  the cluster.
 
 ## Decisions
 
@@ -83,6 +87,23 @@ shows a required compatibility change. Home Assistant will be connected to
 Mosquitto through its supported MQTT config flow using the documented broker
 endpoint and credentials.
 
+### Authenticated Zigbee2MQTT web edge
+
+Expose the frontend as `https://zigbee.calcifer.tech` through the Home Traefik
+`websecure` entry point. Issue a publicly trusted certificate with the existing
+`letsencrypt-production-azure` ClusterIssuer and publish a LAN split-horizon A
+record to `192.168.0.102`. The DNS record provides local routing; it does not
+publish MQTT or create an MQTT LoadBalancer.
+
+Run OAuth2 Proxy `v7.15.4` as a non-privileged sidecar in the Zigbee2MQTT pod.
+Traefik and the ClusterIP Service target only the proxy on port 4180; the proxy
+is the sole HTTP caller of the Zigbee2MQTT frontend on loopback port 8080. Use
+the canonical `https://auth.calcifer.tech` issuer, Authorization Code with PKCE
+S256, an exact callback URI, secure host-only cookies, and the `roles` claim to
+allow only the `admin` role. Store the OIDC client and cookie secrets in SOPS
+resources and register identical client credentials in both authorization
+server instances because they share one canonical issuer.
+
 ## Risks / Trade-offs
 
 - **[Risk]** A `hostPath` mount of a symlink may be rejected by a runtime or
@@ -102,6 +123,14 @@ endpoint and credentials.
 - **[Risk]** MQTT credentials must be shared by broker, Zigbee2MQTT, and the
   manual Home Assistant setup. **Mitigation:** keep them SOPS-encrypted and
   document retrieval without committing plaintext values.
+- **[Risk]** Exposing the administration frontend without an authentication
+  boundary would allow Zigbee network changes. **Mitigation:** route the Service
+  exclusively to OAuth2 Proxy, require OIDC and the `admin` role, restrict proxy
+  ingress to Traefik, and never expose port 8080 through a Service.
+- **[Risk]** Authorization server or Internet loss can interrupt a new browser
+  login. **Mitigation:** existing secure proxy sessions remain valid for their
+  configured lifetime, Home split DNS routes the canonical issuer locally, and
+  Zigbee/MQTT processing remains independent of browser access.
 
 ## Migration Plan
 
@@ -114,7 +143,9 @@ endpoint and credentials.
    availability, and command round trips.
 5. Test restart/recovery scenarios, including retained discovery after broker,
    Zigbee2MQTT, and Home Assistant restarts.
-6. Roll back by suspending/removing the new application Kustomization and
+6. Register the OIDC client, deploy the OAuth2 Proxy sidecar and HTTPS edge, and
+   verify unauthenticated redirects plus authenticated frontend access.
+7. Roll back by suspending/removing the new application Kustomization and
    restoring from PVCs; do not delete the coordinator data PVC during a normal
    rollback.
 

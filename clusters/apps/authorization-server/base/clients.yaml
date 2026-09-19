@@ -31,3 +31,18 @@ identity:
         - client_secret_post
       audience: homepage
       require-proof-key: true
+    zigbee2mqtt:
+      id: zigbee2mqtt
+      secret: ${ZIGBEE2MQTT_OIDC_CLIENT_SECRET}
+      redirect-uris:
+        - https://zigbee.calcifer.tech/oauth2/callback
+      scopes:
+        - openid
+        - profile
+        - email
+      grant-types:
+        - authorization_code
+      authentication-methods:
+        - client_secret_basic
+      audience: zigbee2mqtt
+      require-proof-key: true

@@ -60,3 +60,30 @@ resources or runtime Secret references.
 - **WHEN** a reviewer reads the repository manifests
 - **THEN** MQTT passwords and other sensitive values SHALL be encrypted or
   referenced through Kubernetes Secrets rather than stored in plaintext
+
+### Requirement: Zigbee2MQTT provides an authenticated HTTPS frontend
+The system SHALL expose the Zigbee2MQTT frontend at
+`https://zigbee.calcifer.tech` using a publicly trusted certificate, LAN
+split-horizon DNS, and an OAuth2 Proxy sidecar authenticated by
+`https://auth.calcifer.tech`.
+
+#### Scenario: Unauthenticated browser access requires login
+- **WHEN** a browser without a valid proxy session requests the frontend
+- **THEN** it SHALL be redirected into the Calcifer authorization flow and SHALL
+  not reach Zigbee2MQTT directly
+
+#### Scenario: An administrator reaches the frontend
+- **WHEN** a user completes OIDC Authorization Code with PKCE and has the
+  `admin` role
+- **THEN** OAuth2 Proxy SHALL establish a secure host-only session and proxy the
+  request, including WebSocket traffic, to the loopback frontend
+
+#### Scenario: The raw frontend remains private
+- **WHEN** cluster Services and Traefik routes are inspected
+- **THEN** only OAuth2 Proxy port 4180 SHALL be routed and Zigbee2MQTT port 8080
+  SHALL NOT be directly exposed
+
+#### Scenario: Browser secrets remain encrypted
+- **WHEN** a reviewer inspects the OIDC client and proxy configuration in Git
+- **THEN** client and cookie secrets SHALL exist only in SOPS-encrypted Secret
+  resources while non-secret client metadata remains declarative

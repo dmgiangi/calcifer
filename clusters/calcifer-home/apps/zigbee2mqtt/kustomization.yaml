@@ -6,3 +6,8 @@ resources:
   - configuration.yaml
   - zigbee2mqtt-secrets.sops.yaml
   - deployment.yaml
+  - service.yaml
+  - networkpolicy.yaml
+  - certificate.yaml
+  - dnsendpoint.yaml
+  - traefik.yaml

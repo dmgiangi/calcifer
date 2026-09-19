@@ -1,5 +1,12 @@
 # Home Zigbee2MQTT
 
+## Web frontend
+
+The administration frontend is available at `https://zigbee.calcifer.tech` on
+the Home LAN. Traefik terminates the public certificate and routes only to the
+OAuth2 Proxy sidecar, which requires the `admin` role from
+`https://auth.calcifer.tech`. Port 8080 is not published by a Service.
+
 ## Broker endpoints
 
 - In-cluster clients: `mqtt://mosquitto.mqtt.svc.cluster.local:1883`

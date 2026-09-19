@@ -18,7 +18,7 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/path: /actuator/prometheus
         prometheus.io/port: "8080"
-        calcifer.tech/authorization-secrets-revision: "1"
+        calcifer.tech/authorization-secrets-revision: "2"
     spec:
       serviceAccountName: authorization-server
       securityContext:
