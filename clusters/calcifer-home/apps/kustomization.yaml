@@ -3,4 +3,6 @@ kind: Kustomization
 resources:
   - edge-test
   - home-assistant
+  - mqtt
   - observability
+  - zigbee2mqtt

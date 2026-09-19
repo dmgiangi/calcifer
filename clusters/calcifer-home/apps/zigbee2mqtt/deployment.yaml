@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zigbee2mqtt
+  namespace: zigbee2mqtt
+  labels:
+    app.kubernetes.io/name: zigbee2mqtt
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: zigbee2mqtt
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: zigbee2mqtt
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: calcifer-home
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        supplementalGroups:
+          - 20
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: initialize-configuration
+          image: ghcr.io/koenkk/zigbee2mqtt:2.14.1
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              if [ ! -f /app/data/configuration.yaml ]; then
+                cp /bootstrap/configuration.yaml /app/data/configuration.yaml
+              fi
+              chmod 0600 /app/data/configuration.yaml
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: configuration
+              mountPath: /bootstrap
+              readOnly: true
+            - name: secrets
+              mountPath: /app/data/secret.yaml
+              subPath: secret.yaml
+              readOnly: true
+      containers:
+        - name: zigbee2mqtt
+          image: ghcr.io/koenkk/zigbee2mqtt:2.14.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: frontend
+              containerPort: 8080
+          env:
+            - name: TZ
+              value: Europe/Rome
+            - name: ZIGBEE2MQTT_CONFIG_FRONTEND_ENABLED
+              value: "true"
+            - name: ZIGBEE2MQTT_CONFIG_FRONTEND_PORT
+              value: "8080"
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          startupProbe:
+            tcpSocket:
+              port: frontend
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: frontend
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: frontend
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: secrets
+              mountPath: /app/data/secret.yaml
+              subPath: secret.yaml
+              readOnly: true
+            - name: coordinator
+              mountPath: /dev/ttyUSB0
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: zigbee2mqtt-data
+        - name: configuration
+          configMap:
+            name: zigbee2mqtt-configuration
+        - name: secrets
+          secret:
+            secretName: zigbee2mqtt-secrets
+            defaultMode: 0600
+        - name: coordinator
+          hostPath:
+            path: /dev/serial/by-id/usb-SONOFF_SONOFF_Dongle_Plus_CC2674P10_26319a63aafef01185fcea1f364a576b-if00-port0
+            type: CharDevice

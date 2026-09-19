@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zigbee2mqtt-configuration
+  namespace: zigbee2mqtt
+data:
+  configuration.yaml: |
+    homeassistant:
+      enabled: true
+    mqtt:
+      base_topic: zigbee2mqtt
+      server: '!secret.yaml server'
+      user: '!secret.yaml user'
+      password: '!secret.yaml password'
+    serial:
+      port: /dev/ttyUSB0
+      adapter: zstack
+    advanced:
+      log_level: info
+      network_key: GENERATE

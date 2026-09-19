@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: mosquitto
+  namespace: mqtt
+spec:
+  secretName: mosquitto-tls
+  dnsNames:
+    - mqtt.calcifer.tech
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-production-azure
