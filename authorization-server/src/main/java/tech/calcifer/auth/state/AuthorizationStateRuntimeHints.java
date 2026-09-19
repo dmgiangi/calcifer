@@ -13,6 +13,12 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.hibernate.validator.internal.constraintvalidators.bv.AssertTrueValidator;
+import org.hibernate.validator.internal.constraintvalidators.bv.NotNullValidator;
+import org.hibernate.validator.internal.constraintvalidators.bv.NotBlankValidator;
+import org.hibernate.validator.internal.constraintvalidators.bv.PatternValidator;
+import org.hibernate.validator.internal.constraintvalidators.bv.number.bound.MaxValidatorForInteger;
+import org.hibernate.validator.internal.constraintvalidators.bv.number.bound.MinValidatorForInteger;
 import org.hibernate.validator.internal.util.logging.Log_$logger;
 import org.hibernate.validator.internal.util.logging.Messages_$bundle;
 import org.springframework.aot.hint.ExecutableMode;
@@ -45,7 +51,21 @@ final class AuthorizationStateRuntimeHints implements RuntimeHintsRegistrar {
     @Override
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
         hints.reflection().registerType(Log_$logger.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
+        hints.reflection().registerType(AssertTrueValidator.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
+        hints.reflection().registerType(NotBlankValidator.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
+        hints.reflection().registerType(NotNullValidator.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
+        hints.reflection().registerType(PatternValidator.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
+        hints.reflection().registerType(MaxValidatorForInteger.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
+        hints.reflection().registerType(MinValidatorForInteger.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
+        hints
+            .reflection()
+            .registerType(
+                Messages_$bundle.class,
+                MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                MemberCategory.ACCESS_DECLARED_FIELDS
+            );
         registerPublicMethods(hints, AuthorizationStateProperties.class);
+        hints.reflection().registerType(AuthorizationStateProperties.class, MemberCategory.ACCESS_DECLARED_FIELDS);
         hints
             .reflection()
             .registerType(AuthorizationStateProperties.Redis.class, MemberCategory.ACCESS_DECLARED_FIELDS);

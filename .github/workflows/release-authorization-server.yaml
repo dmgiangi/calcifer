@@ -45,7 +45,7 @@ jobs:
         run: |
           mvn -B -s .mvn/settings.xml -Pnative native:compile -DskipTests
           mvn -B -s .mvn/settings.xml -PnativeTest \
-            '-Dtest=RedisOAuth2AuthorizationStoreTest,AuthorizationStateRoutingTest#authenticatedOidcSessionRoundTripsThroughRedis' \
+            '-Dtest=RedisOAuth2AuthorizationStoreTest,AuthorizationStateRoutingTest#authenticatedOidcSessionRoundTripsThroughRedis,AuthorizationStateOperationalTest#nativeHintsRegisterConstraintValidatorConstructors+validatesEnabledRedisAndRecoveryConfiguration' \
             test
           mvn -B -s .mvn/settings.xml test
       - name: Validate GitOps overlays

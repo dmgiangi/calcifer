@@ -1,6 +1,15 @@
 {
 	"reflection": [
 		{
+			"type": "org.hibernate.validator.internal.constraintvalidators.bv.AssertTrueValidator",
+			"methods": [
+				{
+					"name": "<init>",
+					"parameterTypes": []
+				}
+			]
+		},
+		{
 			"type": "org.hibernate.validator.internal.util.logging.Log_$logger",
 			"methods": [
 				{
@@ -10,7 +19,67 @@
 			]
 		},
 		{
+			"type": "org.hibernate.validator.internal.util.logging.Messages_$bundle",
+			"methods": [
+				{
+					"name": "<init>",
+					"parameterTypes": []
+				}
+			],
+			"fields": [
+				{
+					"name": "INSTANCE"
+				}
+			]
+		},
+		{
+			"type": "org.hibernate.validator.internal.constraintvalidators.bv.NotBlankValidator",
+			"methods": [
+				{
+					"name": "<init>",
+					"parameterTypes": []
+				}
+			]
+		},
+		{
+			"type": "org.hibernate.validator.internal.constraintvalidators.bv.NotNullValidator",
+			"methods": [
+				{
+					"name": "<init>",
+					"parameterTypes": []
+				}
+			]
+		},
+		{
+			"type": "org.hibernate.validator.internal.constraintvalidators.bv.PatternValidator",
+			"methods": [
+				{
+					"name": "<init>",
+					"parameterTypes": []
+				}
+			]
+		},
+		{
+			"type": "org.hibernate.validator.internal.constraintvalidators.bv.number.bound.MaxValidatorForInteger",
+			"methods": [
+				{
+					"name": "<init>",
+					"parameterTypes": []
+				}
+			]
+		},
+		{
+			"type": "org.hibernate.validator.internal.constraintvalidators.bv.number.bound.MinValidatorForInteger",
+			"methods": [
+				{
+					"name": "<init>",
+					"parameterTypes": []
+				}
+			]
+		},
+		{
 			"type": "tech.calcifer.auth.state.AuthorizationStateProperties",
+			"allDeclaredFields": true,
 			"methods": [
 				{
 					"name": "isEnabledRedisConfigurationValid",

@@ -19,9 +19,16 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.hibernate.validator.internal.constraintvalidators.bv.AssertTrueValidator;
+import org.hibernate.validator.internal.constraintvalidators.bv.NotBlankValidator;
+import org.hibernate.validator.internal.constraintvalidators.bv.NotNullValidator;
+import org.hibernate.validator.internal.constraintvalidators.bv.PatternValidator;
+import org.hibernate.validator.internal.constraintvalidators.bv.number.bound.MaxValidatorForInteger;
+import org.hibernate.validator.internal.constraintvalidators.bv.number.bound.MinValidatorForInteger;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.aot.hint.RuntimeHints;
+import org.springframework.aot.hint.predicate.RuntimeHintsPredicates;
 import org.springframework.boot.health.contributor.Status;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -206,6 +213,31 @@ class AuthorizationStateOperationalTest {
                 Set.of().getClass().getName(),
                 Set.of("value").getClass().getName()
             );
+    }
+
+    @Test
+    void nativeHintsRegisterConstraintValidatorConstructors() throws NoSuchMethodException {
+        RuntimeHints hints = new RuntimeHints();
+        new AuthorizationStateRuntimeHints().registerHints(hints, getClass().getClassLoader());
+
+        assertThat(RuntimeHintsPredicates
+            .reflection()
+            .onConstructorInvocation(AssertTrueValidator.class.getConstructor())).accepts(hints);
+        assertThat(RuntimeHintsPredicates
+            .reflection()
+            .onConstructorInvocation(NotBlankValidator.class.getConstructor())).accepts(hints);
+        assertThat(RuntimeHintsPredicates
+            .reflection()
+            .onConstructorInvocation(NotNullValidator.class.getConstructor())).accepts(hints);
+        assertThat(RuntimeHintsPredicates
+            .reflection()
+            .onConstructorInvocation(PatternValidator.class.getConstructor())).accepts(hints);
+        assertThat(RuntimeHintsPredicates
+            .reflection()
+            .onConstructorInvocation(MaxValidatorForInteger.class.getConstructor())).accepts(hints);
+        assertThat(RuntimeHintsPredicates
+            .reflection()
+            .onConstructorInvocation(MinValidatorForInteger.class.getConstructor())).accepts(hints);
     }
 
     @Test
