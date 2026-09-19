@@ -11,36 +11,17 @@ username/password authentication enabled for every MQTT listener.
   SHALL remain available from the attached PVC
 
 #### Scenario: Unauthenticated MQTT access is rejected
-- **WHEN** a client connects to either broker listener without valid
-  credentials
+- **WHEN** a client connects to the broker listener without valid credentials
 - **THEN** Mosquitto SHALL reject the connection and SHALL not allow publish or
   subscribe operations
 
-### Requirement: Home exposes a LAN TLS MQTT endpoint
-The system SHALL expose Mosquitto TLS on `mqtt.calcifer.tech:8883` through a
-LAN-reachable Service, using a cert-manager-issued certificate from the Home
-production ClusterIssuer and retaining port 1883 as an in-cluster-only
-ClusterIP listener.
+### Requirement: Home exposes only an authenticated internal MQTT endpoint
+The system SHALL expose Mosquitto only through an authenticated ClusterIP
+Service on port 1883 for in-cluster consumers.
 
-#### Scenario: LAN client establishes a verified TLS session
-- **WHEN** an authorized LAN client connects to `mqtt.calcifer.tech:8883`
-  using the issued hostname
-- **THEN** the broker SHALL present a currently valid certificate matching that
-  hostname and SHALL accept the authenticated MQTT session
-
-#### Scenario: Unencrypted listener is not externally published
-- **WHEN** a client outside the cluster inspects the broker's published
-  Services
-- **THEN** port 1883 SHALL not be exposed by the LAN-facing Service
-
-### Requirement: Home publishes a declarative broker DNS record
-The system SHALL declare `mqtt.calcifer.tech` through the existing Home LAN DNS
-and ExternalDNS-compatible `DNSEndpoint` mechanism with target
-`192.168.0.102`.
-
-#### Scenario: LAN DNS resolves the MQTT hostname
-- **WHEN** a LAN client queries `mqtt.calcifer.tech`
-- **THEN** the Home resolver SHALL return `192.168.0.102`
+#### Scenario: MQTT is not externally published
+- **WHEN** a client outside the cluster inspects the broker's published Services
+- **THEN** no external MQTT Service or TLS endpoint SHALL be created
 
 ### Requirement: Broker secrets remain encrypted in Git
 The system SHALL store MQTT credentials and any broker secret configuration in

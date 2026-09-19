@@ -7,11 +7,11 @@
 ## 2. Implement the persistent Mosquitto broker
 
 - [x] 2.1 Create the Mosquitto namespace, PVC, Kustomization, and pinned single-replica workload with readiness/liveness checks and persistent broker data.
-- [x] 2.2 Add broker configuration with authenticated internal port 1883 and authenticated TLS port 8883, including retained-message persistence and Home Assistant-compatible wildcard subscriptions.
+- [x] 2.2 Add broker configuration with authenticated internal port 1883, including retained-message persistence and Home Assistant-compatible wildcard subscriptions.
 - [x] 2.3 Create SOPS-encrypted MQTT credentials and wire the broker password file without committing plaintext values.
-- [x] 2.4 Add separate ClusterIP and LAN-facing Services so only 8883 is externally published while 1883 remains in-cluster.
-- [x] 2.5 Add the cert-manager Certificate for `mqtt.calcifer.tech` and verify it references the existing production Home ClusterIssuer.
-- [x] 2.6 Add the `mqtt.calcifer.tech` DNSEndpoint targeting `192.168.0.102` and include all Mosquitto resources in the application Kustomization and Flux root.
+- [x] 2.4 Add an authenticated ClusterIP Service for port 1883 and keep MQTT unexposed outside the cluster.
+- [x] 2.5 Confirm that no broker certificate is required for the in-cluster-only transport and remove the unused cert-manager resource.
+- [x] 2.6 Remove the unused external MQTT DNS record and include the remaining Mosquitto resources in the application Kustomization and Flux root.
 
 ## 3. Implement Zigbee2MQTT and coordinator access
 
@@ -22,8 +22,8 @@
 
 ## 4. Validate deployment and Home Assistant integration
 
-- [x] 4.1 Render and validate all Kustomize manifests, including hostPath, Service, Certificate, Secret, PVC, and scheduling fields.
-- [x] 4.2 Reconcile the Home Flux resources and verify Certificate readiness, DNS resolution, broker authentication, and TLS connectivity on `mqtt.calcifer.tech:8883`.
+- [x] 4.1 Render and validate all Kustomize manifests, including hostPath, Service, Secret, PVC, and scheduling fields.
+- [ ] 4.2 Reconcile the Home Flux resources and verify internal DNS resolution, broker authentication, and connectivity on `mosquitto.mqtt.svc.cluster.local:1883`.
 - [x] 4.3 Verify Zigbee2MQTT starts on `calcifer-home`, opens the mounted coordinator, connects to Mosquitto, and publishes retained discovery and availability topics.
 - [ ] 4.4 Configure Home Assistant's MQTT integration through its supported config flow and verify discovery, state updates, commands, and availability.
 - [x] 4.5 Test restart and recovery scenarios for Mosquitto, Zigbee2MQTT, and Home Assistant, including retained discovery after broker restart and coordinator state preservation.

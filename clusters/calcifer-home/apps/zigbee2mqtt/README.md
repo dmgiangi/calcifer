@@ -3,15 +3,14 @@
 ## Broker endpoints
 
 - In-cluster clients: `mqtt://mosquitto.mqtt.svc.cluster.local:1883`
-- LAN clients: `mqtts://mqtt.calcifer.tech:8883`
 - Zigbee2MQTT base topic: `zigbee2mqtt`
 - Home Assistant discovery: enabled
 
-The Home Assistant MQTT integration should use the LAN endpoint with hostname
-verification, username `homeassistant`, and the password stored in the SOPS
-encrypted `clusters/calcifer-home/apps/mqtt/mosquitto-credentials.sops.yaml`
-resource. Zigbee2MQTT uses its separate `zigbee2mqtt` account from the same
-encrypted Secret.
+The Home Assistant MQTT integration should use the in-cluster endpoint,
+username `homeassistant`, and the password stored in the SOPS encrypted
+`clusters/calcifer-home/apps/mqtt/mosquitto-credentials.sops.yaml` resource.
+Zigbee2MQTT uses its separate `zigbee2mqtt` account from the same encrypted
+Secret.
 
 ## Coordinator
 

@@ -72,8 +72,6 @@ spec:
           ports:
             - name: mqtt
               containerPort: 1883
-            - name: mqtts
-              containerPort: 8883
           env:
             - name: ZIGBEE2MQTT_USERNAME
               valueFrom:
@@ -129,9 +127,6 @@ spec:
             - name: generated-password
               mountPath: /mosquitto/password
               readOnly: true
-            - name: tls
-              mountPath: /mosquitto/certs
-              readOnly: true
             - name: tmp
               mountPath: /tmp
       volumes:
@@ -141,10 +136,6 @@ spec:
         - name: generated-password
           emptyDir:
             medium: Memory
-        - name: tls
-          secret:
-            secretName: mosquitto-tls
-            defaultMode: 0440
         - name: tmp
           emptyDir: {}
         - name: data

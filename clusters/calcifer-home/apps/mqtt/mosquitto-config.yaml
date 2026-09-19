@@ -17,9 +17,3 @@ data:
 
     listener 1883
     protocol mqtt
-
-    listener 8883
-    protocol mqtt
-    certfile /mosquitto/certs/tls.crt
-    keyfile /mosquitto/certs/tls.key
-    tls_version tlsv1.2

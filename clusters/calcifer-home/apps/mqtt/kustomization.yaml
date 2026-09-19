@@ -7,5 +7,3 @@ resources:
   - mosquitto-credentials.sops.yaml
   - deployment.yaml
   - service.yaml
-  - certificate.yaml
-  - dnsendpoint.yaml

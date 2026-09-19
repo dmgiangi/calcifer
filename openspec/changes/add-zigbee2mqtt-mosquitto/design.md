@@ -17,8 +17,8 @@ or Zigbee workload is currently deployed.
 - Deploy a small, recoverable MQTT and Zigbee stack using repository-managed
   Kubernetes resources.
 - Preserve MQTT retained messages and Zigbee2MQTT state across pod restarts.
-- Make the broker available internally and through an authenticated TLS
-  endpoint on `mqtt.calcifer.tech:8883` for LAN clients.
+- Make the broker available internally through an authenticated ClusterIP
+  Service for Home Assistant and Zigbee2MQTT.
 - Expose the coordinator using the exact stable host path selected by the
   operator, while constraining Zigbee2MQTT to `calcifer-home`.
 - Enable MQTT Home Assistant discovery and provide a repeatable validation and
@@ -43,22 +43,19 @@ because retained-message and wildcard-subscription behavior is a core
 Home Assistant discovery requirement. An operator would add lifecycle
 complexity without providing value for this single-broker deployment.
 
-### Separate internal and TLS Services
+### Internal ClusterIP Service
 
-Expose port 1883 through a ClusterIP Service for in-cluster Zigbee2MQTT and
-Home Assistant traffic. Expose port 8883 through a separate LAN-reachable
-Service, backed by the same Mosquitto pod, so the unencrypted listener is not
-accidentally published externally. The TLS Service uses `mqtt.calcifer.tech`, a
-cert-manager Certificate, and the existing Home LAN DNS target
-`192.168.0.102`.
+Expose only port 1883 through a ClusterIP Service for in-cluster Zigbee2MQTT
+and Home Assistant traffic. Do not publish an external MQTT Service because
+all current consumers run inside the cluster.
 
-### TLS and credentials
+### Credentials and transport
 
-Use the existing production Azure DNS ClusterIssuer to issue the broker
-certificate. Keep broker credentials in a SOPS-encrypted Secret and mount the
-certificate Secret read-only. TLS server authentication is required for the
-8883 listener; username/password authentication remains required on both
-listeners.
+Keep broker credentials in a SOPS-encrypted Secret. Username/password
+authentication remains required on the internal listener. Transport encryption
+is intentionally omitted because the broker is reachable only through the
+cluster network; TLS can be added later with an internal CA or split DNS if an
+external client is required.
 
 ### Direct stable device mount
 
@@ -99,20 +96,18 @@ endpoint and credentials.
 - **[Risk]** A single coordinator and single broker are availability points of
   failure. **Mitigation:** use PVCs, Recreate/single-replica semantics, backups
   where practical, and document recovery and coordinator backup steps.
-- **[Risk]** Certificate issuance or LAN DNS propagation can delay TLS startup.
-  **Mitigation:** deploy Certificate and DNSEndpoint declaratively, validate
-  cert-manager readiness before testing MQTT, and retain an internal listener
-  for in-cluster recovery.
+- **[Risk]** An in-cluster-only broker cannot serve clients outside Kubernetes.
+  **Mitigation:** add a separately reviewed TLS listener and access path if a
+  LAN or external MQTT client becomes necessary.
 - **[Risk]** MQTT credentials must be shared by broker, Zigbee2MQTT, and the
   manual Home Assistant setup. **Mitigation:** keep them SOPS-encrypted and
   document retrieval without committing plaintext values.
 
 ## Migration Plan
 
-1. Apply namespaces, PVCs, SOPS Secrets, Mosquitto configuration, Certificate,
-   DNSEndpoint, and Services through Flux.
-2. Wait for certificate issuance and verify the broker's internal health and
-   authenticated 1883 listener.
+1. Apply namespaces, PVCs, SOPS Secrets, Mosquitto configuration, and the
+   internal Service through Flux.
+2. Verify the broker's internal health and authenticated 1883 listener.
 3. Deploy Zigbee2MQTT and confirm the pod has the expected device path and
    coordinator connection.
 4. Configure Home Assistant's MQTT integration and verify discovery, state,
@@ -126,7 +121,5 @@ endpoint and credentials.
 ## Open Questions
 
 - Confirm the exact stable image versions available at implementation time.
-- Confirm whether the cluster's LAN DNS controller watches the new namespace
-  automatically or needs an explicit namespace/configuration update.
 - Confirm the final SOPS secret keys and the operator-provided MQTT credentials
   before creating encrypted secret material.

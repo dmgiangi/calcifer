@@ -11,18 +11,3 @@ spec:
     - name: mqtt
       port: 1883
       targetPort: mqtt
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mosquitto-tls
-  namespace: mqtt
-spec:
-  type: LoadBalancer
-  externalTrafficPolicy: Local
-  selector:
-    app.kubernetes.io/name: mosquitto
-  ports:
-    - name: mqtts
-      port: 8883
-      targetPort: mqtts
