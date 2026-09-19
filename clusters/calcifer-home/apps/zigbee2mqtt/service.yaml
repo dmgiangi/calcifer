@@ -8,6 +8,6 @@ spec:
   selector:
     app.kubernetes.io/name: zigbee2mqtt
   ports:
-    - name: https-edge
+    - name: http-edge
       port: 4180
       targetPort: oauth2-proxy
