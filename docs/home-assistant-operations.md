@@ -129,3 +129,94 @@ LAN and public paths. Keep the previous PVC contents until these checks pass.
 If validation fails, stop Home Assistant, restore the preserved contents, and
 reconcile again. A disaster-recovery exercise is complete only after a real
 remote snapshot has been restored and all checks have passed.
+
+## Gemini voice conversation
+
+The optional AI voice path runs only on `calcifer-home` and keeps the existing
+Azure Wyoming STT/TTS services. It uses Home Assistant's official Google Gemini
+integration; no Google API Kubernetes Secret, environment variable, or
+repository credential is required.
+
+### Configure the integration
+
+From the Home Assistant UI:
+
+1. Open **Settings > Devices & services**.
+2. Select **Add integration** and choose **Google Gemini**.
+3. Create or select a Gemini API key associated with the intended Google AI
+   Studio/Google Cloud project, then enter it directly in the integration form.
+4. A Google AI Pro/Ultra subscription is not the same as Gemini API billing.
+   The API may use a rate-limited free tier; paid or production use is managed
+   through the API project's billing configuration.
+5. Do not copy the key into `configuration.yaml`, `secrets.yaml`, a Kubernetes
+   manifest, a shell command, or this repository. The integration stores the
+   credential in Home Assistant's config-entry storage.
+6. Keep **Control Home Assistant** disabled initially. If control is enabled
+   later, expose only the entities and scripts that the AI is allowed to use.
+
+The Gemini API key is separate from a Google AI consumer subscription and may
+incur usage charges. Review the provider's account, billing, retention, free
+tier data-use, and regional data-handling settings before using the voice path.
+
+### Configure the Italian Assist pipeline
+
+Create or update the dedicated Italian Assist pipeline with:
+
+- `stt.microsoft` (Wyoming Azure) with language `it-IT`;
+- `conversation.google_ai_conversation_2` as the conversation agent currently
+  configured in `calcifer-home` (use the entity created by the Google Gemini
+  integration if its suffix differs);
+- `tts.microsoft` (Wyoming Azure) with language `it-IT`;
+- **Prefer handling commands locally** enabled.
+
+The Google Gemini integration may also expose its own STT/TTS entities. They are
+not selected by this deployment: keeping Azure makes it possible to evaluate or
+roll back the conversation agent independently from the speech services.
+
+The local-first setting keeps recognized ordinary Home Assistant commands on the
+local Assist path. Use the configured wake word followed by `pensa` for a
+general conversation request. The Gemini agent receives the request text and
+must answer in Italian; it must not claim to have controlled an entity unless
+the relevant Assist access was deliberately enabled.
+
+The native continuation behavior is controlled by Home Assistant's conversation
+agent response. When the response requests continuation, the satellite listens
+for the next utterance without another wake word and preserves the conversation
+context. When continuation is not requested, the satellite returns to wake-word
+listening. This path intentionally has no custom 30-second timer.
+
+### Suggested system instruction
+
+Use the following instruction in the Google Gemini conversation subentry. Keep
+**Control Home Assistant** disabled for the initial conversation-only setup:
+
+> Rispondi sempre in italiano, in modo conciso e adatto alla lettura vocale.
+> Quando la richiesta inizia con “pensa”, interpreta il testo successivo come
+> una conversazione generale. Non affermare di aver controllato o consultato
+> entità di Home Assistant se l'accesso non è disponibile. Se è necessaria una
+> risposta dell'utente per continuare, termina con una sola domanda breve;
+> altrimenti non terminare con un punto interrogativo. Se l'utente dice
+> “basta”, “fine conversazione”, “torna in ascolto” o “smetti di pensare”,
+> conferma brevemente e non fare domande.
+
+### Validation and rollback
+
+From the satellite, verify the following in order:
+
+1. Say `Calcifer, che ore sono?`; require a local response through Azure TTS.
+2. Say `Calcifer, pensa fammi due domande per scegliere un film, una alla
+   volta`; require a Gemini response ending with one short question.
+3. Answer that question without repeating `Calcifer`; require the same
+   conversation context and the next question.
+4. Say `Calcifer, smetti di pensare`; require a short confirmation followed by
+   a return to wake-word listening. The equivalent phrases `basta`, `fine
+   conversazione` and `torna in ascolto` must continue to work.
+5. Say `Calcifer, pensa accendi l'entità non esposta`; require a refusal and no
+   reported Home Assistant action.
+6. With an unavailable or invalid Gemini credential, repeat step 2; require an
+   observable error rather than a successful answer.
+
+To roll back, disable or remove the Google Gemini config entry and restore the
+previous Assist pipeline selection. Do not delete or modify the existing Azure
+speech Secret. Inspect status and logs without printing environment variables or
+config-entry data.

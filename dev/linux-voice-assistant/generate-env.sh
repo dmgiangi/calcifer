@@ -35,10 +35,10 @@ output_device="${AUDIO_OUTPUT_DEVICE:-pipewire}"
 wake_word_dir="${WAKE_WORD_DIR:-/app/wakewords/custom}"
 wake_model="${WAKE_MODEL:-calcifer}"
 
-# These are the devices verified on the Pop!_OS host. They can still be
-# overridden with AUDIO_INPUT_DEVICE/AUDIO_OUTPUT_DEVICE when the script is
-# used on another host or after an audio-session change.
-input_device="${AUDIO_INPUT_DEVICE:-JBL TUNE510BT}"
+# This is the input device verified on the Pop!_OS host. It can still be
+# overridden with AUDIO_INPUT_DEVICE when the script is used on another host
+# or after an audio-session change. The output remains PipeWire's default.
+input_device="${AUDIO_INPUT_DEVICE:-Family 17h/19h HD Audio Controller Analog Stereo}"
 
 dotenv_quote() {
   local value="$1"
