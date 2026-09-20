@@ -10,7 +10,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/wireguard-config: private-ingest-established-nodeport-redis-backup-egress-v4
+        checksum/wireguard-config: private-ingest-established-nodeport-redis-backup-speech-egress-v5
       labels:
         app.kubernetes.io/name: home-edge-wireguard
     spec:

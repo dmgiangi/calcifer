@@ -51,6 +51,16 @@ only to the Cloud tunnel address, accepts only source `172.31.255.2`, and
 permits only `calciferobs.blob.core.windows.net:443`. It does not terminate TLS
 or expose a general-purpose forward proxy.
 
+Azure Speech egress uses a separate HTTP CONNECT proxy at Cloud
+`172.31.255.1:3129`. It also binds only to the tunnel address and accepts only
+source `172.31.255.2`, but permits only
+`calcifer-home-speech-it.cognitiveservices.azure.com:443`. The Home Wyoming
+adapters explicitly configure this proxy through the Speech SDK; generic
+`HTTP_PROXY`/`HTTPS_PROXY` variables are insufficient for this SDK runtime.
+Azure Speech network ACLs deny by default and allow only the Cloud public IP.
+Home SNATs only pod traffic destined for `172.31.255.1:3129` to its WireGuard
+address `172.31.255.2`; no default route or arbitrary Pod CIDR is tunneled.
+
 ## Flux, SOPS, and secret locations
 
 Provision the existing repository age private key out-of-band as the Secret
@@ -162,11 +172,14 @@ not provide a password or issue a Redis command that prints stored values:
 ```sh
 nc -z -w 2 172.31.255.1 16379 >/dev/null 2>&1; printf 'redis-private-reachability exit=%s\n' "$?"
 nc -z -w 2 172.31.255.1 16380 >/dev/null 2>&1; printf 'undeclared-port exit=%s\n' "$?"
+nc -z -w 2 172.31.255.1 3129 >/dev/null 2>&1; printf 'speech-proxy-reachability exit=%s\n' "$?"
 ```
 
-The first check is expected to succeed only from the Home tunnel path. The
-second and any public-path attempt are expected to fail. These checks validate
-reachability only and never expose ACL credentials or Redis values.
+The Redis and Speech proxy checks are expected to succeed only from the Home
+tunnel path. The undeclared port and any public-path attempt are expected to
+fail. These checks validate reachability only and never expose credentials or
+stored values. For Speech, also verify that the named endpoint fails without
+the proxy and that a Wyoming TTS-to-STT round trip succeeds through the proxy.
 
 The public test path must resolve to Cloud. The LAN override may resolve it to
 Home only while Home’s equivalent authorization policy is enabled. Confirm

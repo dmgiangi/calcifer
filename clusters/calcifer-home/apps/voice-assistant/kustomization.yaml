@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - azure-speech-secret.sops.yaml
+  - azure-speech-bootstrap-configmap.yaml
+  - azure-stt-deployment.yaml
+  - azure-stt-service.yaml
+  - azure-tts-deployment.yaml
+  - azure-tts-service.yaml

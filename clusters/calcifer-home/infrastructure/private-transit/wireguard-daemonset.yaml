@@ -10,7 +10,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/wireguard-config: home-edge-established-traffic-redis-v3
+        checksum/wireguard-config: home-edge-established-traffic-redis-speech-snat-v4
       labels:
         app.kubernetes.io/name: home-edge-wireguard
     spec:

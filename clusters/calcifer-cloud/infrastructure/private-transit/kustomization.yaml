@@ -6,3 +6,4 @@ resources:
   - wireguard-config.yaml
   - wireguard-daemonset.yaml
   - azure-backup-egress-proxy.yaml
+  - azure-speech-egress-proxy.yaml

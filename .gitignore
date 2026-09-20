@@ -1,3 +1,12 @@
 .venv
 .idea
 authorization-server/target
+
+# Local Linux Voice Assistant runtime data
+dev/linux-voice-assistant/.env
+dev/linux-voice-assistant/local/
+dev/linux-voice-assistant/configuration/
+dev/linux-voice-assistant/wakewords/
+dev/linux-voice-assistant/sounds/
+dev/linux-voice-assistant/audio/
+dev/linux-voice-assistant/models/

@@ -10,6 +10,7 @@ data:
     PrivateKey = __PRIVATE_KEY__
     Table = off
     PostUp = ip route replace 172.31.255.1/32 dev %i
+    PostUp = iptables -t nat -C POSTROUTING -o %i -d 172.31.255.1/32 -p tcp --dport 3129 -j SNAT --to-source 172.31.255.2 || iptables -t nat -A POSTROUTING -o %i -d 172.31.255.1/32 -p tcp --dport 3129 -j SNAT --to-source 172.31.255.2
     PostUp = iptables -t mangle -N CALCIFER_HOME_EDGE || true
     PostUp = iptables -t mangle -F CALCIFER_HOME_EDGE
     PostUp = iptables -t mangle -A CALCIFER_HOME_EDGE -i %i -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
@@ -29,6 +30,7 @@ data:
     PostDown = iptables -t mangle -D OUTPUT -j CALCIFER_HOME_EDGE_OUTPUT || true
     PostDown = iptables -t mangle -F CALCIFER_HOME_EDGE_OUTPUT || true
     PostDown = iptables -t mangle -X CALCIFER_HOME_EDGE_OUTPUT || true
+    PostDown = iptables -t nat -D POSTROUTING -o %i -d 172.31.255.1/32 -p tcp --dport 3129 -j SNAT --to-source 172.31.255.2 || true
     PostDown = ip route del 172.31.255.1/32 dev %i || true
 
     [Peer]
