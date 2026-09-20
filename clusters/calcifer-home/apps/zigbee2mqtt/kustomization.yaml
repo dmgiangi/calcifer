@@ -5,9 +5,12 @@ resources:
   - pvc.yaml
   - configuration.yaml
   - zigbee2mqtt-secrets.sops.yaml
+  - backup-secrets.sops.yaml
   - deployment.yaml
+  - backup-cronjob.yaml
   - service.yaml
   - networkpolicy.yaml
+  - backup-networkpolicy.yaml
   - certificate.yaml
   - dnsendpoint.yaml
   - traefik.yaml

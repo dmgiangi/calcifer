@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: zigbee2mqtt-backup-egress
+  namespace: zigbee2mqtt
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: zigbee2mqtt-backup
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 172.31.255.1/32
+      ports:
+        - protocol: TCP
+          port: 3128

@@ -17,7 +17,9 @@ physically hosts it.
   stable SONOFF device path under `/dev/serial/by-id` as the direct host device
   mount and the host `dialout` group (GID 20).
 - Persist Mosquitto retained/session state and Zigbee2MQTT configuration,
-  coordinator state, and backups on `local-path` PVCs.
+  coordinator state, and runtime data on `local-path` PVCs, with scheduled
+  encrypted Zigbee2MQTT backups copied to a dedicated private Azure Blob
+  Storage container.
 - Configure Zigbee2MQTT for the Texas Instruments coordinator and MQTT Home
   Assistant discovery, and document the Home Assistant MQTT integration and
   validation procedure.
@@ -53,7 +55,8 @@ None.
   resources for the new workloads and dual edge path.
 - Requires the existing `local-path` storage class, SOPS age key, production
   ClusterIssuer, LAN DNS controller, authorization server, and schedulable node
-  `calcifer-home`.
+  `calcifer-home`, plus the existing restricted Cloud Azure egress path for
+  backup uploads.
 - Adds the pinned OAuth2 Proxy sidecar image but no new operator.
 - Home Assistant MQTT integration onboarding remains a config-flow operation;
   the change supplies the broker endpoint, credentials, and discovery settings

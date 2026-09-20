@@ -43,6 +43,29 @@ The raw device mount requires a privileged Zigbee2MQTT container on this K3s
 containerd runtime because a plain `hostPath` character-device mount is blocked
 by the device cgroup. Mosquitto and other workloads remain unprivileged.
 
+## Backups
+
+The `zigbee2mqtt-backup` CronJob runs daily at 03:00 Europe/Rome. It copies the
+data PVC into a temporary snapshot, records checksums, and uploads an encrypted
+Restic snapshot to the private `zigbee2mqtt-backups` Azure Blob container. The
+job keeps seven daily snapshots, checks repository data, and reaches Azure only
+through the restricted Cloud CONNECT proxy at `172.31.255.1:3128`.
+
+Azure credentials and the Restic password are stored only in the SOPS-encrypted
+`zigbee2mqtt-backup` Secret. The container-scoped SAS expires on 20 September
+2031 and must be rotated before that date. Verify a run without reading Secret
+values:
+
+```sh
+kubectl --context calcifer-home -n zigbee2mqtt get cronjob,job,pod
+kubectl --context calcifer-home -n zigbee2mqtt logs job/<backup-job-name>
+```
+
+For a restore test, mount an empty temporary volume in a one-off Restic Job,
+reuse the backup Secret, and run `restic restore latest --host calcifer-home
+--tag zigbee2mqtt --target /restore`. Verify `/restore/snapshot/data` and its
+`SHA256SUMS` before changing the live PVC.
+
 ## Recovery
 
 1. Check Mosquitto and Zigbee2MQTT pod logs before restarting either workload.
@@ -53,6 +76,9 @@ by the device cgroup. Mosquitto and other workloads remain unprivileged.
    running.
 5. After recovery, verify the `zigbee2mqtt/bridge/state` topic and Home
    Assistant discovery entities.
+6. To restore remotely, scale Zigbee2MQTT to zero, restore into a staging
+   volume first, verify the checksums, preserve the current PVC contents, and
+   only then copy the staged `data` directory into the live PVC.
 
 The coordinator backup is stored in the Zigbee2MQTT data PVC. Keep a copy of
 that PVC before intentionally changing coordinator firmware or network state.

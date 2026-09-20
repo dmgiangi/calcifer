@@ -1,4 +1,9 @@
-## ADDED Requirements
+# home-zigbee2mqtt Specification
+
+## Purpose
+TBD - created by syncing change add-zigbee2mqtt-mosquitto.
+
+## Requirements
 
 ### Requirement: Home runs a single persistent Zigbee2MQTT workload
 The system SHALL run one Zigbee2MQTT replica on the node labeled
@@ -13,6 +18,36 @@ configuration, coordinator state, device state, and logs.
 #### Scenario: Zigbee2MQTT is not scheduled away from the coordinator
 - **WHEN** Kubernetes schedules or reschedules the workload
 - **THEN** the pod SHALL run only on `calcifer-home`
+
+### Requirement: Zigbee2MQTT data is backed up to private Azure Blob Storage
+The system SHALL run a scheduled backup on `calcifer-home` that captures the
+Zigbee2MQTT data volume, including configuration, coordinator state, network
+state, paired-device state, and recovery metadata, and stores encrypted
+snapshots in a dedicated private Azure Blob Storage container. The backup SHALL
+not replace the local PVC, which remains the primary runtime storage.
+
+#### Scenario: Scheduled Zigbee2MQTT backup execution
+- **WHEN** the scheduled backup job runs
+- **THEN** it SHALL create a consistent snapshot of the Zigbee2MQTT data
+  volume, upload it to the dedicated Azure Blob container through the approved
+  Cloud egress path, and fail if the upload or integrity verification fails
+
+#### Scenario: Zigbee2MQTT backup retention
+- **WHEN** a backup completes successfully
+- **THEN** the backup repository SHALL retain at least seven daily snapshots and
+  prune older snapshots according to the declared retention policy
+
+#### Scenario: Zigbee2MQTT backup credentials remain protected
+- **WHEN** the backup job accesses Azure Blob Storage
+- **THEN** Azure credentials and the Restic encryption password SHALL come only
+  from a SOPS-encrypted Kubernetes Secret and SHALL not be stored in plaintext
+  in Git or emitted in job logs
+
+#### Scenario: Zigbee2MQTT backup storage is private
+- **WHEN** an unauthenticated client attempts to access the backup container
+- **THEN** Azure Blob Storage SHALL deny the request, and the backup job SHALL
+  use HTTPS through the restricted Cloud CONNECT proxy rather than exposing an
+  inbound Home endpoint
 
 ### Requirement: Zigbee2MQTT directly accesses the SONOFF coordinator
 The system SHALL mount the exact stable host path

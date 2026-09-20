@@ -17,6 +17,8 @@ or Zigbee workload is currently deployed.
 - Deploy a small, recoverable MQTT and Zigbee stack using repository-managed
   Kubernetes resources.
 - Preserve MQTT retained messages and Zigbee2MQTT state across pod restarts.
+- Back up Zigbee2MQTT data to a private Azure Blob container independently of
+  the local runtime PVC.
 - Make the broker available internally through an authenticated ClusterIP
   Service for Home Assistant and Zigbee2MQTT.
 - Expose the coordinator using the exact stable host path selected by the
@@ -78,6 +80,17 @@ implementation starts, then pin immutable image tags in Git. Do not use the
 `latest` tag. Record the selected versions in the manifests and validation
 notes so upgrades are deliberate.
 
+### Zigbee2MQTT backup repository
+
+Run a dedicated scheduled CronJob in `calcifer-home` that snapshots the
+Zigbee2MQTT data PVC and uploads the snapshot with the repository's existing
+Restic pattern to a private Azure Blob container dedicated to Zigbee2MQTT
+backups. Use the existing restricted Cloud CONNECT proxy for Azure HTTPS
+egress, retain at least seven daily snapshots, and keep Azure credentials and
+the Restic repository password in a SOPS-encrypted Secret. The backup job must
+not expose a new Service or inbound endpoint and must not replace the PVC as
+the primary runtime store.
+
 ### Application boundaries
 
 Keep Mosquitto and Zigbee2MQTT resources in dedicated application directories
@@ -124,7 +137,8 @@ server instances because they share one canonical issuer.
   Mosquitto or unrelated workloads.
 - **[Risk]** A single coordinator and single broker are availability points of
   failure. **Mitigation:** use PVCs, Recreate/single-replica semantics, backups
-  where practical, and document recovery and coordinator backup steps.
+  to the private Azure repository, and document recovery and coordinator
+  backup steps.
 - **[Risk]** An in-cluster-only broker cannot serve clients outside Kubernetes.
   **Mitigation:** add a separately reviewed TLS listener and access path if a
   LAN or external MQTT client becomes necessary.
@@ -156,11 +170,13 @@ server instances because they share one canonical issuer.
    availability, and command round trips.
 5. Test restart/recovery scenarios, including retained discovery after broker,
    Zigbee2MQTT, and Home Assistant restarts.
-6. Register the OIDC client, deploy the OAuth2 Proxy sidecar and Home HTTPS
+6. Add and validate the scheduled Zigbee2MQTT backup job, Azure repository,
+   retention policy, protected credentials, and restore procedure.
+7. Register the OIDC client, deploy the OAuth2 Proxy sidecar and Home HTTPS
    edge, and verify unauthenticated redirects plus authenticated frontend access.
-7. Deploy the Cloud HTTPS edge over WireGuard and verify the public certificate,
+8. Deploy the Cloud HTTPS edge over WireGuard and verify the public certificate,
    canonical upstream TLS, OAuth2 redirect, and LAN split-horizon path.
-8. Roll back by suspending/removing the new application Kustomization and
+9. Roll back by suspending/removing the new application Kustomization and
    restoring from PVCs; do not delete the coordinator data PVC during a normal
    rollback.
 

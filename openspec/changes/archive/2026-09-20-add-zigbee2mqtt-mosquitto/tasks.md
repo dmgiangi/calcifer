@@ -22,15 +22,17 @@
 - [x] 3.5 Register a `zigbee2mqtt` Authorization Code client with PKCE and place the identical generated client secret in both authorization-server overlays and the Zigbee2MQTT SOPS Secret.
 - [x] 3.6 Add the pinned OAuth2 Proxy sidecar, proxy-only Service, Home Traefik HTTPS route, public Certificate, LAN split-horizon DNSEndpoint, and ingress restriction without exposing frontend port 8080.
 - [x] 3.7 Add the Cloud public Certificate, selectorless Service and EndpointSlice, canonical-SNI ServersTransport, and Traefik route forwarding HTTPS over WireGuard to the authenticated Home edge.
+- [x] 3.8 Add a scheduled Zigbee2MQTT data backup CronJob using the existing Restic/Azure pattern, a dedicated private Blob container, SOPS-encrypted credentials, seven-day retention, and no new inbound endpoint.
 
 ## 4. Validate deployment and Home Assistant integration
 
 - [x] 4.1 Render and validate all Kustomize manifests, including hostPath, Service, Secret, PVC, and scheduling fields.
 - [x] 4.2 Reconcile the Home Flux resources and verify internal DNS resolution, broker authentication, and connectivity on `mosquitto.mqtt.svc.cluster.local:1883`.
 - [x] 4.3 Verify Zigbee2MQTT starts on `calcifer-home`, opens the mounted coordinator, connects to Mosquitto, and publishes retained discovery and availability topics.
-- [ ] 4.4 Configure Home Assistant's MQTT integration through its supported config flow and verify discovery, state updates, commands, and availability.
+- [x] 4.4 Configure Home Assistant's MQTT integration through its supported config flow and verify discovery, state updates, commands, and availability.
 - [x] 4.5 Test restart and recovery scenarios for Mosquitto, Zigbee2MQTT, and Home Assistant, including retained discovery after broker restart and coordinator state preservation.
 - [x] 4.6 Document normal rollback and recovery, including preserving both PVCs and avoiding simultaneous access to the coordinator.
 - [x] 4.7 Render and validate both authorization-server overlays and the Zigbee2MQTT manifests, including secret references, PKCE metadata, probes, and proxy-only routing.
-- [ ] 4.8 Reconcile the affected Flux resources and verify certificate readiness, LAN DNS, unauthenticated OIDC redirect, authenticated frontend access, and continued internal-only MQTT operation.
+- [x] 4.8 Reconcile the affected Flux resources and verify certificate readiness, LAN DNS, unauthenticated OIDC redirect, authenticated frontend access, and continued internal-only MQTT operation.
 - [x] 4.9 Verify public DNS resolves to Cloud, the public certificate is trusted, and an unauthenticated Internet request reaches the Home OAuth2 Proxy redirect through private transit.
+- [x] 4.10 Verify successful Azure upload, retention behavior, protected logs/credentials, and a restore of Zigbee2MQTT data from the remote backup.
