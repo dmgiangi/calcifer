@@ -33,4 +33,4 @@
 - [x] 4.6 Document normal rollback and recovery, including preserving both PVCs and avoiding simultaneous access to the coordinator.
 - [x] 4.7 Render and validate both authorization-server overlays and the Zigbee2MQTT manifests, including secret references, PKCE metadata, probes, and proxy-only routing.
 - [ ] 4.8 Reconcile the affected Flux resources and verify certificate readiness, LAN DNS, unauthenticated OIDC redirect, authenticated frontend access, and continued internal-only MQTT operation.
-- [ ] 4.9 Verify public DNS resolves to Cloud, the public certificate is trusted, and an unauthenticated Internet request reaches the Home OAuth2 Proxy redirect through private transit.
+- [x] 4.9 Verify public DNS resolves to Cloud, the public certificate is trusted, and an unauthenticated Internet request reaches the Home OAuth2 Proxy redirect through private transit.
