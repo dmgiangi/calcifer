@@ -49,18 +49,18 @@
 
 - [x] 4.1 Add the Azure Wyoming integration endpoints to Home Assistant and
   verify Italian STT and TTS are selectable in an Assist pipeline
-- [ ] 4.2 Add the LVA device through the ESPHome integration using the PC LAN
+- [x] 4.2 Add the LVA device through the ESPHome integration using the PC LAN
   address and port `6053`; verify Home Assistant can open the satellite session
   without relying on multicast discovery
-- [ ] 4.3 Create the Italian Assist pipeline and bind it to the LVA device;
+- [x] 4.3 Create the Italian Assist pipeline and bind it to the LVA device;
   verify an utterance is transcribed and answered through Azure
-- [ ] 4.4 Add the documented custom Italian test sentence/intent for the
+- [x] 4.4 Add the documented custom Italian test sentence/intent for the
   selected switch entity, with success speech exactly `Fatto`; verify success
   and unavailable-switch paths do not confuse the response
 
 ## 5. Validate, document, and provide rollback
 
-- [ ] 5.1 Run the full acceptance test from wake word through Italian switch
+- [x] 5.1 Run the full acceptance test from wake word through Italian switch
   command, state change, selected TTS synthesis, and PC speaker playback; record the
   observable result and warm-path latency without recording secrets
 - [x] 5.2 Validate both Kustomize outputs, Compose configuration, pod/proxy logs,
@@ -68,6 +68,6 @@
   repository secret checks
 - [x] 5.3 Document prerequisites, startup order, Home Assistant onboarding,
   restricted Cloud egress, firewall checks, troubleshooting, and rollback
-- [ ] 5.4 Exercise rollback by disabling the voice application and stopping the
+- [x] 5.4 Exercise rollback by disabling the voice application and stopping the
   local Compose project; verify Home Assistant HTTP access, its PVC, and
   unrelated Home cluster workloads remain available
