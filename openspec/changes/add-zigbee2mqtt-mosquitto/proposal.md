@@ -22,9 +22,11 @@ physically hosts it.
   Assistant discovery, and document the Home Assistant MQTT integration and
   validation procedure.
 - Expose only the Zigbee2MQTT web frontend at `https://zigbee.calcifer.tech`
-  through Traefik, a public cert-manager certificate, LAN split-horizon DNS,
-  and an OAuth2 Proxy sidecar authenticated by the Calcifer authorization
-  server.
+  from both the LAN and Internet. LAN clients route directly to Home through
+  split-horizon DNS, while public clients enter through Cloud Traefik and the
+  existing WireGuard private transit. Both paths terminate publicly trusted
+  TLS and reach an OAuth2 Proxy sidecar authenticated by the Calcifer
+  authorization server.
 - Keep MQTT unexposed outside the cluster; a future external endpoint would
   require a separately reviewed TLS and DNS design.
 
@@ -43,10 +45,12 @@ None.
 
 ## Impact
 
-- Adds manifests under `clusters/calcifer-home/apps` and corresponding Flux
-  application reconciliation resources.
+- Adds workload and LAN-edge manifests under `clusters/calcifer-home/apps`,
+  public-edge forwarding manifests under `clusters/calcifer-cloud/apps`, and
+  corresponding Flux application reconciliation resources.
 - Adds Service, PVC, Secret, Deployment, Traefik IngressRoute, Certificate,
-  DNSEndpoint, NetworkPolicy, and Kustomize resources for the new workloads.
+  DNSEndpoint, EndpointSlice, ServersTransport, NetworkPolicy, and Kustomize
+  resources for the new workloads and dual edge path.
 - Requires the existing `local-path` storage class, SOPS age key, production
   ClusterIssuer, LAN DNS controller, authorization server, and schedulable node
   `calcifer-home`.

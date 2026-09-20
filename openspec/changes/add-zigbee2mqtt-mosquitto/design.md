@@ -23,8 +23,8 @@ or Zigbee workload is currently deployed.
   operator, while constraining Zigbee2MQTT to `calcifer-home`.
 - Enable MQTT Home Assistant discovery and provide a repeatable validation and
   rollback procedure.
-- Publish the Zigbee2MQTT browser frontend through a canonical HTTPS hostname
-  protected by the existing Calcifer identity plane.
+- Publish the Zigbee2MQTT browser frontend to LAN and Internet clients through
+  a canonical HTTPS hostname protected by the existing Calcifer identity plane.
 
 **Non-Goals:**
 
@@ -89,11 +89,19 @@ endpoint and credentials.
 
 ### Authenticated Zigbee2MQTT web edge
 
-Expose the frontend as `https://zigbee.calcifer.tech` through the Home Traefik
-`websecure` entry point. Issue a publicly trusted certificate with the existing
-`letsencrypt-production-azure` ClusterIssuer and publish a LAN split-horizon A
-record to `192.168.0.102`. The DNS record provides local routing; it does not
-publish MQTT or create an MQTT LoadBalancer.
+Expose the frontend as `https://zigbee.calcifer.tech` through dual Traefik
+edges. Publish the public Azure DNS A record to Cloud `136.144.222.128`. Cloud
+Traefik terminates a publicly trusted certificate, then uses a selectorless
+Service and EndpointSlice to forward HTTPS over WireGuard to Home
+`172.31.255.2:443`. A ServersTransport SHALL send
+`zigbee.calcifer.tech` as the upstream TLS server name and preserve the Host
+header. Home Traefik terminates its own publicly trusted certificate and routes
+only to OAuth2 Proxy.
+
+Publish a Home LAN split-horizon A record to `192.168.0.102` so local clients
+reach Home Traefik directly. Both certificates use the existing
+`letsencrypt-production-azure` ClusterIssuer. Neither path publishes MQTT or
+creates an MQTT LoadBalancer, and no residential router port-forward is used.
 
 Run OAuth2 Proxy `v7.15.4` as a non-privileged sidecar in the Zigbee2MQTT pod.
 Traefik and the ClusterIP Service target only the proxy on port 4180; the proxy
@@ -127,6 +135,11 @@ server instances because they share one canonical issuer.
   boundary would allow Zigbee network changes. **Mitigation:** route the Service
   exclusively to OAuth2 Proxy, require OIDC and the `admin` role, restrict proxy
   ingress to Traefik, and never expose port 8080 through a Service.
+- **[Risk]** The Cloud edge could bypass Home authentication or fail upstream
+  TLS verification. **Mitigation:** forward only to Home Traefik on
+  `172.31.255.2:443`, preserve the canonical Host header, validate the Home
+  certificate with canonical SNI, and keep OAuth2 Proxy as the sole Home
+  application backend.
 - **[Risk]** Authorization server or Internet loss can interrupt a new browser
   login. **Mitigation:** existing secure proxy sessions remain valid for their
   configured lifetime, Home split DNS routes the canonical issuer locally, and
@@ -143,9 +156,11 @@ server instances because they share one canonical issuer.
    availability, and command round trips.
 5. Test restart/recovery scenarios, including retained discovery after broker,
    Zigbee2MQTT, and Home Assistant restarts.
-6. Register the OIDC client, deploy the OAuth2 Proxy sidecar and HTTPS edge, and
-   verify unauthenticated redirects plus authenticated frontend access.
-7. Roll back by suspending/removing the new application Kustomization and
+6. Register the OIDC client, deploy the OAuth2 Proxy sidecar and Home HTTPS
+   edge, and verify unauthenticated redirects plus authenticated frontend access.
+7. Deploy the Cloud HTTPS edge over WireGuard and verify the public certificate,
+   canonical upstream TLS, OAuth2 redirect, and LAN split-horizon path.
+8. Roll back by suspending/removing the new application Kustomization and
    restoring from PVCs; do not delete the coordinator data PVC during a normal
    rollback.
 

@@ -2,10 +2,23 @@
 
 ## Web frontend
 
-The administration frontend is available at `https://zigbee.calcifer.tech` on
-the Home LAN. Traefik terminates the public certificate and routes only to the
-OAuth2 Proxy sidecar, which requires the `admin` role from
-`https://auth.calcifer.tech`. Port 8080 is not published by a Service.
+The administration frontend is available at `https://zigbee.calcifer.tech`
+from both the Home LAN and Internet. LAN DNS resolves the name to
+`192.168.0.102`, where Home Traefik routes only to the OAuth2 Proxy sidecar.
+Public DNS resolves the same name to Cloud `136.144.222.128`; Cloud Traefik
+forwards HTTPS over WireGuard to Home `172.31.255.2:443` with canonical SNI.
+
+Both edges use publicly trusted certificates. OAuth2 Proxy requires the
+`admin` role from `https://auth.calcifer.tech`. Port 8080 is not published by a
+Service, MQTT remains cluster-internal, and the Home router has no inbound
+port-forward.
+
+Verify both paths without reading Secret data:
+
+```sh
+kubectl --context calcifer-home -n zigbee2mqtt get certificate,deploy,pod,service,ingressroute
+kubectl --context calcifer-cloud -n zigbee2mqtt get certificate,service,endpointslice,serverstransport,ingressroute
+```
 
 ## Broker endpoints
 

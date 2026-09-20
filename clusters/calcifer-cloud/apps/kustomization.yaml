@@ -4,3 +4,4 @@ resources:
   - edge-test
   - home-assistant
   - observability
+  - zigbee2mqtt

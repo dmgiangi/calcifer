@@ -63,9 +63,23 @@ resources or runtime Secret references.
 
 ### Requirement: Zigbee2MQTT provides an authenticated HTTPS frontend
 The system SHALL expose the Zigbee2MQTT frontend at
-`https://zigbee.calcifer.tech` using a publicly trusted certificate, LAN
-split-horizon DNS, and an OAuth2 Proxy sidecar authenticated by
-`https://auth.calcifer.tech`.
+`https://zigbee.calcifer.tech` to both LAN and Internet clients using publicly
+trusted certificates and an OAuth2 Proxy sidecar authenticated by
+`https://auth.calcifer.tech`. LAN clients SHALL resolve the canonical hostname
+to Home `192.168.0.102`. Internet clients SHALL resolve it to Cloud
+`136.144.222.128`, where Cloud Traefik SHALL forward HTTPS over WireGuard to
+Home `172.31.255.2:443` with canonical SNI and the original Host header.
+
+#### Scenario: Public browser access uses the Cloud private-transit edge
+- **WHEN** an Internet client resolves and requests `zigbee.calcifer.tech`
+- **THEN** it SHALL connect to Cloud Traefik with a publicly trusted certificate
+  and the request SHALL traverse WireGuard to Home Traefik without an inbound
+  residential router port-forward
+
+#### Scenario: LAN browser access uses the direct Home edge
+- **WHEN** a LAN client resolves and requests `zigbee.calcifer.tech`
+- **THEN** split-horizon DNS SHALL return `192.168.0.102` and the client SHALL
+  connect directly to Home Traefik with a publicly trusted certificate
 
 #### Scenario: Unauthenticated browser access requires login
 - **WHEN** a browser without a valid proxy session requests the frontend
@@ -81,7 +95,8 @@ split-horizon DNS, and an OAuth2 Proxy sidecar authenticated by
 #### Scenario: The raw frontend remains private
 - **WHEN** cluster Services and Traefik routes are inspected
 - **THEN** only OAuth2 Proxy port 4180 SHALL be routed and Zigbee2MQTT port 8080
-  SHALL NOT be directly exposed
+  SHALL NOT be directly exposed; the Cloud edge SHALL forward only to Home
+  Traefik HTTPS on `172.31.255.2:443`
 
 #### Scenario: Browser secrets remain encrypted
 - **WHEN** a reviewer inspects the OIDC client and proxy configuration in Git

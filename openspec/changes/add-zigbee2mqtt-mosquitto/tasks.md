@@ -20,7 +20,8 @@
 - [x] 3.3 Configure Zigbee2MQTT to authenticate to the internal Mosquitto Service, use the `zigbee2mqtt` base topic, enable Home Assistant discovery, and keep secrets out of plaintext configuration.
 - [x] 3.4 Include Zigbee2MQTT resources in the application Kustomization and Flux root without changing the existing Home Assistant workload unnecessarily.
 - [x] 3.5 Register a `zigbee2mqtt` Authorization Code client with PKCE and place the identical generated client secret in both authorization-server overlays and the Zigbee2MQTT SOPS Secret.
-- [x] 3.6 Add the pinned OAuth2 Proxy sidecar, proxy-only Service, Traefik HTTPS route, public Certificate, LAN split-horizon DNSEndpoint, and ingress restriction without exposing frontend port 8080.
+- [x] 3.6 Add the pinned OAuth2 Proxy sidecar, proxy-only Service, Home Traefik HTTPS route, public Certificate, LAN split-horizon DNSEndpoint, and ingress restriction without exposing frontend port 8080.
+- [x] 3.7 Add the Cloud public Certificate, selectorless Service and EndpointSlice, canonical-SNI ServersTransport, and Traefik route forwarding HTTPS over WireGuard to the authenticated Home edge.
 
 ## 4. Validate deployment and Home Assistant integration
 
@@ -32,3 +33,4 @@
 - [x] 4.6 Document normal rollback and recovery, including preserving both PVCs and avoiding simultaneous access to the coordinator.
 - [x] 4.7 Render and validate both authorization-server overlays and the Zigbee2MQTT manifests, including secret references, PKCE metadata, probes, and proxy-only routing.
 - [ ] 4.8 Reconcile the affected Flux resources and verify certificate readiness, LAN DNS, unauthenticated OIDC redirect, authenticated frontend access, and continued internal-only MQTT operation.
+- [ ] 4.9 Verify public DNS resolves to Cloud, the public certificate is trusted, and an unauthenticated Internet request reaches the Home OAuth2 Proxy redirect through private transit.
