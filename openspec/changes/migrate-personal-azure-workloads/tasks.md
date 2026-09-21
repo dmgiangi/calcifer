@@ -49,8 +49,8 @@
 
 ## 6. Retention, rollback, and decommissioning
 
-- [ ] 6.1 Keep the old Storage account, old Speech account, and legacy Resource Group unchanged for the agreed observation window; verify new backups continue succeeding and no unexpected writes reach the old account
-- [ ] 6.2 Document the rollback procedure and current target/source references; verify restoring the old encrypted credentials and manifests is possible without deleting the new resources
-- [ ] 6.3 Record explicit migration acceptance after backup, restore, DNS-01, Speech, firewall, and data-integrity checks pass; verify the acceptance record identifies the retention expiry
-- [ ] 6.4 Remove the old Storage, Speech, DNS scopes, and unused `vnet01` only after separate review of each dependency; verify Azure reports successful deletion and no active repository reference remains
-- [ ] 6.5 Run a final post-decommission search and Azure inventory; verify only `sub-personal`, `rg-calcifer`, `rg-dmgiangi-public`, and the approved target resources remain
+- [x] 6.1 Keep the old Storage account, old Speech account, and legacy Resource Group unchanged for the agreed observation window; verify new backups continue succeeding and no unexpected writes reach the old account
+- [x] 6.2 Document the rollback procedure and current target/source references; verify restoring the old encrypted credentials and manifests is possible without deleting the new resources
+- [x] 6.3 Record explicit migration acceptance after backup, restore, DNS-01, Speech, firewall, and data-integrity checks pass; verify the acceptance record identifies the retention expiry
+- [x] 6.4 Remove the old Storage, Speech, DNS scopes, and unused `vnet01` only after separate review of each dependency; verify Azure reports successful deletion and no active repository reference remains
+- [x] 6.5 Run a final post-decommission search and Azure inventory; verify only `sub-personal`, `rg-calcifer`, `rg-dmgiangi-public`, and the approved target resources remain

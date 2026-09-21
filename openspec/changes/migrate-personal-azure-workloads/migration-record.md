@@ -24,15 +24,16 @@ The following checks passed on 2026-09-21:
 - A TTS request from the intended Home workload path succeeded against the target Speech endpoint.
 - Target inventories contain the migration baseline plus post-cutover backups.
 
-Operational acceptance is pending both an agreed retention expiry and durable GitOps reconciliation.
+Operational acceptance was completed on 2026-09-21T09:46:00Z after the backup, restore, DNS-01, Speech, firewall, data-integrity, and GitOps checks passed. The agreed retention duration was zero days, and decommissioning completed successfully.
 
 ## Retention gate
 
 - Observation start: 2026-09-21T09:37:14Z, after durable GitOps reconciliation in both clusters.
-- Agreed duration: pending operator decision.
-- Retention expiry: pending operator decision.
-- During retention, do not delete or repurpose `calciferobs`, `calcifer-home-speech-it`, `vnet01`, or `rg-calcifer-westeurope-001`.
+- Agreed duration: 0 days (immediate decommission authorized by the operator).
+- Retention expiry: 2026-09-21T09:46:00Z.
+- During the zero-day window, do not delete or repurpose the legacy resources until the final dependency review is complete.
 - Confirm new scheduled backups continue to succeed and verify the source Storage account receives no unexpected writes.
+- At 2026-09-21T09:43:23Z, Azure Monitor reported zero transactions on `calciferobs` since the observation start; target Home Assistant, Zigbee2MQTT, and Velero backups were successful.
 
 ## Rollback procedure
 
@@ -46,8 +47,26 @@ Operational acceptance is pending both an agreed retention expiry and durable Gi
 
 ## GitOps gate
 
-The migration changes are currently uncommitted and the affected root Kustomizations are suspended in both clusters. Do not resume them until the reviewed changes are committed and available to the Git source revision consumed by Flux; otherwise reconciliation can restore legacy references.
+The migration changes were committed and pushed. At the observation start, all 10 Cloud and all 9 Home Kustomizations were unsuspended, `Ready=True`, and reconciled to `master@sha1:c20c0443181450496f3ed287ad15519335ecfb87`, with no `ReconciliationFailed` events.
 
 ## Decommission review
 
 After the retention expiry, review and delete each legacy resource separately. Reconfirm dependencies immediately before deleting Storage, Speech, `vnet01`, and finally the legacy Resource Group. Never delete the target DNS zones or their active cert-manager role assignments as part of legacy cleanup.
+
+The separate read-only dependency review completed at 2026-09-21T09:43:23Z, before deletion:
+
+- `calciferobs` has no active workload reference; active backup producers point to `stcalciferbackupitn`.
+- `calcifer-home-speech-it` has no active workload reference; Home STT/TTS point to `speech-calcifer-home-itn`.
+- `vnet01` has no peering, NIC, private endpoint, or attached IP configuration. Its only dependency is a subnet service endpoint and virtual-network rule owned by the legacy Speech account, so delete Speech before the VNet.
+- The legacy Resource Group contains only the old Storage account, old Speech account, and `vnet01`; no resource lock prevents their separate deletion.
+
+## Acceptance and decommission result
+
+Acceptance was recorded at 2026-09-21T09:46:00Z with a zero-day retention window. The legacy resources were then deleted separately in dependency order:
+
+1. Storage account `calciferobs`.
+2. Speech account `calcifer-home-speech-it`.
+3. Virtual network `vnet01`.
+4. Resource Group `rg-calcifer-westeurope-001`, after Azure reported zero remaining resources.
+
+The target DNS zones `calcifer.tech` and `dmgiangi.dev` were not deleted; they remain in their approved target Resource Groups. A final Azure inventory confirmed that the legacy Resource Group no longer exists, the target subscription contains only `rg-calcifer` and `rg-dmgiangi-public`, and active repository content contains no legacy resource references.

@@ -11,8 +11,9 @@ certificate issuance through Azure DNS DNS-01 validation.
 The system SHALL install cert-manager on `calcifer-home` through Flux before
 applying Home certificate configuration. It SHALL provide separate Let's
 Encrypt staging and production `ClusterIssuer` resources that use Azure DNS
-DNS-01 validation for `calcifer.tech`, and it SHALL keep DNS credentials
-SOPS-encrypted in Git.
+DNS-01 validation for `calcifer.tech` in the migrated `sub-personal`
+subscription and `rg-calcifer` Resource Group, and it SHALL keep DNS
+credentials SOPS-encrypted in Git.
 
 #### Scenario: Home certificate configuration follows controller installation
 - **WHEN** Flux reconciles the Home certificate-management roots on a new

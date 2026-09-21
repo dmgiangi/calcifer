@@ -4,7 +4,7 @@
 TBD - created by archiving change add-home-assistant-home-edge. Update Purpose after archive.
 ## Requirements
 ### Requirement: Automated periodic backup of Home Assistant configuration to Azure Blob Storage
-The system SHALL run a scheduled backup job on `calcifer-home` to archive the Home Assistant `/config` volume and upload encrypted snapshots to a dedicated, private Azure Blob Storage container.
+The system SHALL run a scheduled backup job on `calcifer-home` to archive the Home Assistant `/config` volume and upload encrypted snapshots to the designated private container in the migrated Italy North Azure Blob Storage account.
 
 #### Scenario: Scheduled backup execution
 - **WHEN** the scheduled backup CronJob triggers
@@ -32,4 +32,3 @@ The system SHALL store Azure Blob credentials exclusively in SOPS-encrypted Kube
 #### Scenario: Egress proxy use is restricted
 - **WHEN** a client other than the Home WireGuard peer or a destination other than the configured Azure Blob endpoint attempts to use the proxy
 - **THEN** the proxy SHALL deny the connection.
-

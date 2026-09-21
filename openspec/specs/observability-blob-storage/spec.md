@@ -8,11 +8,11 @@ Velero backups of observability data.
 ## Requirements
 
 ### Requirement: Isolated Azure Blob containers
-The system SHALL use a dedicated, private Azure Blob container in the `calciferobs` storage account for Velero offsite disaster recovery backups of observability volumes, without active database read/write connections from runtime pods.
+The system SHALL use a dedicated, private Azure Blob container in the migrated Italy North Storage account for Velero offsite disaster recovery backups of observability volumes, without active database read/write connections from runtime pods.
 
 #### Scenario: Velero performs offsite backup
 - **WHEN** Velero executes a scheduled or manual backup of observability volumes
-- **THEN** it SHALL write backup archives exclusively to the designated backup container in `calciferobs`.
+- **THEN** it SHALL write backup archives exclusively to the designated backup container in the migrated Storage account.
 
 #### Scenario: Runtime observability pods operate
 - **WHEN** VictoriaMetrics, VictoriaLogs, or VictoriaTraces runs
@@ -30,7 +30,7 @@ The system SHALL store Azure Blob credentials for Velero exclusively in SOPS-enc
 - **THEN** they SHALL receive object-store credentials from a dedicated Kubernetes Secret limited to the backup storage location.
 
 ### Requirement: Restricted storage network access
-The Azure storage account SHALL permit Blob data-plane access from the `calcifer-cloud` VPS address `136.144.222.128` and SHALL deny anonymous blob access.
+The Azure Storage account SHALL permit Blob data-plane access from the `calcifer-cloud` VPS address `136.144.222.128` and SHALL deny anonymous blob access. The restriction SHALL be implemented with the Storage firewall rather than a dependency on the retired `vnet01`.
 
 #### Scenario: Backup access from the cluster VPS
 - **WHEN** Velero accesses the backup Blob container from `136.144.222.128` with valid credentials
