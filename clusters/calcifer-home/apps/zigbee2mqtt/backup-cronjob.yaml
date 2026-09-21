@@ -5,6 +5,7 @@ metadata:
   namespace: zigbee2mqtt
 spec:
   schedule: "0 3 * * *"
+  suspend: true
   timeZone: Europe/Rome
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3

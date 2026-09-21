@@ -50,6 +50,16 @@ These snapshots prove repository health but are not the final cutover recovery p
 - Kept every destination canonical IngressRoute and DNS endpoint outside the prepare composition; source routes remain active.
 - Prepare renders contain 99 Home resources and 75 Cloud resources when combined with the existing active Homepage overlays. Resource identities are unique, destination routes are absent, and all source namespaces remain rendered.
 
+## Prepare reconciliation
+
+- Prepare commit: `87c7b95b55b319cebe99ec58130245e456c6b295`.
+- `home-apps` and `cloud-apps` applied the prepare revision and every Flux Kustomization reported `Ready=True`.
+- All three Home replacement PVCs reached `Bound`; the prepare-only binding Job completed successfully after verifying empty mounts.
+- Six Home destination Deployments and both Homepage destination Deployments remained at zero replicas.
+- All source Deployments remained ready, and each canonical Home Assistant, Zigbee2MQTT, and Homepage hostname had exactly one active route per cluster.
+- All source and destination Certificates were ready; destination DNS endpoints and canonical IngressRoutes remained absent as intended.
+- Platform namespaces and unrelated workloads remained present and ready.
+
 ## Namespace-sensitive inventory
 
 The preflight search covered active manifests, documentation, and scripts. It identified workload namespace references, one explicit `mosquitto.mqtt.svc.cluster.local` reference, ten files containing `namespaceSelector`, namespaced Traefik and Certificate resources, Flux health checks, SOPS Secrets, backup resources, and operational commands. These references are tracked by tasks 2.3–2.7, 6.4–6.6, and 8.4.

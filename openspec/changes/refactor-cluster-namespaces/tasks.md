@@ -20,9 +20,9 @@
 
 ## 3. Reconcile and validate the prepare stage
 
-- [ ] 3.1 Commit and push the prepare stage to the Flux-followed branch, reconcile both clusters, and verify the Git source and affected Kustomizations reach the expected revision and `Ready=True`.
-- [ ] 3.2 Verify `home-automation` and `web` contain the expected inactive resources, empty replacement PVCs, destination Secrets, and restore prerequisites while all source workloads and canonical routes remain active.
-- [ ] 3.3 Verify platform namespaces and unrelated applications remain ready and that no canonical hostname, certificate, DNS record, or Cloud-to-Home route changed during prepare.
+- [x] 3.1 Commit and push the prepare stage to the Flux-followed branch, reconcile both clusters, and verify the Git source and affected Kustomizations reach the expected revision and `Ready=True`.
+- [x] 3.2 Verify `home-automation` and `web` contain the expected inactive resources, empty replacement PVCs, destination Secrets, and restore prerequisites while all source workloads and canonical routes remain active.
+- [x] 3.3 Verify platform namespaces and unrelated applications remain ready and that no canonical hostname, certificate, DNS record, or Cloud-to-Home route changed during prepare.
 
 ## 4. Freeze source workloads and create final backups
 

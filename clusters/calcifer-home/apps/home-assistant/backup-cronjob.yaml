@@ -5,6 +5,7 @@ metadata:
   namespace: home-assistant
 spec:
   schedule: "30 2 * * *"
+  suspend: true
   timeZone: Europe/Rome
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
