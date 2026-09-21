@@ -5,4 +5,3 @@ resources:
   - certificate.yaml
   - service.yaml
   - endpointslice.yaml
-  - traefik.yaml

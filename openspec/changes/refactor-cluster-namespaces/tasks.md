@@ -45,7 +45,7 @@
 - [x] 6.1 Activate Mosquitto in `home-automation`, reconcile, and verify authenticated readiness, rejected anonymous access, ClusterIP-only exposure, and persistence on the replacement PVC.
 - [x] 6.2 Activate restored Zigbee2MQTT after Mosquitto is ready, reconcile, and verify exclusive coordinator access, MQTT connectivity, paired devices, state publication, and discovery republishing.
 - [x] 6.3 Activate voice-assistant services and restored Home Assistant after their dependencies are ready, reconcile, and verify Home Assistant starts from restored state and reaches Mosquitto and speech endpoints in `home-automation`.
-- [ ] 6.4 Replace Home canonical ingress resources and Homepage with their destination namespace versions in one controlled route cutover; verify each hostname has exactly one effective route per cluster and keeps its existing certificate and URL behavior.
+- [x] 6.4 Replace Home canonical ingress resources and Homepage with their destination namespace versions in one controlled route cutover; verify each hostname has exactly one effective route per cluster and keeps its existing certificate and URL behavior.
 - [ ] 6.5 Replace Cloud Home Assistant and Zigbee2MQTT edge proxies with the `web` resources and verify HTTPS forwarding over WireGuard preserves Host, SNI validation, WebSockets, and authorization behavior.
 - [ ] 6.6 Update namespace-sensitive Grafana queries, alerts, labels, NetworkPolicies, Flux health checks, and remaining operational references; verify repository searches find no stale active dependency on removed workload namespaces.
 
