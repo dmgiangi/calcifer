@@ -26,7 +26,7 @@
 
 ## 4. Freeze source workloads and create final backups
 
-- [ ] 4.1 Suspend the Home Assistant and Zigbee2MQTT scheduled CronJobs and verify no backup Job is running before the freeze begins.
+- [x] 4.1 Suspend the Home Assistant and Zigbee2MQTT scheduled CronJobs and verify no backup Job is running before the freeze begins.
 - [ ] 4.2 Stop Home Assistant and Zigbee2MQTT writers, then Mosquitto and dependent voice services, and verify their pods have terminated while source PVCs remain bound.
 - [ ] 4.3 Trigger a final Home Assistant backup from the source CronJob, verify successful Restic completion and SQLite integrity, and record the exact selected snapshot ID without exposing credentials.
 - [ ] 4.4 Trigger a final Zigbee2MQTT backup from the source CronJob, verify successful Restic completion, repository check, and snapshot checksum metadata, and record the exact selected snapshot ID without exposing credentials.

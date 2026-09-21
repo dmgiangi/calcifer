@@ -68,3 +68,8 @@ The preflight search covered active manifests, documentation, and scripts. It id
 
 - Home Assistant: pending workload freeze.
 - Zigbee2MQTT: pending workload freeze.
+
+## Freeze progress
+
+- Source backup schedules were suspended at commit `1c913d01de6a7a84b9e15d6433755d41d86aab60`.
+- Both source CronJobs reported `suspend: true`, and neither source namespace contained an active backup Job before writer shutdown.
