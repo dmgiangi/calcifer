@@ -28,7 +28,7 @@ Operational acceptance is pending both an agreed retention expiry and durable Gi
 
 ## Retention gate
 
-- Observation start: pending durable GitOps reconciliation.
+- Observation start: 2026-09-21T09:37:14Z, after durable GitOps reconciliation in both clusters.
 - Agreed duration: pending operator decision.
 - Retention expiry: pending operator decision.
 - During retention, do not delete or repurpose `calciferobs`, `calcifer-home-speech-it`, `vnet01`, or `rg-calcifer-westeurope-001`.
