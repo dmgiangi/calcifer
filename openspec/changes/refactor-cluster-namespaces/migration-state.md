@@ -90,3 +90,8 @@ The preflight search covered active manifests, documentation, and scripts. It id
 - Corrected Job `home-assistant-restore-90f31d8c-v2` completed successfully; both restore containers and both Zigbee2MQTT restore containers exited with code zero against the pinned IDs.
 - A read-only post-restore probe verified the Home Assistant configuration and `.storage` tree, SQLite integrity, Zigbee2MQTT configuration/device/coordinator/state files, and an empty Mosquitto replacement PVC.
 - Mosquitto credential and configuration objects are present, completed restore Jobs remain available, and all source Deployments/namespaces/PVCs remain retained for rollback.
+
+## Cutover progress
+
+- Destination Mosquitto was activated at commit `fc3a063c6de45ca674de0549556f84186120cb33` while the source broker remained stopped.
+- Its authenticated readiness probe passed, anonymous publication was rejected, the Service remained ClusterIP-only, and the replacement PVC was `Bound`, mounted, writable, and configured for persistence.
