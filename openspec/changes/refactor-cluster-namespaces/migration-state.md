@@ -87,3 +87,6 @@ The preflight search covered active manifests, documentation, and scripts. It id
 - Zigbee2MQTT restore Job `zigbee2mqtt-restore-28937415` completed successfully, including checksum and critical-state validation before copying to the replacement PVC.
 - The first Home Assistant restore attempt restored snapshot `90f31d8c` to staging but its read-only SQLite validation required immutable mode after the quiescent backup; it failed before checking or copying the empty destination PVC.
 - The corrected Home Assistant restore Job uses `mode=ro&immutable=1` only for validation of the frozen staged database and has a new immutable Job name.
+- Corrected Job `home-assistant-restore-90f31d8c-v2` completed successfully; both restore containers and both Zigbee2MQTT restore containers exited with code zero against the pinned IDs.
+- A read-only post-restore probe verified the Home Assistant configuration and `.storage` tree, SQLite integrity, Zigbee2MQTT configuration/device/coordinator/state files, and an empty Mosquitto replacement PVC.
+- Mosquitto credential and configuration objects are present, completed restore Jobs remain available, and all source Deployments/namespaces/PVCs remain retained for rollback.

@@ -34,11 +34,11 @@
 
 ## 5. Restore application state into `home-automation`
 
-- [ ] 5.1 Pin the temporary restore Jobs to the recorded snapshot IDs, reconcile them in `home-automation`, and verify each Job completes without resolving an arbitrary `latest` snapshot.
-- [ ] 5.2 Verify the Home Assistant replacement PVC contains the restored configuration and `.storage` tree and that `PRAGMA integrity_check` returns `ok` for the restored SQLite database.
-- [ ] 5.3 Verify the Zigbee2MQTT replacement PVC checksum file and restored configuration, coordinator, network, and paired-device state all pass validation.
-- [ ] 5.4 Verify the Mosquitto replacement PVC is intentionally empty, its credential Secret and declarative configuration are present, and no source broker data was copied accidentally.
-- [ ] 5.5 Preserve completed restore Job status and source rollback resources until cutover validation finishes; verify neither old namespace is eligible for pruning.
+- [x] 5.1 Pin the temporary restore Jobs to the recorded snapshot IDs, reconcile them in `home-automation`, and verify each Job completes without resolving an arbitrary `latest` snapshot.
+- [x] 5.2 Verify the Home Assistant replacement PVC contains the restored configuration and `.storage` tree and that `PRAGMA integrity_check` returns `ok` for the restored SQLite database.
+- [x] 5.3 Verify the Zigbee2MQTT replacement PVC checksum file and restored configuration, coordinator, network, and paired-device state all pass validation.
+- [x] 5.4 Verify the Mosquitto replacement PVC is intentionally empty, its credential Secret and declarative configuration are present, and no source broker data was copied accidentally.
+- [x] 5.5 Preserve completed restore Job status and source rollback resources until cutover validation finishes; verify neither old namespace is eligible for pruning.
 
 ## 6. Perform the ordered cutover
 
