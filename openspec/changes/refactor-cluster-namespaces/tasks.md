@@ -59,8 +59,8 @@
 
 ## 8. Cleanup and documentation
 
-- [ ] 8.1 Remove temporary restore Jobs and prepare/cutover-only resources after successful validation; verify steady-state renders contain no migration Job or pinned snapshot ID.
+- [x] 8.1 Remove temporary restore Jobs and prepare/cutover-only resources after successful validation; verify steady-state renders contain no migration Job or pinned snapshot ID.
 - [ ] 8.2 Remove obsolete `home-assistant`, `mqtt`, `zigbee2mqtt`, `voice-assistant`, and `homepage` namespace resources only where replaced, then reconcile cleanup and verify Flux prunes their old workloads and PVCs without affecting platform namespaces.
 - [ ] 8.3 Verify the final namespace inventory, active routes, Services, EndpointSlices, Certificates, NetworkPolicies, PVCs, and backup schedules match the new taxonomy on both clusters.
-- [ ] 8.4 Update Home Assistant, Zigbee2MQTT, edge-routing, backup/restore, and cluster operational documentation with new namespaces and recovery commands; verify documented commands reference only steady-state resources.
-- [ ] 8.5 Render both final cluster trees, run strict OpenSpec validation and repository checks, and verify the Git working tree contains only the intended implementation and change artifacts.
+- [x] 8.4 Update Home Assistant, Zigbee2MQTT, edge-routing, backup/restore, and cluster operational documentation with new namespaces and recovery commands; verify documented commands reference only steady-state resources.
+- [x] 8.5 Render both final cluster trees, run strict OpenSpec validation and repository checks, and verify the Git working tree contains only the intended implementation and change artifacts.

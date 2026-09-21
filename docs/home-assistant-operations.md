@@ -19,8 +19,8 @@ Confirm the certificate, workload, PVC, and both edge routes without reading
 Secret data:
 
 ```sh
-kubectl --context calcifer-home -n home-assistant get certificate,deploy,pod,pvc,service,ingressroute
-kubectl --context calcifer-cloud -n home-assistant get certificate,service,endpointslice,serverstransport,ingressroute
+kubectl --context calcifer-home -n home-automation get certificate,deploy,pod,pvc,service,ingressroute
+kubectl --context calcifer-cloud -n web get certificate,service,endpointslice,serverstransport,ingressroute
 ```
 
 From a LAN client, `home.calcifer.tech` must resolve to `192.168.0.102`. From a
@@ -82,11 +82,11 @@ After reconciliation, trigger a backup and inspect only its status and logs;
 never print the Secret or its environment variables:
 
 ```sh
-kubectl --context calcifer-home -n home-assistant create job \
+kubectl --context calcifer-home -n home-automation create job \
   --from=cronjob/home-assistant-backup home-assistant-backup-manual
-kubectl --context calcifer-home -n home-assistant wait \
+kubectl --context calcifer-home -n home-automation wait \
   --for=condition=complete job/home-assistant-backup-manual --timeout=2h
-kubectl --context calcifer-home -n home-assistant logs \
+kubectl --context calcifer-home -n home-automation logs \
   job/home-assistant-backup-manual -c restic
 ```
 

@@ -13,7 +13,7 @@ import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SECRET = ROOT / "clusters/calcifer-home/apps/home-assistant/backup-secrets.sops.yaml"
+SECRET = ROOT / "clusters/calcifer-home/apps/home-automation/home-assistant/backup-secrets.sops.yaml"
 SUBSCRIPTION = "sub-personal"
 ACCOUNT = "stcalciferbackupitn"
 RESOURCE_GROUP = "rg-calcifer"
@@ -128,7 +128,7 @@ def main() -> None:
             "kind": "Secret",
             "metadata": {
                 "name": "home-assistant-backup",
-                "namespace": "home-assistant",
+                "namespace": "home-automation",
             },
             "type": "Opaque",
             "stringData": {

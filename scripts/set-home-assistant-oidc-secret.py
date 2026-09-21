@@ -17,7 +17,7 @@ AUTH_SECRETS = (
     ROOT / "clusters/apps/authorization-server/overlays/cloud/authorization-server-secrets.sops.yaml",
     ROOT / "clusters/apps/authorization-server/overlays/home/authorization-server-secrets.sops.yaml",
 )
-HA_SECRET = ROOT / "clusters/calcifer-home/apps/home-assistant/home-assistant-secrets.sops.yaml"
+HA_SECRET = ROOT / "clusters/calcifer-home/apps/home-automation/home-assistant/home-assistant-secrets.sops.yaml"
 KEY = "HOME_ASSISTANT_OIDC_CLIENT_SECRET"
 
 
@@ -78,7 +78,7 @@ def main() -> None:
     home_assistant = {
         "apiVersion": "v1",
         "kind": "Secret",
-        "metadata": {"name": "home-assistant-secrets", "namespace": "home-assistant"},
+        "metadata": {"name": "home-assistant-secrets", "namespace": "home-automation"},
         "type": "Opaque",
         "stringData": {"secrets.yaml": f"oidc_client_secret: {json.dumps(value)}\n"},
     }

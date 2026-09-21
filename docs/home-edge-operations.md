@@ -78,8 +78,8 @@ Encrypted secret locations are:
 - `clusters/calcifer-cloud/infrastructure/private-transit/wireguard-private-key.sops.yaml`
 - `clusters/calcifer-home/infrastructure/cert-manager/config/azure-dns-credentials.sops.yaml`
 - `clusters/apps/authorization-server/overlays/home/authorization-server-secrets.sops.yaml`
-- `clusters/apps/homepage/overlays/home/homepage-secrets.sops.yaml`
-- `clusters/apps/homepage/overlays/cloud/homepage-secrets.sops.yaml`
+- `clusters/apps/homepage/overlays/home-web/homepage-secrets.sops.yaml`
+- `clusters/apps/homepage/overlays/cloud-web/homepage-secrets.sops.yaml`
 - `clusters/calcifer-cloud/apps/authorization-state/redis-auth.sops.yaml`
 - `clusters/apps/authorization-server/overlays/home/redis-auth.sops.yaml`
 

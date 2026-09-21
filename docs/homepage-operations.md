@@ -1,21 +1,21 @@
 # Homepage and declarative OIDC operations
 
-Homepage is deployed from the shared base in `clusters/apps/homepage/base` and
-the Cloud/Home overlays. Both instances use `https://calcifer.tech`, while Home
-publishes a LAN-only `DNSEndpoint` for split-horizon DNS.
+Homepage is deployed from `clusters/apps/homepage/web-base` and the
+`cloud-web`/`home-web` overlays. Both instances use `https://calcifer.tech`,
+while Home publishes a LAN-only `DNSEndpoint` for split-horizon DNS.
 
 ## Add or update a dashboard service
 
-1. Edit `clusters/apps/homepage/base/services.yaml` and add the canonical HTTPS
+1. Edit `clusters/apps/homepage/web-base/services.yaml` and add the canonical HTTPS
    link and a `siteMonitor` URL that represents end-to-end reachability.
 2. Render both overlays and confirm that the entry is present:
 
    ```sh
-   kubectl kustomize clusters/apps/homepage/overlays/cloud >/tmp/homepage-cloud.yaml
-   kubectl kustomize clusters/apps/homepage/overlays/home >/tmp/homepage-home.yaml
+    kubectl kustomize clusters/apps/homepage/overlays/cloud-web >/tmp/homepage-cloud.yaml
+    kubectl kustomize clusters/apps/homepage/overlays/home-web >/tmp/homepage-home.yaml
    ```
 
-3. Commit and let Flux reconcile the `homepage` Kustomization in both clusters.
+3. Commit and let Flux reconcile `cloud-apps` and `home-apps`.
    The generated ConfigMap name includes a content hash, so a catalog change
    rolls the Homepage Deployment automatically.
 
@@ -52,10 +52,10 @@ Authorization Server startup validation.
 Check rollout state without reading Secret values:
 
 ```sh
-flux --context calcifer-cloud get kustomization authorization-server homepage
-flux --context calcifer-home get kustomization authorization-server homepage
-kubectl --context calcifer-cloud -n homepage rollout status deployment/homepage
-kubectl --context calcifer-home -n homepage rollout status deployment/homepage
+flux --context calcifer-cloud get kustomization authorization-server cloud-apps
+flux --context calcifer-home get kustomization authorization-server home-apps
+kubectl --context calcifer-cloud -n web rollout status deployment/homepage
+kubectl --context calcifer-home -n web rollout status deployment/homepage
 ```
 
 From a public client, confirm `calcifer.tech` resolves to Cloud. From a Home LAN
