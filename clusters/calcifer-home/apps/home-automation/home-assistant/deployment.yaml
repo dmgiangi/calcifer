@@ -6,7 +6,7 @@ metadata:
   labels:
     app.kubernetes.io/name: home-assistant
 spec:
-  replicas: 0
+  replicas: 1
   revisionHistoryLimit: 3
   strategy:
     type: Recreate

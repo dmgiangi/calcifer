@@ -98,3 +98,4 @@ The preflight search covered active manifests, documentation, and scripts. It id
 - Restored Zigbee2MQTT was activated at commit `970ae4650946cacf1537b3f6ddaba2eac67e8c86` with the source coordinator workload still stopped.
 - Both Zigbee2MQTT containers became ready with zero restarts; logs confirmed MQTT connection, coordinator initialization, network startup, one joined device, MQTT publications, Home Assistant discovery references, and availability publications.
 - Before Home Assistant activation, a read-only inspection found two old broker FQDN references in restored `.storage/core.config_entries`; a dedicated cutover Job migrates exactly those references atomically to the `home-automation` Service after JSON validation.
+- MQTT endpoint migration Job `home-assistant-mqtt-endpoint-migration-v1` completed successfully; a separate read-only probe confirmed zero old and two new broker FQDN references before Home Assistant startup.
