@@ -77,8 +77,6 @@ Encrypted secret locations are:
 - `clusters/calcifer-home/infrastructure/private-transit/wireguard-private-key.sops.yaml`
 - `clusters/calcifer-cloud/infrastructure/private-transit/wireguard-private-key.sops.yaml`
 - `clusters/calcifer-home/infrastructure/cert-manager/config/azure-dns-credentials.sops.yaml`
-- `clusters/calcifer-home/apps/edge-test/basic-auth.sops.yaml`
-- `clusters/calcifer-cloud/apps/edge-test/basic-auth.sops.yaml`
 - `clusters/apps/authorization-server/overlays/home/authorization-server-secrets.sops.yaml`
 - `clusters/apps/homepage/overlays/home/homepage-secrets.sops.yaml`
 - `clusters/apps/homepage/overlays/cloud/homepage-secrets.sops.yaml`
@@ -100,7 +98,7 @@ resolver to forward to the router: it forwards undeclared queries directly to
 `1.1.1.1`.
 
 The router has been manually checked and has no inbound NAT/port-forward rule
-for the Home node or the test service. Preserve that invariant: public traffic
+for the Home node. Preserve that invariant: public traffic
 must enter through the Cloud VPS and private transit only.
 
 During a controlled outage test, record the router configuration, make the
@@ -112,7 +110,6 @@ constraint. Restore the Service and confirm the declared Home name returns
 Useful checks from a LAN client are:
 
 ```sh
-dig @192.168.0.102 edge-test.calcifer.tech A
 dig @192.168.0.102 auth.calcifer.tech A
 dig @192.168.0.102 calcifer.tech A
 dig @192.168.0.102 example.com A
@@ -145,8 +142,8 @@ Create a dedicated Azure application/service principal restricted to the
 Store its client ID, tenant ID, subscription/resource-group identifiers, and
 client secret only in the encrypted Home cert-manager Secret. Reconcile the
 staging issuer first, then production. Home certificates must use canonical
-hostnames such as `edge-test.calcifer.tech`; Home need not be Internet
-reachable for DNS-01.
+hostnames for selected Home services; Home need not be Internet reachable for
+DNS-01.
 
 ## Verification
 
@@ -157,8 +154,6 @@ flux --context calcifer-home get kustomizations
 flux --context calcifer-cloud get kustomizations
 kubectl --context calcifer-home -n private-transit get pods
 kubectl --context calcifer-cloud -n private-transit get pods
-kubectl --context calcifer-home -n edge-test get certificate,ingressroute
-kubectl --context calcifer-cloud -n edge-test get service,endpointslice,ingressroute
 ```
 
 On the nodes, verify a recent WireGuard handshake and only the intended peer
@@ -181,30 +176,18 @@ fail. These checks validate reachability only and never expose credentials or
 stored values. For Speech, also verify that the named endpoint fails without
 the proxy and that a Wyoming TTS-to-STT round trip succeeds through the proxy.
 
-The public test path must resolve to Cloud. The LAN override may resolve it to
-Home only while Home’s equivalent authorization policy is enabled. Confirm
- that `auth.calcifer.tech` and `grafana.calcifer.tech` remain unchanged. When
- connected, authorization telemetry should report `CONNECTED`; after the
+Confirm that `auth.calcifer.tech` and `grafana.calcifer.tech` remain unchanged.
+When
+connected, authorization telemetry should report `CONNECTED`; after the
  configured three failed two-second probes Home may report `ISOLATED` for at
  least 15 seconds. A 30-second stable-success window, a 30-second lease, a
  20-second gate, and a three-second drain precede automatic generation recovery.
 
 ## Rollback and incident recovery
 
-For a route rollback, remove or suspend the Cloud edge route first, then the
-Home route and disposable backend. Keep certificates and transit intact if
-they are healthy. For a transit incident, suspend the private-transit Flux
+For a Home edge route rollback, remove or suspend the Cloud edge route first,
+then the Home route and backend. Keep certificates and transit intact if they
+are healthy. For a transit incident, suspend the private-transit Flux
 Kustomizations, remove the affected peer/key, and rotate both peer keys after
 containment. Restore router DNS to its prior upstream configuration if the
 Home resolver is unhealthy.
-
-The protected `edge-test` route is retained as a non-sensitive operational
-health endpoint. It requires the encrypted basic-auth Secret on both Cloud
-and Home and is not a production application. Retain it only while that
-authorization remains valid; otherwise remove the backend, both edge routes,
-the LAN `DNSEndpoint`, and its certificates together.
-
-Use its route pattern as the review baseline for later workload migrations:
-Home canonical certificate and access control, optional LAN `DNSEndpoint`,
-Cloud selectorless Service/EndpointSlice, canonical-SNI `ServersTransport`,
-and a Cloud Traefik route preserving Host and HTTPS forwarding metadata.
