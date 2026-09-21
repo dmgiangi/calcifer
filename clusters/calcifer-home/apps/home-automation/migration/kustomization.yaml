@@ -3,4 +3,5 @@ kind: Kustomization
 resources:
   - prepare-pvc-binding.yaml
   - home-assistant-restore.yaml
+  - home-assistant-mqtt-endpoint-migration.yaml
   - zigbee2mqtt-restore.yaml

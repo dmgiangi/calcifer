@@ -95,3 +95,6 @@ The preflight search covered active manifests, documentation, and scripts. It id
 
 - Destination Mosquitto was activated at commit `fc3a063c6de45ca674de0549556f84186120cb33` while the source broker remained stopped.
 - Its authenticated readiness probe passed, anonymous publication was rejected, the Service remained ClusterIP-only, and the replacement PVC was `Bound`, mounted, writable, and configured for persistence.
+- Restored Zigbee2MQTT was activated at commit `970ae4650946cacf1537b3f6ddaba2eac67e8c86` with the source coordinator workload still stopped.
+- Both Zigbee2MQTT containers became ready with zero restarts; logs confirmed MQTT connection, coordinator initialization, network startup, one joined device, MQTT publications, Home Assistant discovery references, and availability publications.
+- Before Home Assistant activation, a read-only inspection found two old broker FQDN references in restored `.storage/core.config_entries`; a dedicated cutover Job migrates exactly those references atomically to the `home-automation` Service after JSON validation.
