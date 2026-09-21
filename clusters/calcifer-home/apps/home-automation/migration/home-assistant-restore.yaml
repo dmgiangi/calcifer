@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: home-assistant-restore-90f31d8c
+  name: home-assistant-restore-90f31d8c-v2
   namespace: home-automation
   labels:
     app.kubernetes.io/name: home-assistant-restore
@@ -118,7 +118,9 @@ spec:
                   raise RuntimeError("Home Assistant restore is missing expected paths: " + ", ".join(missing))
 
               database = restored / "home-assistant_v2.db"
-              with sqlite3.connect(f"file:{database}?mode=ro", uri=True) as connection:
+              with sqlite3.connect(
+                  f"file:{database}?mode=ro&immutable=1", uri=True
+              ) as connection:
                   result = connection.execute("PRAGMA integrity_check").fetchone()
               if result != ("ok",):
                   raise RuntimeError("Home Assistant SQLite integrity check failed")

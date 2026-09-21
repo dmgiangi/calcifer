@@ -81,3 +81,9 @@ The preflight search covered active manifests, documentation, and scripts. It id
 - Home Assistant and Zigbee2MQTT writers were stopped first at commit `de20beef7268fc49cb3aedbd5c4fec8da609a926`.
 - Mosquitto and both voice adapters were stopped second at commit `064db4ccae1c48b3b16466f005acbdb25165e0ab`.
 - All source application Deployments reported zero replicas and no active application pods; the three source PVCs remained `Bound`.
+
+## Restore progress
+
+- Zigbee2MQTT restore Job `zigbee2mqtt-restore-28937415` completed successfully, including checksum and critical-state validation before copying to the replacement PVC.
+- The first Home Assistant restore attempt restored snapshot `90f31d8c` to staging but its read-only SQLite validation required immutable mode after the quiescent backup; it failed before checking or copying the empty destination PVC.
+- The corrected Home Assistant restore Job uses `mode=ro&immutable=1` only for validation of the frozen staged database and has a new immutable Job name.
