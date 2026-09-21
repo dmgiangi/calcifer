@@ -5,7 +5,7 @@ metadata:
   namespace: home-automation
 spec:
   schedule: "0 3 * * *"
-  suspend: true
+  suspend: false
   timeZone: Europe/Rome
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
