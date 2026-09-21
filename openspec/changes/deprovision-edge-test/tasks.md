@@ -10,8 +10,8 @@
 
 - [x] 2.1 Remove `edge-test` from `clusters/calcifer-home/apps/kustomization.yaml` and verify the Home application Kustomization no longer includes the workload
 - [x] 2.2 Remove the `clusters/calcifer-cloud/apps/edge-test` and `clusters/calcifer-home/apps/edge-test` resource directories, including encrypted `basic-auth` manifests, and verify no non-archived active manifest references remain
-- [ ] 2.3 Reconcile `home-apps` and verify the Home Deployment, Service, ingress routes, `DNSEndpoint`, Certificates, Secret, and `edge-test` namespace are pruned
-- [ ] 2.4 Verify that the LAN DNS override and managed DNS record for `edge-test.calcifer.tech` are removed after normal controller and DNS propagation delays
+- [x] 2.3 Reconcile `home-apps` and verify the Home Deployment, Service, ingress routes, `DNSEndpoint`, Certificates, Secret, and `edge-test` namespace are pruned
+- [x] 2.4 Verify that the LAN `DNSEndpoint` and any edge-test-specific public DNS record are removed; preserve the shared `*.calcifer.tech` wildcard required by other services
 
 ## 3. Update operational documentation
 
@@ -21,5 +21,5 @@
 ## 4. Validate the resulting desired state
 
 - [x] 4.1 Render or validate both `clusters/calcifer-cloud/apps` and `clusters/calcifer-home/apps` Kustomizations and verify no unrelated resources are removed
-- [ ] 4.2 Run the OpenSpec validation for `deprovision-edge-test` and verify the proposal, spec delta, design, and task checklist are coherent
-- [ ] 4.3 Confirm the final diff is limited to the `edge-test` deprovisioning and its current documentation, with archived OpenSpec artifacts unchanged
+- [x] 4.2 Run the OpenSpec validation for `deprovision-edge-test` and verify the proposal, spec delta, design, and task checklist are coherent
+- [x] 4.3 Confirm the final diff is limited to the `edge-test` deprovisioning and its current documentation, with archived OpenSpec artifacts unchanged
