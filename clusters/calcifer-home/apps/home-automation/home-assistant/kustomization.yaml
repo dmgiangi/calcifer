@@ -13,3 +13,5 @@ resources:
   - service.yaml
   - backup-cronjob.yaml
   - certificate.yaml
+  - dnsendpoint.yaml
+  - traefik.yaml

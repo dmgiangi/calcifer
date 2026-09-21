@@ -3,4 +3,5 @@ kind: Kustomization
 resources:
   - ../../web-base
   - certificate.yaml
+  - ingressroute.yaml
   - homepage-secrets.sops.yaml

@@ -12,3 +12,5 @@ resources:
   - backup-networkpolicy.yaml
   - middleware.yaml
   - certificate.yaml
+  - dnsendpoint.yaml
+  - traefik.yaml
