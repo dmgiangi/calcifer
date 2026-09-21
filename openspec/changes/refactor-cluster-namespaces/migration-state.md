@@ -118,3 +118,12 @@ The preflight search covered active manifests, documentation, and scripts. It id
 - Zigbee2MQTT retained one joined device without re-pairing, published state/discovery/availability during startup, retained discovery and bridge-state topics, and repopulated the Home Assistant MQTT entity registry.
 - An end-to-end Wyoming probe generated 58,240 bytes through Azure TTS and obtained a non-empty Azure STT transcript from that audio.
 - Homepage returned its expected authenticated redirect on both LAN and Cloud with ready, zero-restart Pods. VictoriaMetrics and VictoriaLogs contained `home-automation`/`web` label data, all active Deployments and Certificates were ready, all Flux Kustomizations were ready, and split-horizon DNS resolved Home locally and Cloud publicly.
+
+## Cleanup completion
+
+- Cleanup commit `1d1ebed1e2ec3da019218aa8b1843c90c0ae3953` removed migration Jobs, prepare-only resources, source workload trees, legacy Homepage overlays, and the two standalone Homepage Flux Kustomizations.
+- Final renders contain 41 Home objects and 42 Cloud objects, with no migration Job, pinned cutover snapshot ID, legacy Namespace, or object namespaced under a removed workload namespace.
+- Both `flux-system` roots and `home-apps`/`cloud-apps` reconciled the cleanup revision; every remaining Flux Kustomization reported `Ready=True` and the standalone `homepage` Kustomizations were absent.
+- Home no longer contains `home-assistant`, `mqtt`, `zigbee2mqtt`, `voice-assistant`, or `homepage`; Cloud no longer contains `home-assistant`, `zigbee2mqtt`, or `homepage`. Platform namespaces remained present.
+- No PV retained a claim reference to a removed namespace. The three replacement PVCs remained bound in `home-automation`, and completed one-off post-cutover backup Jobs were removed after their outcomes were recorded.
+- All Deployments and Certificates were ready, both destination backup CronJobs were active, Cloud edge EndpointSlices targeted `172.31.255.2`, and LAN/public requests retained the expected `200`, `302`, and `307` responses for Home Assistant, Zigbee2MQTT, and Homepage.
