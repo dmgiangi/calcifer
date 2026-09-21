@@ -65,7 +65,7 @@ Blob container `home-assistant-backups`. It retains seven daily snapshots.
 Restic sends HTTPS through a restricted HTTP CONNECT proxy bound only to
 `172.31.255.1:3128` on `calcifer-cloud`. The proxy accepts only
 `172.31.255.2` over WireGuard and only tunnels to
-`calciferobs.blob.core.windows.net:443`; TLS remains end-to-end between Restic
+`stcalciferbackupitn.blob.core.windows.net:443`; TLS remains end-to-end between Restic
 and Azure. The storage account firewall therefore needs only the static Cloud
 VPS egress IP `136.144.222.128`. Do not allow the dynamic Home egress IP or
 open the storage account to unrestricted public access.

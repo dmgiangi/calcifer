@@ -14,8 +14,9 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 SECRET = ROOT / "clusters/calcifer-home/apps/home-assistant/backup-secrets.sops.yaml"
-ACCOUNT = "calciferobs"
-RESOURCE_GROUP = "rg-calcifer-westeurope-001"
+SUBSCRIPTION = "sub-personal"
+ACCOUNT = "stcalciferbackupitn"
+RESOURCE_GROUP = "rg-calcifer"
 CONTAINER = "home-assistant-backups"
 
 
@@ -80,6 +81,8 @@ def main() -> None:
             "storage",
             "container-rm",
             "create",
+            "--subscription",
+            SUBSCRIPTION,
             "--storage-account",
             ACCOUNT,
             "--resource-group",
@@ -99,6 +102,8 @@ def main() -> None:
             "storage",
             "container",
             "generate-sas",
+            "--subscription",
+            SUBSCRIPTION,
             "--account-name",
             ACCOUNT,
             "--name",

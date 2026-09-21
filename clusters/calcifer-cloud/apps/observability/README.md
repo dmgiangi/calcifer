@@ -11,9 +11,9 @@ Deployment settings:
 - Trace retention: 7 days with an 8 GiB data cap on a 10 GiB local persistent
   volume, enforced by VictoriaTraces.
 - Disaster recovery: Velero with Kopia File System Backup schedules daily backups
-  of observability PVCs to the private `backups` container in `calciferobs`.
+  of observability PVCs to the private `backups` container in `stcalciferbackupitn`.
 - Azure credentials for Velero use a dedicated service principal with
-  `Storage Blob Data Contributor` scoped to the `backups` container; all
+  `Storage Blob Data Contributor` scoped to the replacement Storage account; all
   credentials remain SOPS-encrypted.
 
 The Grafana Operator, Alloy, VictoriaMetrics, VictoriaLogs, VictoriaTraces, and

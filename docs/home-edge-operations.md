@@ -48,13 +48,13 @@ startup and DNATs only source `172.31.255.2` on port `16379` to Service port
 Home Assistant backup egress is also deliberately narrow: Home may use the
 HTTP CONNECT proxy at Cloud `172.31.255.1:3128` only through `wg0`. Envoy binds
 only to the Cloud tunnel address, accepts only source `172.31.255.2`, and
-permits only `calciferobs.blob.core.windows.net:443`. It does not terminate TLS
+permits only `stcalciferbackupitn.blob.core.windows.net:443`. It does not terminate TLS
 or expose a general-purpose forward proxy.
 
 Azure Speech egress uses a separate HTTP CONNECT proxy at Cloud
 `172.31.255.1:3129`. It also binds only to the tunnel address and accepts only
 source `172.31.255.2`, but permits only
-`calcifer-home-speech-it.cognitiveservices.azure.com:443`. The Home Wyoming
+`speech-calcifer-home-itn.cognitiveservices.azure.com:443`. The Home Wyoming
 adapters explicitly configure this proxy through the Speech SDK; generic
 `HTTP_PROXY`/`HTTPS_PROXY` variables are insufficient for this SDK runtime.
 Azure Speech network ACLs deny by default and allow only the Cloud public IP.

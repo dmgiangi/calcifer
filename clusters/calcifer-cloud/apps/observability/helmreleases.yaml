@@ -632,9 +632,9 @@ spec:
           bucket: backups
           default: true
           config:
-            resourceGroup: rg-calcifer-westeurope-001
-            storageAccount: calciferobs
-            storageAccountURI: https://calciferobs.blob.core.windows.net
+            resourceGroup: rg-calcifer
+            storageAccount: stcalciferbackupitn
+            storageAccountURI: https://stcalciferbackupitn.blob.core.windows.net
             useAAD: "true"
       uploaderType: kopia
       defaultVolumesToFsBackup: false

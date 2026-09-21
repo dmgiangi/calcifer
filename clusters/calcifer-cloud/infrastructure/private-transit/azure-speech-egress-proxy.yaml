@@ -44,7 +44,7 @@ data:
                       virtual_hosts:
                         - name: azure_speech
                           domains:
-                            - calcifer-home-speech-it.cognitiveservices.azure.com:443
+                            - speech-calcifer-home-itn.cognitiveservices.azure.com:443
                           routes:
                             - match:
                                 connect_matcher: {}
@@ -89,7 +89,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/envoy-config: azure-speech-egress-v1
+        checksum/envoy-config: azure-speech-egress-v2
       labels:
         app.kubernetes.io/name: azure-speech-egress-proxy
     spec:

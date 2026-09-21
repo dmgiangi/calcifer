@@ -37,7 +37,7 @@ data:
                       virtual_hosts:
                         - name: azure_blob
                           domains:
-                            - calciferobs.blob.core.windows.net:443
+                            - stcalciferbackupitn.blob.core.windows.net:443
                           routes:
                             - match:
                                 connect_matcher: {}
@@ -82,7 +82,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/envoy-config: azure-backup-egress-v1
+        checksum/envoy-config: azure-backup-egress-v2
       labels:
         app.kubernetes.io/name: azure-backup-egress-proxy
     spec:
