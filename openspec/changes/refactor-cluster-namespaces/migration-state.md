@@ -66,10 +66,18 @@ The preflight search covered active manifests, documentation, and scripts. It id
 
 ## Final cutover snapshots
 
-- Home Assistant: pending workload freeze.
-- Zigbee2MQTT: pending workload freeze.
+- Home Assistant: `90f31d8c`.
+  - Created by `home-assistant-backup-final-20260921-immutable` after all source writers stopped.
+  - The standard read-only SQLite URI could not create locking state after shutdown, so the successful one-time quiescent Job used `mode=ro&immutable=1`; staging was writable and the source PVC remained read-only.
+  - Snapshot init and Restic containers exited successfully, including SQLite integrity validation.
+- Zigbee2MQTT: `28937415`.
+  - Created by `zigbee2mqtt-backup-final-20260921` after all source writers stopped.
+  - Checksum snapshot init, Restic repository check, backup, and retention processing exited successfully.
 
 ## Freeze progress
 
 - Source backup schedules were suspended at commit `1c913d01de6a7a84b9e15d6433755d41d86aab60`.
 - Both source CronJobs reported `suspend: true`, and neither source namespace contained an active backup Job before writer shutdown.
+- Home Assistant and Zigbee2MQTT writers were stopped first at commit `de20beef7268fc49cb3aedbd5c4fec8da609a926`.
+- Mosquitto and both voice adapters were stopped second at commit `064db4ccae1c48b3b16466f005acbdb25165e0ab`.
+- All source application Deployments reported zero replicas and no active application pods; the three source PVCs remained `Bound`.
