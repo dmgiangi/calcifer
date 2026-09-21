@@ -110,3 +110,11 @@ The preflight search covered active manifests, documentation, and scripts. It id
 - Cloud edge cutover revision `3d4d1008b824aeaf69ab313fbda7f36b5f246ad1` moved both public edge routes to `web` while retaining source Certificate/Service/EndpointSlice rollback resources.
 - Cloud verification found one route per hostname, ready `172.31.255.2` WireGuard endpoints, matching backend SNI names, ready Certificates, preserved Host forwarding, public HTTPS responses of `200` and `302`, and a successful Home Assistant WebSocket upgrade (`101`).
 - Namespace-sensitive repository checks found no active old FQDN, dashboard/alert filter, NetworkPolicy, or namespace dependency outside explicitly retained rollback and migration paths; all Flux Kustomizations were ready.
+
+## Post-cutover validation
+
+- Destination backup schedules resumed at revision `678ebe21d10872e11808b64da3e270f5d570d485`; manual Jobs created Home Assistant snapshot `4031f084` and Zigbee2MQTT snapshot `2101588c`, with zero container failures, successful retention, and a clean Zigbee2MQTT repository check.
+- Home Assistant exposed its UI over LAN and Cloud, completed public WebSocket upgrade, retained a valid OIDC discovery endpoint plus local `homeassistant` fallback, loaded 15 integrations and 18 MQTT entities, and contained 2,745 historical states plus 5,866 events. No automations existed in the restored registry or history, so there was no automation execution to exercise.
+- Zigbee2MQTT retained one joined device without re-pairing, published state/discovery/availability during startup, retained discovery and bridge-state topics, and repopulated the Home Assistant MQTT entity registry.
+- An end-to-end Wyoming probe generated 58,240 bytes through Azure TTS and obtained a non-empty Azure STT transcript from that audio.
+- Homepage returned its expected authenticated redirect on both LAN and Cloud with ready, zero-restart Pods. VictoriaMetrics and VictoriaLogs contained `home-automation`/`web` label data, all active Deployments and Certificates were ready, all Flux Kustomizations were ready, and split-horizon DNS resolved Home locally and Cloud publicly.

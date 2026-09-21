@@ -51,11 +51,11 @@
 
 ## 7. Validate backups and application behavior
 
-- [ ] 7.1 Resume Home Assistant and Zigbee2MQTT CronJobs in `home-automation`, trigger one manual backup of each restored application, and verify new snapshots and retention processing complete through the restricted proxy.
-- [ ] 7.2 Validate Home Assistant UI, OIDC and local fallback, automations, integrations, history, MQTT entities, and `/api/websocket` through both LAN and public paths.
-- [ ] 7.3 Validate Zigbee2MQTT frontend authentication, LAN/public routing, coordinator state, device updates, retained discovery topics, and Home Assistant rediscovery without re-pairing devices.
-- [ ] 7.4 Validate voice STT/TTS behavior, Homepage on both clusters, certificates, split-horizon DNS, Cloud edge routing, and monitoring visibility using the new namespace labels.
-- [ ] 7.5 Verify both Flux installations and all unrelated platform Kustomizations remain `Ready=True`; if any required check fails, execute the documented rollback using retained source namespaces and PVCs before proceeding.
+- [x] 7.1 Resume Home Assistant and Zigbee2MQTT CronJobs in `home-automation`, trigger one manual backup of each restored application, and verify new snapshots and retention processing complete through the restricted proxy.
+- [x] 7.2 Validate Home Assistant UI, OIDC and local fallback, automations, integrations, history, MQTT entities, and `/api/websocket` through both LAN and public paths.
+- [x] 7.3 Validate Zigbee2MQTT frontend authentication, LAN/public routing, coordinator state, device updates, retained discovery topics, and Home Assistant rediscovery without re-pairing devices.
+- [x] 7.4 Validate voice STT/TTS behavior, Homepage on both clusters, certificates, split-horizon DNS, Cloud edge routing, and monitoring visibility using the new namespace labels.
+- [x] 7.5 Verify both Flux installations and all unrelated platform Kustomizations remain `Ready=True`; if any required check fails, execute the documented rollback using retained source namespaces and PVCs before proceeding.
 
 ## 8. Cleanup and documentation
 
