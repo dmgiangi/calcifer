@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: home-assistant-restore-ownership-v1
+  name: home-assistant-restore-ownership-v2
   namespace: home-automation
   labels:
     app.kubernetes.io/name: home-assistant-migration
@@ -22,10 +22,9 @@ spec:
       automountServiceAccountToken: false
       restartPolicy: Never
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -40,15 +39,23 @@ spec:
               from pathlib import Path
 
               root = Path("/config")
-              for directory, directories, files in os.walk(root, topdown=False):
-                  for name in files:
-                      os.lchown(Path(directory) / name, 0, 0)
-                  for name in directories:
-                      os.lchown(Path(directory) / name, 0, 0)
-                  os.chown(directory, 0, 0)
+              targets = [path for path in root.iterdir() if path.name != ".cache"]
+              for target in targets:
+                  if target.is_dir() and not target.is_symlink():
+                      for directory, directories, files in os.walk(target, topdown=False):
+                          for name in files:
+                              os.lchown(Path(directory) / name, 0, 0)
+                          for name in directories:
+                              os.lchown(Path(directory) / name, 0, 0)
+                          os.chown(directory, 0, 0)
+                  else:
+                      os.lchown(target, 0, 0)
               os.chown(root, 0, 0)
-              for directory, directories, files in os.walk(root):
-                  paths = [Path(directory) / name for name in directories + files]
+              for target in targets:
+                  paths = [target]
+                  if target.is_dir() and not target.is_symlink():
+                      for directory, directories, files in os.walk(target):
+                          paths.extend(Path(directory) / name for name in directories + files)
                   if any(path.lstat().st_uid != 0 or path.lstat().st_gid != 0 for path in paths):
                       raise RuntimeError("Home Assistant restore ownership correction failed")
           securityContext:
