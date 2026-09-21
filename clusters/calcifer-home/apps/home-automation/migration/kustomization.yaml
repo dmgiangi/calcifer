@@ -4,4 +4,5 @@ resources:
   - prepare-pvc-binding.yaml
   - home-assistant-restore.yaml
   - home-assistant-mqtt-endpoint-migration.yaml
+  - home-assistant-restore-ownership.yaml
   - zigbee2mqtt-restore.yaml

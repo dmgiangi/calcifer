@@ -1,0 +1,75 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: home-assistant-restore-ownership-v1
+  namespace: home-automation
+  labels:
+    app.kubernetes.io/name: home-assistant-migration
+    app.kubernetes.io/component: restore-ownership
+  annotations:
+    calcifer.tech/cutover-only: "true"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: home-assistant-migration
+        app.kubernetes.io/component: restore-ownership
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: calcifer-home
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: correct-ownership
+          image: ghcr.io/home-assistant/home-assistant:2026.9.2@sha256:a1bc133af84ee6505fe2c266d9805b7c75b780dfdc188edfee3b11e8f3cd8efe
+          imagePullPolicy: IfNotPresent
+          command:
+            - python3
+            - -c
+            - |
+              import os
+              from pathlib import Path
+
+              root = Path("/config")
+              for directory, directories, files in os.walk(root, topdown=False):
+                  for name in files:
+                      os.lchown(Path(directory) / name, 0, 0)
+                  for name in directories:
+                      os.lchown(Path(directory) / name, 0, 0)
+                  os.chown(directory, 0, 0)
+              os.chown(root, 0, 0)
+              for directory, directories, files in os.walk(root):
+                  paths = [Path(directory) / name for name in directories + files]
+                  if any(path.lstat().st_uid != 0 or path.lstat().st_gid != 0 for path in paths):
+                      raise RuntimeError("Home Assistant restore ownership correction failed")
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: home-assistant-config
