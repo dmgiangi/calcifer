@@ -1,0 +1,154 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: zigbee2mqtt-restore-template
+  namespace: home-automation
+  labels:
+    app.kubernetes.io/name: zigbee2mqtt-restore
+    app.kubernetes.io/component: migration
+  annotations:
+    calcifer.tech/migration-template: "true"
+    calcifer.tech/cutover-only: "true"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 7200
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: zigbee2mqtt-restore
+        app.kubernetes.io/component: migration
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: calcifer-home
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: restore
+          image: restic/restic:0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              if [ "$SNAPSHOT_ID" = "VERIFIED_SNAPSHOT_ID_REQUIRED" ]; then
+                echo 'Replace SNAPSHOT_ID with the verified final snapshot ID before applying this template.' >&2
+                exit 1
+              fi
+              case "$SNAPSHOT_ID" in
+                ''|latest|*[!0123456789abcdef]*)
+                  echo 'SNAPSHOT_ID must be a verified hexadecimal Restic snapshot ID.' >&2
+                  exit 1
+                  ;;
+              esac
+              restic restore "$SNAPSHOT_ID" \
+                --host calcifer-home \
+                --target /restore \
+                --include /snapshot/data \
+                --include /snapshot/SHA256SUMS
+          env:
+            - name: SNAPSHOT_ID
+              value: VERIFIED_SNAPSHOT_ID_REQUIRED
+            - name: HTTPS_PROXY
+              value: http://172.31.255.1:3128
+            - name: RESTIC_REPOSITORY
+              value: azure:zigbee2mqtt-backups:/restic
+            - name: RESTIC_CACHE_DIR
+              value: /cache
+            - name: AZURE_ACCOUNT_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: zigbee2mqtt-backup
+                  key: AZURE_ACCOUNT_NAME
+            - name: AZURE_ACCOUNT_SAS
+              valueFrom:
+                secretKeyRef:
+                  name: zigbee2mqtt-backup
+                  key: AZURE_ACCOUNT_SAS
+            - name: RESTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: zigbee2mqtt-backup
+                  key: RESTIC_PASSWORD
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          volumeMounts:
+            - name: restore
+              mountPath: /restore
+            - name: cache
+              mountPath: /cache
+            - name: temporary
+              mountPath: /tmp
+      containers:
+        - name: validate-and-copy
+          image: ghcr.io/koenkk/zigbee2mqtt:2.14.1
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              restored=/restore/snapshot
+              data="$restored/data"
+              test -d "$data"
+              test -s "$restored/SHA256SUMS"
+              (cd "$restored" && sha256sum -c SHA256SUMS >/dev/null)
+              for required in configuration.yaml database.db coordinator_backup.json state.json; do
+                test -s "$data/$required"
+              done
+              grep -Eq '^(homeassistant|mqtt|serial):' "$data/configuration.yaml"
+              if find /destination -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then
+                echo 'Destination Zigbee2MQTT PVC is not empty' >&2
+                exit 1
+              fi
+              cp -a "$data"/. /destination/
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          volumeMounts:
+            - name: restore
+              mountPath: /restore
+              readOnly: true
+            - name: destination
+              mountPath: /destination
+            - name: temporary
+              mountPath: /tmp
+      volumes:
+        - name: restore
+          emptyDir:
+            sizeLimit: 4Gi
+        - name: cache
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: temporary
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: destination
+          persistentVolumeClaim:
+            claimName: zigbee2mqtt-data

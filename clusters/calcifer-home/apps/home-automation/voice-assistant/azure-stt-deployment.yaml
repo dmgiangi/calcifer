@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wyoming-azure-stt
+  namespace: home-automation
+  labels:
+    app.kubernetes.io/name: wyoming-azure-stt
+    app.kubernetes.io/part-of: voice-assistant
+spec:
+  replicas: 0
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wyoming-azure-stt
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wyoming-azure-stt
+        app.kubernetes.io/part-of: voice-assistant
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: wyoming-azure-stt
+          image: ghcr.io/hugobloem/wyoming-microsoft-stt-noha:1.3.10@sha256:e1ba70482b2ca026ca2c81d1e4b76490af1937f1ca528246e41e23ab73b6111e
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - /opt/azure-speech-bootstrap/bootstrap.py
+            - wyoming_microsoft_stt
+          args:
+            - --language
+            - it-IT
+            - --uri
+            - tcp://0.0.0.0:10300
+          env:
+            - name: HOME
+              value: /tmp
+            - name: AZURE_SPEECH_ENDPOINT
+              value: https://speech-calcifer-home-itn.cognitiveservices.azure.com/
+            - name: AZURE_SPEECH_PROXY_HOST
+              value: 172.31.255.1
+            - name: AZURE_SPEECH_PROXY_PORT
+              value: "3129"
+            - name: AZURE_SERVICE_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: azure-speech
+                  key: AZURE_SERVICE_REGION
+            - name: AZURE_SUBSCRIPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: azure-speech
+                  key: AZURE_SUBSCRIPTION_KEY
+          ports:
+            - name: wyoming
+              containerPort: 10300
+              protocol: TCP
+          startupProbe:
+            tcpSocket:
+              port: wyoming
+            failureThreshold: 30
+            periodSeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            tcpSocket:
+              port: wyoming
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: wyoming
+            periodSeconds: 30
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: azure-speech-bootstrap
+              mountPath: /opt/azure-speech-bootstrap
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: azure-speech-bootstrap
+          configMap:
+            name: azure-speech-bootstrap

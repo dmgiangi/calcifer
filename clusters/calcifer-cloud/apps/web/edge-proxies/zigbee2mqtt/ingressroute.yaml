@@ -1,0 +1,20 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: zigbee2mqtt
+  namespace: web
+spec:
+  entryPoints: [websecure]
+  routes:
+    - kind: Rule
+      match: Host(`zigbee.calcifer.tech`)
+      middlewares:
+        - name: zigbee2mqtt-security-headers
+      services:
+        - name: zigbee2mqtt-home
+          port: 443
+          scheme: https
+          serversTransport: zigbee2mqtt-home
+          passHostHeader: true
+  tls:
+    secretName: zigbee2mqtt-cloud-tls

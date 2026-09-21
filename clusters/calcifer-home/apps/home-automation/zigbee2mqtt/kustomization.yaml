@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - pvc.yaml
+  - configuration.yaml
+  - zigbee2mqtt-secrets.sops.yaml
+  - backup-secrets.sops.yaml
+  - deployment.yaml
+  - backup-cronjob.yaml
+  - service.yaml
+  - networkpolicy.yaml
+  - backup-networkpolicy.yaml
+  - middleware.yaml
+  - certificate.yaml

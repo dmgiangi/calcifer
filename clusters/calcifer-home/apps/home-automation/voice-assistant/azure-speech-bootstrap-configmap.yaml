@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: azure-speech-bootstrap
+  namespace: home-automation
+data:
+  bootstrap.py: |
+    import os
+    import runpy
+    import sys
+
+    # noinspection PyUnresolvedReferences
+    import azure.cognitiveservices.speech as speechsdk
+
+    allowed_modules = {
+        "wyoming_microsoft_stt",
+        "wyoming_microsoft_tts",
+    }
+    module = sys.argv.pop(1)
+    if module not in allowed_modules:
+        raise RuntimeError(f"Unsupported module: {module}")
+
+    original_speech_config = speechsdk.SpeechConfig
+
+    def proxied_speech_config(**kwargs):
+        subscription = kwargs.get("subscription")
+        if subscription is None:
+            raise RuntimeError("Azure Speech subscription was not provided")
+
+        config = original_speech_config(
+            subscription=subscription,
+            endpoint=os.environ["AZURE_SPEECH_ENDPOINT"],
+        )
+        config.set_proxy(
+            os.environ["AZURE_SPEECH_PROXY_HOST"],
+            int(os.environ["AZURE_SPEECH_PROXY_PORT"]),
+        )
+        return config
+
+    speechsdk.SpeechConfig = proxied_speech_config
+    runpy.run_module(module, run_name="__main__")

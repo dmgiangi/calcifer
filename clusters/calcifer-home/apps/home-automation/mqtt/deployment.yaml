@@ -1,0 +1,143 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosquitto
+  namespace: home-automation
+  labels:
+    app.kubernetes.io/name: mosquitto
+spec:
+  replicas: 0
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mosquitto
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mosquitto
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsUser: 1883
+        runAsGroup: 1883
+        fsGroup: 1883
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: generate-password-file
+          image: eclipse-mosquitto:2.1.2-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              rm -f /generated/passwordfile
+              mosquitto_passwd -b -c /generated/passwordfile "$ZIGBEE2MQTT_USERNAME" "$ZIGBEE2MQTT_PASSWORD"
+              mosquitto_passwd -b /generated/passwordfile "$HOME_ASSISTANT_USERNAME" "$HOME_ASSISTANT_PASSWORD"
+              chmod 0640 /generated/passwordfile
+          env:
+            - name: ZIGBEE2MQTT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mosquitto-credentials
+                  key: zigbee2mqtt-username
+            - name: ZIGBEE2MQTT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mosquitto-credentials
+                  key: zigbee2mqtt-password
+            - name: HOME_ASSISTANT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mosquitto-credentials
+                  key: homeassistant-username
+            - name: HOME_ASSISTANT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mosquitto-credentials
+                  key: homeassistant-password
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: generated-password
+              mountPath: /generated
+      containers:
+        - name: mosquitto
+          image: eclipse-mosquitto:2.1.2-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: mqtt
+              containerPort: 1883
+          env:
+            - name: ZIGBEE2MQTT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mosquitto-credentials
+                  key: zigbee2mqtt-username
+            - name: ZIGBEE2MQTT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mosquitto-credentials
+                  key: zigbee2mqtt-password
+          command:
+            - /usr/sbin/mosquitto
+            - -c
+            - /mosquitto/config/mosquitto.conf
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - mosquitto_pub -h 127.0.0.1 -p 1883 -u "$ZIGBEE2MQTT_USERNAME" -P "$ZIGBEE2MQTT_PASSWORD" -t health/mosquitto -m ready -q 0
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - mosquitto_pub -h 127.0.0.1 -p 1883 -u "$ZIGBEE2MQTT_USERNAME" -P "$ZIGBEE2MQTT_PASSWORD" -t health/mosquitto -m alive -q 0
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /mosquitto/config/mosquitto.conf
+              subPath: mosquitto.conf
+              readOnly: true
+            - name: data
+              mountPath: /mosquitto/data
+            - name: generated-password
+              mountPath: /mosquitto/password
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          configMap:
+            name: mosquitto-config
+        - name: generated-password
+          emptyDir:
+            medium: Memory
+        - name: tmp
+          emptyDir: {}
+        - name: data
+          persistentVolumeClaim:
+            claimName: mosquitto-data

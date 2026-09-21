@@ -1,0 +1,158 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: home-assistant-backup
+  namespace: home-automation
+spec:
+  schedule: "30 2 * * *"
+  suspend: true
+  timeZone: Europe/Rome
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 7200
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: home-assistant-backup
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          initContainers:
+            - name: snapshot-config
+              image: ghcr.io/home-assistant/home-assistant:2026.9.2@sha256:a1bc133af84ee6505fe2c266d9805b7c75b780dfdc188edfee3b11e8f3cd8efe
+              imagePullPolicy: IfNotPresent
+              command:
+                - python3
+                - -c
+                - |
+                  from pathlib import Path
+                  import shutil
+                  import sqlite3
+
+                  source = Path("/config")
+                  target = Path("/snapshot/config")
+                  ignored = shutil.ignore_patterns(
+                      "home-assistant_v2.db*",
+                      "home-assistant.log*",
+                      "__pycache__",
+                      "deps",
+                      "tts",
+                  )
+                  shutil.copytree(
+                      source,
+                      target,
+                      dirs_exist_ok=True,
+                      ignore=ignored,
+                      symlinks=True,
+                  )
+                  database = source / "home-assistant_v2.db"
+                  if database.exists():
+                      with sqlite3.connect(
+                          "file:/config/home-assistant_v2.db?mode=ro", uri=True
+                      ) as live, sqlite3.connect(target / database.name) as backup:
+                          live.backup(backup)
+                          result = backup.execute("PRAGMA integrity_check").fetchone()
+                          if result != ("ok",):
+                              raise RuntimeError("SQLite snapshot integrity check failed")
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+                readOnlyRootFilesystem: true
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+              volumeMounts:
+                - name: config
+                  mountPath: /config
+                  readOnly: true
+                - name: snapshot
+                  mountPath: /snapshot
+                - name: temporary
+                  mountPath: /tmp
+          containers:
+            - name: restic
+              image: restic/restic:0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -ec
+                - |
+                  if ! restic cat config >/dev/null 2>&1; then
+                    restic init
+                  fi
+                  restic backup /snapshot/config \
+                    --host calcifer-home \
+                    --tag home-assistant
+                  restic forget \
+                    --host calcifer-home \
+                    --path /snapshot/config \
+                    --tag home-assistant \
+                    --keep-daily 7 \
+                    --prune
+              env:
+                - name: HTTPS_PROXY
+                  value: http://172.31.255.1:3128
+                - name: RESTIC_REPOSITORY
+                  value: azure:home-assistant-backups:/restic
+                - name: RESTIC_CACHE_DIR
+                  value: /cache
+                - name: AZURE_ACCOUNT_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: home-assistant-backup
+                      key: AZURE_ACCOUNT_NAME
+                - name: AZURE_ACCOUNT_SAS
+                  valueFrom:
+                    secretKeyRef:
+                      name: home-assistant-backup
+                      key: AZURE_ACCOUNT_SAS
+                - name: RESTIC_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: home-assistant-backup
+                      key: RESTIC_PASSWORD
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+                readOnlyRootFilesystem: true
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: "1"
+                  memory: 512Mi
+              volumeMounts:
+                - name: snapshot
+                  mountPath: /snapshot
+                  readOnly: true
+                - name: cache
+                  mountPath: /cache
+                - name: temporary
+                  mountPath: /tmp
+          volumes:
+            - name: config
+              persistentVolumeClaim:
+                claimName: home-assistant-config
+            - name: snapshot
+              emptyDir:
+                sizeLimit: 10Gi
+            - name: cache
+              emptyDir:
+                sizeLimit: 1Gi
+            - name: temporary
+              emptyDir:
+                sizeLimit: 64Mi

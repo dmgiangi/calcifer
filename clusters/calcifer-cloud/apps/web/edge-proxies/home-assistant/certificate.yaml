@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: home-assistant-cloud
+  namespace: web
+spec:
+  secretName: home-assistant-cloud-tls
+  dnsNames:
+    - home.calcifer.tech
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-production-azure

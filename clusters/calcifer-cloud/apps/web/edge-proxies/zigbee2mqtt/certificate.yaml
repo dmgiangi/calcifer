@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: zigbee2mqtt-cloud
+  namespace: web
+spec:
+  secretName: zigbee2mqtt-cloud-tls
+  dnsNames:
+    - zigbee.calcifer.tech
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-production-azure

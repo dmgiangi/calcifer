@@ -1,0 +1,169 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: home-assistant-restore-template
+  namespace: home-automation
+  labels:
+    app.kubernetes.io/name: home-assistant-restore
+    app.kubernetes.io/component: migration
+  annotations:
+    calcifer.tech/migration-template: "true"
+    calcifer.tech/cutover-only: "true"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 7200
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: home-assistant-restore
+        app.kubernetes.io/component: migration
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: restore
+          image: restic/restic:0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              if [ "$SNAPSHOT_ID" = "VERIFIED_SNAPSHOT_ID_REQUIRED" ]; then
+                echo 'Replace SNAPSHOT_ID with the verified final snapshot ID before applying this template.' >&2
+                exit 1
+              fi
+              case "$SNAPSHOT_ID" in
+                ''|latest|*[!0123456789abcdef]*)
+                  echo 'SNAPSHOT_ID must be a verified hexadecimal Restic snapshot ID.' >&2
+                  exit 1
+                  ;;
+              esac
+              restic restore "$SNAPSHOT_ID" \
+                --host calcifer-home \
+                --target /restore \
+                --include /snapshot/config
+          env:
+            - name: SNAPSHOT_ID
+              value: VERIFIED_SNAPSHOT_ID_REQUIRED
+            - name: HTTPS_PROXY
+              value: http://172.31.255.1:3128
+            - name: RESTIC_REPOSITORY
+              value: azure:home-assistant-backups:/restic
+            - name: RESTIC_CACHE_DIR
+              value: /cache
+            - name: AZURE_ACCOUNT_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: home-assistant-backup
+                  key: AZURE_ACCOUNT_NAME
+            - name: AZURE_ACCOUNT_SAS
+              valueFrom:
+                secretKeyRef:
+                  name: home-assistant-backup
+                  key: AZURE_ACCOUNT_SAS
+            - name: RESTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: home-assistant-backup
+                  key: RESTIC_PASSWORD
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          volumeMounts:
+            - name: restore
+              mountPath: /restore
+            - name: cache
+              mountPath: /cache
+            - name: temporary
+              mountPath: /tmp
+      containers:
+        - name: validate-and-copy
+          image: ghcr.io/home-assistant/home-assistant:2026.9.2@sha256:a1bc133af84ee6505fe2c266d9805b7c75b780dfdc188edfee3b11e8f3cd8efe
+          imagePullPolicy: IfNotPresent
+          command:
+            - python3
+            - -c
+            - |
+              from pathlib import Path
+              import shutil
+              import sqlite3
+
+              restored = Path("/restore/snapshot/config")
+              destination = Path("/destination")
+              required = (
+                  restored / "configuration.yaml",
+                  restored / ".storage",
+                  restored / ".storage/core.config_entries",
+                  restored / ".storage/core.restore_state",
+                  restored / "home-assistant_v2.db",
+              )
+              missing = [str(path.relative_to(restored)) for path in required if not path.exists()]
+              if missing:
+                  raise RuntimeError("Home Assistant restore is missing expected paths: " + ", ".join(missing))
+
+              database = restored / "home-assistant_v2.db"
+              with sqlite3.connect(f"file:{database}?mode=ro", uri=True) as connection:
+                  result = connection.execute("PRAGMA integrity_check").fetchone()
+              if result != ("ok",):
+                  raise RuntimeError("Home Assistant SQLite integrity check failed")
+
+              if any(destination.iterdir()):
+                  raise RuntimeError("Destination Home Assistant PVC is not empty")
+
+              for source in restored.iterdir():
+                  target = destination / source.name
+                  if source.is_dir():
+                      shutil.copytree(source, target, symlinks=True)
+                  else:
+                      shutil.copy2(source, target, follow_symlinks=False)
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: restore
+              mountPath: /restore
+              readOnly: true
+            - name: destination
+              mountPath: /destination
+            - name: temporary
+              mountPath: /tmp
+      volumes:
+        - name: restore
+          emptyDir:
+            sizeLimit: 10Gi
+        - name: cache
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: temporary
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: destination
+          persistentVolumeClaim:
+            claimName: home-assistant-config
