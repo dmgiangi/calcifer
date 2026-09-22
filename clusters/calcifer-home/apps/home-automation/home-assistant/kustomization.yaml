@@ -11,6 +11,7 @@ resources:
   - backup-secrets.sops.yaml
   - deployment.yaml
   - service.yaml
+  - networkpolicy.yaml
   - backup-cronjob.yaml
   - certificate.yaml
   - dnsendpoint.yaml

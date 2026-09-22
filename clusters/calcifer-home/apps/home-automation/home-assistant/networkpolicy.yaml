@@ -1,13 +1,14 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: homepage-ingress
-  namespace: web
+  name: home-assistant-ingress
+  namespace: home-automation
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: homepage
-  policyTypes: [Ingress]
+      app.kubernetes.io/name: home-assistant
+  policyTypes:
+    - Ingress
   ingress:
     - from:
         - namespaceSelector:
@@ -18,4 +19,4 @@ spec:
               app.kubernetes.io/name: traefik
       ports:
         - protocol: TCP
-          port: 3000
+          port: 8123
