@@ -4,8 +4,6 @@ metadata:
   name: authorization-server-config
   namespace: authorization
 data:
-  AUTH_ALLOWED_GOOGLE_EMAIL: dem.gianluigi@gmail.com
-  AUTH_CANONICAL_USER_ID: user:admin
   GRAFANA_OIDC_CLIENT_ID: grafana
   GRAFANA_OIDC_REDIRECT_URI: https://grafana.calcifer.tech/login/generic_oauth
   GRAFANA_OIDC_AUDIENCE: grafana

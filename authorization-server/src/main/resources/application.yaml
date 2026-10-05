@@ -42,8 +42,6 @@ spring:
             redirect-uri: https://auth.calcifer.tech/login/oauth2/code/google
 identity:
   issuer: ${AUTH_ISSUER:}
-  allowed-google-email: ${AUTH_ALLOWED_GOOGLE_EMAIL:dem.gianluigi@gmail.com}
-  canonical-user-id: ${AUTH_CANONICAL_USER_ID:user:admin}
   signing-key-location: ${AUTH_SIGNING_KEY_LOCATION:file:/var/run/secrets/authorization-server/jwt-private-key.pem}
   grafana:
     id: ${GRAFANA_OIDC_CLIENT_ID:grafana}

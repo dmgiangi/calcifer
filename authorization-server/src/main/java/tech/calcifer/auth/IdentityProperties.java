@@ -1,16 +1,24 @@
 package tech.calcifer.auth;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.validation.annotation.Validated;
 
 
@@ -18,20 +26,23 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("identity")
 public record IdentityProperties(
     @NotBlank String issuer,
-    @NotBlank String allowedGoogleEmail,
-    @NotBlank String canonicalUserId,
     @NotBlank String signingKeyLocation,
-    @Valid Client grafana,
-    @Valid Client grafanaApi,
-    @Valid LocalLogin localLogin,
-    Map<String, @Valid ClientDefinition> clients
+    @NotEmpty Set<@NotBlank String> groups,
+    @NotEmpty Map<@NotBlank String, @Valid User> users,
+    @NotNull @Valid Client grafana,
+    @NotNull @Valid Client grafanaApi,
+    @NotNull @Valid LocalLogin localLogin,
+    Map<@NotBlank String, @Valid ClientDefinition> clients
 ) {
 
     @ConstructorBinding
     public IdentityProperties {
+        groups = groups == null ? Set.of() : Set.copyOf(groups);
+        users = users == null ? Map.of() : Map.copyOf(users);
         clients = clients == null ? Map.of() : Map.copyOf(clients);
     }
 
+    /** Compatibility constructor for callers that still describe the original administrator directly. */
     public IdentityProperties(
         String issuer,
         String allowedGoogleEmail,
@@ -42,14 +53,128 @@ public record IdentityProperties(
         LocalLogin localLogin) {
         this(
             issuer,
-            allowedGoogleEmail,
-            canonicalUserId,
             signingKeyLocation,
+            Set.of("admin"),
+            Map.of("admin", legacyAdministrator(allowedGoogleEmail, canonicalUserId, localLogin)),
             grafana,
             grafanaApi,
             localLogin,
             Map.of()
         );
+    }
+
+    /** Compatibility constructor for existing tests and callers that also provide clients. */
+    public IdentityProperties(
+        String issuer,
+        String allowedGoogleEmail,
+        String canonicalUserId,
+        String signingKeyLocation,
+        Client grafana,
+        Client grafanaApi,
+        LocalLogin localLogin,
+        Map<String, ClientDefinition> clients) {
+        this(
+            issuer,
+            signingKeyLocation,
+            Set.of("admin"),
+            Map.of("admin", legacyAdministrator(allowedGoogleEmail, canonicalUserId, localLogin)),
+            grafana,
+            grafanaApi,
+            localLogin,
+            clients
+        );
+    }
+
+    @AssertTrue(message = "identity catalog contains invalid users, groups, methods, or client policies")
+    public boolean isCatalogConfigurationValid() {
+        if (groups.isEmpty()
+            || users.isEmpty()
+            || !groups.contains("admin")
+            || groups.stream().anyMatch(group -> group == null || !group.matches("[a-z][a-z0-9-]*"))) {
+            return false;
+        }
+        Set<String> subjects = new HashSet<>();
+        Set<String> emails = new HashSet<>();
+        for (Map.Entry<String, User> entry : users.entrySet()) {
+            User user = entry.getValue();
+            if (entry.getKey() == null || entry.getKey().isBlank()
+                || user == null
+                || user.email() == null || user.email().isBlank()
+                || user.canonicalSubject() == null || user.canonicalSubject().isBlank()
+                || !subjects.add(user.canonicalSubject())
+                || !emails.add(user.email().toLowerCase(java.util.Locale.ROOT))
+                || user.groups().isEmpty()
+                || !groups.containsAll(user.groups())
+                || user.authenticationMethods().isEmpty()
+                || !Set.of("google", "password").containsAll(user.authenticationMethods())) {
+                return false;
+            }
+        }
+        for (ClientDefinition client : clients.values()) {
+            if (client == null || !groups.containsAll(client.allowedGroups())
+                || (!client.allowedGroups().isEmpty()
+                    && !client.grantTypes().contains("authorization_code"))) {
+                return false;
+            }
+        }
+        if (localLogin == null) {
+            return false;
+        }
+        if (localLogin.enabled()) {
+            User passwordUser = userByEmail(localLogin.username());
+            return passwordUser != null && passwordUser.authenticationMethods().contains("password");
+        }
+        return true;
+    }
+
+    public User userByEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+        return users.values().stream()
+            .filter(user -> user.email().equalsIgnoreCase(email))
+            .findFirst()
+            .orElse(null);
+    }
+
+    User userFor(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        Object principal = authentication.getPrincipal();
+        if (authentication instanceof OAuth2AuthenticationToken oauth2
+            && "google".equals(oauth2.getAuthorizedClientRegistrationId())
+            && principal instanceof OidcUser oidcUser
+            && Boolean.TRUE.equals(oidcUser.getEmailVerified())) {
+            User user = userByEmail(oidcUser.getEmail());
+            return user != null && user.authenticationMethods().contains("google") ? user : null;
+        }
+        if (authentication instanceof UsernamePasswordAuthenticationToken
+            && principal instanceof UserDetails localUser
+            && localLogin.enabled()
+            && localLogin.username().equalsIgnoreCase(localUser.getUsername())) {
+            User user = userByEmail(localUser.getUsername());
+            return user != null && user.authenticationMethods().contains("password") ? user : null;
+        }
+        // Unknown or legacy principal shapes require a fresh login, never inferred eligibility.
+        return null;
+    }
+
+    /** Legacy accessors retained for integrations that read the administrator identity. */
+    public String allowedGoogleEmail() {
+        return users.values().stream()
+            .filter(user -> user.groups().contains("admin"))
+            .map(User::email)
+            .findFirst()
+            .orElse("");
+    }
+
+    public String canonicalUserId() {
+        return users.values().stream()
+            .filter(user -> user.groups().contains("admin"))
+            .map(User::canonicalSubject)
+            .findFirst()
+            .orElse("");
     }
 
     List<ClientDefinition> configuredClients() {
@@ -76,6 +201,18 @@ public record IdentityProperties(
         @NotBlank String audience
     ) {}
 
+    public record User(
+        @NotBlank @Email String email,
+        @NotBlank String canonicalSubject,
+        @NotEmpty Set<@NotBlank String> groups,
+        @NotEmpty Set<@NotBlank String> authenticationMethods
+    ) {
+        public User {
+            groups = groups == null ? Set.of() : Set.copyOf(groups);
+            authenticationMethods = authenticationMethods == null ? Set.of() : Set.copyOf(authenticationMethods);
+        }
+    }
+
     public record ClientDefinition(
         @NotBlank String id,
         @NotBlank String secret,
@@ -85,15 +222,42 @@ public record IdentityProperties(
         Set<@NotBlank String> authenticationMethods,
         String audience,
         boolean requireProofKey,
-        Duration accessTokenTtl
+        Duration accessTokenTtl,
+        Set<@NotBlank String> allowedGroups
     ) {
 
+        @ConstructorBinding
         public ClientDefinition {
             redirectUris = redirectUris == null ? Set.of() : Set.copyOf(redirectUris);
             scopes = scopes == null ? Set.of() : Set.copyOf(scopes);
             grantTypes = grantTypes == null ? Set.of() : Set.copyOf(grantTypes);
             authenticationMethods = authenticationMethods == null || authenticationMethods.isEmpty() ? Set.of(
                 "client_secret_basic") : Set.copyOf(authenticationMethods);
+            allowedGroups = allowedGroups == null ? Set.of() : Set.copyOf(allowedGroups);
+        }
+
+        public ClientDefinition(
+            String id,
+            String secret,
+            Set<String> redirectUris,
+            Set<String> scopes,
+            Set<String> grantTypes,
+            Set<String> authenticationMethods,
+            String audience,
+            boolean requireProofKey,
+            Duration accessTokenTtl) {
+            this(
+                id,
+                secret,
+                redirectUris,
+                scopes,
+                grantTypes,
+                authenticationMethods,
+                audience,
+                requireProofKey,
+                accessTokenTtl,
+                Set.of()
+            );
         }
 
         @AssertTrue(message = "authorization_code clients require at least one redirect URI")
@@ -103,6 +267,13 @@ public record IdentityProperties(
 
         String effectiveAudience() {
             return audience == null || audience.isBlank() ? id : audience;
+        }
+
+        Set<String> effectiveAllowedGroups() {
+            if (!grantTypes.contains("authorization_code")) {
+                return Set.of();
+            }
+            return allowedGroups.isEmpty() ? Set.of("admin") : allowedGroups;
         }
 
         static ClientDefinition browser(Client client) {
@@ -115,7 +286,8 @@ public record IdentityProperties(
                 Set.of("client_secret_basic"),
                 client.audience(),
                 true,
-                null
+                null,
+                Set.of("admin")
             );
         }
 
@@ -129,7 +301,8 @@ public record IdentityProperties(
                 Set.of("client_secret_basic"),
                 client.audience(),
                 false,
-                null
+                null,
+                Set.of()
             );
         }
     }
@@ -139,4 +312,11 @@ public record IdentityProperties(
         @NotBlank String username,
         String passwordHash
     ) {}
+
+    private static User legacyAdministrator(String email, String subject, LocalLogin localLogin) {
+        Set<String> methods = localLogin != null && localLogin.enabled()
+            ? Set.of("google", "password")
+            : Set.of("google");
+        return new User(email, subject, Set.of("admin"), methods);
+    }
 }

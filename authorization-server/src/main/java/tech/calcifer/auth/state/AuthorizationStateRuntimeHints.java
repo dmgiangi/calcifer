@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.hibernate.validator.internal.constraintvalidators.bv.AssertTrueValidator;
+import org.hibernate.validator.internal.constraintvalidators.bv.EmailValidator;
 import org.hibernate.validator.internal.constraintvalidators.bv.NotNullValidator;
 import org.hibernate.validator.internal.constraintvalidators.bv.NotBlankValidator;
 import org.hibernate.validator.internal.constraintvalidators.bv.PatternValidator;
@@ -53,6 +54,7 @@ final class AuthorizationStateRuntimeHints implements RuntimeHintsRegistrar {
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
         hints.reflection().registerType(Log_$logger.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
         hints.reflection().registerType(AssertTrueValidator.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
+        hints.reflection().registerType(EmailValidator.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
         hints.reflection().registerType(NotBlankValidator.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
         hints.reflection().registerType(NotNullValidator.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
         hints.reflection().registerType(PatternValidator.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS);
@@ -72,6 +74,8 @@ final class AuthorizationStateRuntimeHints implements RuntimeHintsRegistrar {
             .registerType(AuthorizationStateProperties.Redis.class, MemberCategory.ACCESS_DECLARED_FIELDS);
         hints.reflection().registerType(IdentityProperties.Client.class, MemberCategory.ACCESS_DECLARED_FIELDS);
         hints.reflection().registerType(IdentityProperties.LocalLogin.class, MemberCategory.ACCESS_DECLARED_FIELDS);
+        hints.reflection().registerType(IdentityProperties.User.class, MemberCategory.ACCESS_DECLARED_FIELDS);
+        registerPublicMethods(hints, IdentityProperties.User.class);
         registerPublicMethods(hints, IdentityProperties.ClientDefinition.class);
         for (var field : Messages_$bundle.class.getFields()) {
             if (field.getName().equals("INSTANCE")) {

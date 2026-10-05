@@ -3,6 +3,7 @@ package tech.calcifer.auth;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
@@ -33,14 +34,25 @@ class GoogleAdminOidcUserService implements OAuth2UserService<OidcUserRequest, O
     public OidcUser loadUser(OidcUserRequest request) {
         OidcUser user = delegate.loadUser(request);
         String email = user.getEmail();
-        if (!properties.allowedGoogleEmail().equalsIgnoreCase(email) || !Boolean.TRUE.equals(user.getEmailVerified())) {
+        IdentityProperties.User configuredUser = properties.userByEmail(email);
+        if (configuredUser == null
+            || !configuredUser.authenticationMethods().contains("google")
+            || !Boolean.TRUE.equals(user.getEmailVerified())) {
             throw new AccessDeniedException("Google identity is not authorized");
         }
+        Set<GrantedAuthority> authorities = new java.util.HashSet<>();
+        configuredUser.groups().stream().map(GoogleAdminOidcUserService::roleAuthority).map(SimpleGrantedAuthority::new)
+            .forEach(authorities::add);
+        authorities.add(FactorGrantedAuthority.fromAuthority(FactorGrantedAuthority.AUTHORIZATION_CODE_AUTHORITY));
         return new DefaultOidcUser(
-            Set.of(
-                new SimpleGrantedAuthority("ROLE_ADMIN"),
-                FactorGrantedAuthority.fromAuthority(FactorGrantedAuthority.AUTHORIZATION_CODE_AUTHORITY)
-            ), user.getIdToken(), user.getUserInfo(), "sub"
+            authorities,
+            user.getIdToken(),
+            user.getUserInfo(),
+            "sub"
         );
+    }
+
+    private static String roleAuthority(String group) {
+        return "ROLE_" + group.toUpperCase(java.util.Locale.ROOT).replace('-', '_');
     }
 }

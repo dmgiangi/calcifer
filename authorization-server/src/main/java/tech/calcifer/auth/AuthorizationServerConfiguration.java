@@ -27,10 +27,16 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationProvider;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationValidator;
 import org.springframework.security.oauth2.server.authorization.InMemoryOAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
@@ -64,27 +70,38 @@ class AuthorizationServerConfiguration {
             .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
             .with(
                 authorizationServer,
-                configurer -> configurer.oidc(oidc -> oidc.providerConfigurationEndpoint(endpoint -> endpoint.providerConfigurationCustomizer(
-                    provider -> {
-                        provider.grantTypes(grants -> {
-                            grants.clear();
-                            properties
-                                .configuredClients()
-                                .stream()
-                                .flatMap(client -> client.grantTypes().stream())
-                                .map(AuthorizationServerConfiguration::grantType)
-                                .map(AuthorizationGrantType::getValue)
-                                .forEach(grants::add);
-                        });
-                        provider.scopes(scopes -> {
-                            scopes.clear();
-                            properties
-                                .configuredClients()
-                                .stream()
-                                .flatMap(client -> client.scopes().stream())
-                                .forEach(scopes::add);
-                        });
-                    })))
+                configurer -> configurer
+                    .authorizationEndpoint(endpoint -> endpoint.authenticationProviders(providers -> providers
+                        .stream()
+                        .filter(OAuth2AuthorizationCodeRequestAuthenticationProvider.class::isInstance)
+                        .map(OAuth2AuthorizationCodeRequestAuthenticationProvider.class::cast)
+                        .forEach(provider -> provider.setAuthenticationValidator(
+                            new OAuth2AuthorizationCodeRequestAuthenticationValidator()
+                                .andThen(new InteractiveClientGroupPolicy(properties)::validate)
+                        ))))
+                    .oidc(oidc -> oidc
+                        .userInfoEndpoint(endpoint -> endpoint.userInfoMapper(new CatalogOidcUserInfoMapper(properties)))
+                        .providerConfigurationEndpoint(endpoint -> endpoint.providerConfigurationCustomizer(
+                        provider -> {
+                            provider.grantTypes(grants -> {
+                                grants.clear();
+                                properties
+                                    .configuredClients()
+                                    .stream()
+                                    .flatMap(client -> client.grantTypes().stream())
+                                    .map(AuthorizationServerConfiguration::grantType)
+                                    .map(AuthorizationGrantType::getValue)
+                                    .forEach(grants::add);
+                            });
+                            provider.scopes(scopes -> {
+                                scopes.clear();
+                                properties
+                                    .configuredClients()
+                                    .stream()
+                                    .flatMap(client -> client.scopes().stream())
+                                    .forEach(scopes::add);
+                            });
+                        })))
             )
             .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()))
             .requestCache(cache -> cache.requestCache(authorizationRequestCache()))
@@ -265,11 +282,39 @@ class AuthorizationServerConfiguration {
         if (properties.localLogin().passwordHash() == null || properties.localLogin().passwordHash().isBlank()) {
             throw new IllegalStateException("Local login requires AUTH_LOCAL_LOGIN_PASSWORD_HASH");
         }
+        String passwordHash = validatedLocalPasswordHash(properties.localLogin().passwordHash());
+        IdentityProperties.User user = properties.userByEmail(properties.localLogin().username());
+        if (user == null || !user.authenticationMethods().contains("password")) {
+            throw new IllegalStateException("Local login user must explicitly allow password authentication");
+        }
         return new InMemoryUserDetailsManager(User
-            .withUsername(properties.localLogin().username())
-            .password(properties.localLogin().passwordHash())
-            .roles("ADMIN")
+            .withUsername(user.email())
+            .password(passwordHash)
+            .authorities(user.groups().stream().map(group -> new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                "ROLE_" + group.toUpperCase(java.util.Locale.ROOT).replace('-', '_'))).toList())
             .build());
+    }
+
+    private static String validatedLocalPasswordHash(String hash) {
+        String encoding = "";
+        String payload = hash;
+        if (hash.startsWith("{")) {
+            int closingBrace = hash.indexOf('}');
+            if (closingBrace > 0) {
+                encoding = hash.substring(0, closingBrace + 1);
+                payload = hash.substring(closingBrace + 1);
+            }
+        }
+        if ((encoding.isEmpty() || encoding.equals("{bcrypt}"))
+            && payload.matches("\\$2[aby]\\$(0[4-9]|[12][0-9]|3[01])\\$[./A-Za-z0-9]{53}")) {
+            return "{bcrypt}" + payload;
+        }
+        if ((encoding.isEmpty() || encoding.equals("{argon2}") || encoding.equals("{argon2@SpringSecurity_v5_8}"))
+            && payload.matches("\\$argon2id\\$v=19\\$m=[1-9][0-9]*,t=[1-9][0-9]*,p=[1-9][0-9]*\\$[A-Za-z0-9+/]+\\$[A-Za-z0-9+/]+")) {
+            return (encoding.isEmpty() ? "{argon2@SpringSecurity_v5_8}" : encoding) + payload;
+        }
+        // Never include the configured hash in an exception or log message.
+        throw new IllegalStateException("Local login password hash must use bcrypt or Argon2id with a supported encoding");
     }
 
     @Bean
@@ -312,14 +357,24 @@ class AuthorizationServerConfiguration {
         return context -> {
             boolean clientCredentials
                 = AuthorizationGrantType.CLIENT_CREDENTIALS.equals(context.getAuthorizationGrantType());
-            context.getClaims().audience(List.of(properties.audienceFor(context.getRegisteredClient().getClientId())));
+            if (OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) {
+                context.getClaims().audience(List.of(properties.audienceFor(context.getRegisteredClient().getClientId())));
+            } else if (OidcParameterNames.ID_TOKEN.equals(context.getTokenType().getValue())) {
+                context.getClaims().audience(List.of(context.getRegisteredClient().getClientId()));
+            }
             if (clientCredentials) {
                 context.getClaims().subject(context.getPrincipal().getName());
                 context.getClaims().claim("roles", Set.of("service"));
             } else {
-                context.getClaims().subject(properties.canonicalUserId());
-                context.getClaims().claim("roles", Set.of("admin"));
-                context.getClaims().claim("email", properties.allowedGoogleEmail());
+                IdentityProperties.User user = properties.userFor(context.getPrincipal());
+                if (user == null) {
+                    throw new OAuth2AuthenticationException(new OAuth2Error(
+                        OAuth2ErrorCodes.ACCESS_DENIED, "Interactive principal is not eligible under current identity policy", null));
+                }
+                context.getClaims().subject(user.canonicalSubject());
+                context.getClaims().claim("groups", user.groups());
+                context.getClaims().claim("roles", user.groups());
+                context.getClaims().claim("email", user.email());
             }
             if (OidcParameterNames.ID_TOKEN.equals(context.getTokenType().getValue())) {
                 context.getClaims().claim("email_verified", true);

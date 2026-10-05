@@ -14,9 +14,18 @@ class IdentityPropertiesBindingTest {
         .withUserConfiguration(PropertiesConfiguration.class)
         .withPropertyValues(
             "identity.issuer=https://auth.calcifer.tech",
-            "identity.allowed-google-email=admin@example.com",
-            "identity.canonical-user-id=user:admin",
             "identity.signing-key-location=file:key",
+            "identity.groups[0]=admin",
+            "identity.groups[1]=rage-quit",
+            "identity.users.administrator.email=admin@example.com",
+            "identity.users.administrator.canonical-subject=user:admin",
+            "identity.users.administrator.groups[0]=admin",
+            "identity.users.administrator.authentication-methods[0]=google",
+            "identity.users.administrator.authentication-methods[1]=password",
+            "identity.users.pugliens.email=pugliens@gmail.com",
+            "identity.users.pugliens.canonical-subject=user:pugliens",
+            "identity.users.pugliens.groups[0]=rage-quit",
+            "identity.users.pugliens.authentication-methods[0]=google",
             "identity.grafana.id=grafana",
             "identity.grafana.secret=grafana-secret",
             "identity.grafana.redirect-uri=https://grafana.calcifer.tech/login/generic_oauth",
@@ -47,7 +56,13 @@ class IdentityPropertiesBindingTest {
             "identity.clients.home-assistant.scopes[2]=email",
             "identity.clients.home-assistant.grant-types[0]=authorization_code",
             "identity.clients.home-assistant.authentication-methods[0]=client_secret_post",
-            "identity.clients.home-assistant.require-proof-key=true"
+            "identity.clients.home-assistant.require-proof-key=true",
+            "identity.clients.rage-quit.id=rage-quit",
+            "identity.clients.rage-quit.secret=rage-quit-secret",
+            "identity.clients.rage-quit.redirect-uris[0]=https://rage-quit.calcifer.tech/login/oauth2/code/auth",
+            "identity.clients.rage-quit.scopes[0]=openid",
+            "identity.clients.rage-quit.grant-types[0]=authorization_code",
+            "identity.clients.rage-quit.allowed-groups[0]=rage-quit"
         );
 
     @Test
@@ -62,7 +77,31 @@ class IdentityPropertiesBindingTest {
             assertThat(homeAssistant.secret()).isEqualTo("home-assistant-secret");
             assertThat(homeAssistant.redirectUris()).containsExactly("https://home.calcifer.tech/auth/oidc/callback");
             assertThat(homeAssistant.requireProofKey()).isTrue();
+            assertThat(context.getBean(IdentityProperties.class).clients().get("rage-quit").allowedGroups())
+                .containsExactly("rage-quit");
+            assertThat(context.getBean(IdentityProperties.class).userByEmail("PUGLIENS@gmail.com"))
+                .isEqualTo(new IdentityProperties.User(
+                    "pugliens@gmail.com",
+                    "user:pugliens",
+                    java.util.Set.of("rage-quit"),
+                    java.util.Set.of("google")
+                ));
         });
+    }
+
+    @Test
+    void rejectsUnknownGroupsAndUnsupportedAuthenticationMethods() {
+        contextRunner.withPropertyValues(
+            "identity.users.pugliens.groups[0]=unknown",
+            "identity.users.pugliens.authentication-methods[0]=magic"
+        ).run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    void rejectsDuplicateCanonicalSubjects() {
+        contextRunner.withPropertyValues(
+            "identity.users.pugliens.canonical-subject=user:admin"
+        ).run(context -> assertThat(context).hasFailed());
     }
 
     @Configuration(proxyBeanMethods = false)

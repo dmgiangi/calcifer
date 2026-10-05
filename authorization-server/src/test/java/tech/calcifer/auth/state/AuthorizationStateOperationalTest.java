@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.hibernate.validator.internal.constraintvalidators.bv.AssertTrueValidator;
+import org.hibernate.validator.internal.constraintvalidators.bv.EmailValidator;
 import org.hibernate.validator.internal.constraintvalidators.bv.NotBlankValidator;
 import org.hibernate.validator.internal.constraintvalidators.bv.NotNullValidator;
 import org.hibernate.validator.internal.constraintvalidators.bv.PatternValidator;
@@ -225,6 +226,9 @@ class AuthorizationStateOperationalTest {
         assertThat(RuntimeHintsPredicates
             .reflection()
             .onConstructorInvocation(AssertTrueValidator.class.getConstructor())).accepts(hints);
+        assertThat(RuntimeHintsPredicates
+            .reflection()
+            .onConstructorInvocation(EmailValidator.class.getConstructor())).accepts(hints);
         assertThat(RuntimeHintsPredicates
             .reflection()
             .onConstructorInvocation(NotBlankValidator.class.getConstructor())).accepts(hints);

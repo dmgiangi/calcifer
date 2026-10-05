@@ -1,4 +1,30 @@
 identity:
+  groups:
+    - admin
+    - rage-quit
+  users:
+    administrator:
+      email: dem.gianluigi@gmail.com
+      canonical-subject: user:admin
+      groups:
+        - admin
+      authentication-methods:
+        - google
+        - password
+    pugliens:
+      email: pugliens@gmail.com
+      canonical-subject: user:moody
+      groups:
+        - rage-quit
+      authentication-methods:
+        - google
+    frevadiscor:
+      email: frevadiscor@gmail.com
+      canonical-subject: user:frevadiscor
+      groups:
+        - rage-quit
+      authentication-methods:
+        - google
   clients:
     home-assistant:
       id: home-assistant
