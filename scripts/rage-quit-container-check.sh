@@ -67,7 +67,7 @@ docker run -d --name "$container" --network none --read-only --user 10001:10001 
   --cap-drop ALL --security-opt no-new-privileges --memory 512m \
   --tmpfs /tmp:rw,nosuid,nodev,exec,size=64m,mode=1777 --mount "type=volume,source=$volume,target=/data" \
   --env-file "$scratch/missing-date-env" "$image" >/dev/null
-for attempt in {1..60}; do
+for ((attempt = 1; attempt <= 60; attempt++)); do
   [[ $(docker inspect --format '{{.State.Running}}' "$container") == true ]] || break
   sleep 1
 done

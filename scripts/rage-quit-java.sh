@@ -3,7 +3,7 @@
 rage_quit_repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 rage_quit_java=${RAGE_QUIT_JAVA_BIN:-java}
 rage_quit_prepare_java() {
-  local destination=$1 jar_file entry
+  local destination=$1 jar_file
   local -a jars
   shopt -s nullglob
   jars=("$rage_quit_repo"/rage-quit/target/rage-quit-*.jar)

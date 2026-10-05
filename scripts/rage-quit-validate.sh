@@ -27,4 +27,4 @@ done
   "$scratch/auth-cloud.yaml" "$scratch/auth-home.yaml" \
   "$rage_quit_repo/authorization-server/src/main/resources/application-rage-quit.yaml"
 if command -v actionlint >/dev/null; then actionlint "$rage_quit_repo/.github/workflows/release-rage-quit.yaml"; fi
-if command -v shellcheck >/dev/null; then shellcheck -x "$rage_quit_repo"/scripts/rage-quit*.sh; fi
+if command -v shellcheck >/dev/null; then shellcheck -x -P "$rage_quit_repo/scripts" "$rage_quit_repo"/scripts/rage-quit*.sh; fi
