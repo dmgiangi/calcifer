@@ -9,4 +9,4 @@ spec:
       containers:
         - name: rage-quit
           # No invented digest. The manual release promotes a tested digest here.
-          image: ghcr.io/dmgiangi/calcifer-rage-quit@sha256:1cc803debce028e48504268ba03880239ffa05c8dadaca05c55a9fe890bf43c0
+          image: ghcr.io/dmgiangi/calcifer-rage-quit@sha256:d75365ffd9e834047f72d7b52e82678b6ed2ca53a38ca78012530570c91a29c7
