@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rage-quit
+  namespace: web
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: rage-quit
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

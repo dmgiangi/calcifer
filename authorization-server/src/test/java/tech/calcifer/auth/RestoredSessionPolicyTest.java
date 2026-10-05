@@ -93,6 +93,25 @@ class RestoredSessionPolicyTest {
         assertThat(properties.userFor(IdentityTestAuthentications.password("pugliens@gmail.com"))).isNull();
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"dem.gianluigi@gmail.com", "pugliens@gmail.com", "frevadiscor@gmail.com"})
+    void restoredRageQuitGoogleSessionsRetainTheirSubjectRoleAndRestrictions(String email) throws Exception {
+        RageQuitRestoredPolicyAssertions.verify(restored(RageQuitTestSupport.google(email)), false);
+    }
+
+    @Test
+    void restoredPasswordAndPreCatalogSessionsMustReauthenticateForGoogleOnlyClient() throws Exception {
+        var policy = new InteractiveClientGroupPolicy(RageQuitTestSupport.properties());
+        Authentication password = restored(RageQuitTestSupport.password());
+        assertThat(policy.requiresGoogleAuthentication("rage-quit", password)).isTrue();
+        assertThat(policy.allows("rage-quit", password)).isFalse();
+        assertThat(policy.allows("grafana", password)).isTrue();
+        var legacy = new TestingAuthenticationToken(ADMIN, "ignored", "ROLE_ADMIN");
+        assertThat(policy.requiresGoogleAuthentication("rage-quit", legacy)).isTrue();
+        assertThat(policy.allows("rage-quit", legacy)).isFalse();
+        assertThat(policy.allows("grafana", legacy)).isFalse();
+    }
+
     @Test
     void disablingLocalLoginInvalidatesExistingPasswordSessions() {
         var original = InteractiveClientGroupPolicyTest.properties();

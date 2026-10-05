@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rage-quit
+  namespace: web
+spec:
+  secretName: rage-quit-tls
+  issuerRef:
+    name: letsencrypt-production-azure
+    kind: ClusterIssuer
+  dnsNames:
+    - rage-quit.calcifer.tech

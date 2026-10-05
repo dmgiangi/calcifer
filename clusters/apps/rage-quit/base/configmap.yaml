@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rage-quit-config
+  namespace: web
+data:
+  RAGE_QUIT_ISSUER: https://auth.calcifer.tech
+  RAGE_QUIT_CLIENT_ID: rage-quit
+  RAGE_QUIT_DATABASE: /data/rage-quit.sqlite
+  PORT: "8080"
+  # Intentionally absent: RAGE_QUIT_START_DATE. The operator must choose the
+  # common Europe/Rome date before activation; missing configuration fails closed.

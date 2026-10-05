@@ -41,7 +41,7 @@ class GoogleAdminOidcUserService implements OAuth2UserService<OidcUserRequest, O
             throw new AccessDeniedException("Google identity is not authorized");
         }
         Set<GrantedAuthority> authorities = new java.util.HashSet<>();
-        configuredUser.groups().stream().map(GoogleAdminOidcUserService::roleAuthority).map(SimpleGrantedAuthority::new)
+        configuredUser.effectiveRoles().stream().map(GoogleAdminOidcUserService::roleAuthority).map(SimpleGrantedAuthority::new)
             .forEach(authorities::add);
         authorities.add(FactorGrantedAuthority.fromAuthority(FactorGrantedAuthority.AUTHORIZATION_CODE_AUTHORITY));
         return new DefaultOidcUser(

@@ -1,0 +1,25 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: rage-quit
+  namespace: flux-system
+spec:
+  # Explicit operator gate: DNS, auth on both edges, encrypted client secret,
+  # immutable image and the common start date must exist before unsuspending.
+  suspend: true
+  interval: 10m
+  path: ./clusters/apps/rage-quit/overlays/cloud
+  prune: true
+  wait: true
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+    - name: authorization-server
+    - name: cert-manager-config
+    - name: cloud-apps

@@ -5,6 +5,7 @@ metadata:
   namespace: authorization
 data:
   AUTH_ISSUER: "https://auth.calcifer.tech"
+  SPRING_PROFILES_ACTIVE: "rage-quit"
   AUTH_LOCAL_LOGIN_ENABLED: "true"
   AUTH_STATE_ENABLED: "true"
   AUTH_STATE_ROLE: "CLOUD"

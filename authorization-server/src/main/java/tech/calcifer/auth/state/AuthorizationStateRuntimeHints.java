@@ -74,7 +74,13 @@ final class AuthorizationStateRuntimeHints implements RuntimeHintsRegistrar {
             .registerType(AuthorizationStateProperties.Redis.class, MemberCategory.ACCESS_DECLARED_FIELDS);
         hints.reflection().registerType(IdentityProperties.Client.class, MemberCategory.ACCESS_DECLARED_FIELDS);
         hints.reflection().registerType(IdentityProperties.LocalLogin.class, MemberCategory.ACCESS_DECLARED_FIELDS);
-        hints.reflection().registerType(IdentityProperties.User.class, MemberCategory.ACCESS_DECLARED_FIELDS);
+        hints.reflection().registerType(IdentityProperties.class, MemberCategory.ACCESS_DECLARED_FIELDS,
+            MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);
+        hints.reflection().registerType(IdentityProperties.User.class, MemberCategory.ACCESS_DECLARED_FIELDS,
+            MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);
+        hints.reflection().registerType(IdentityProperties.ClientDefinition.class, MemberCategory.ACCESS_DECLARED_FIELDS,
+            MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);
+        registerPublicMethods(hints, IdentityProperties.class);
         registerPublicMethods(hints, IdentityProperties.User.class);
         registerPublicMethods(hints, IdentityProperties.ClientDefinition.class);
         for (var field : Messages_$bundle.class.getFields()) {

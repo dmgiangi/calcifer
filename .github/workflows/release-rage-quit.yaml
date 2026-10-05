@@ -1,0 +1,86 @@
+name: Release Rage Quit
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Immutable SemVer version without build metadata (for example 0.1.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rage-quit-cloud-promotion
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    outputs:
+      source-sha: ${{ steps.source.outputs.sha }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: master
+      - name: Record verified source revision
+        id: source
+        run: printf 'sha=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Validate manual release version and branch
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/master
+          bash scripts/rage-quit-version.sh "$VERSION"
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Test and package the JVM application
+        run: mvn -B -ntp -f rage-quit/pom.xml verify -s authorization-server/.mvn/settings.xml
+      - name: Test the framework-free Italian interface
+        run: node --test rage-quit/ui-tests/ui.test.js
+      - name: Validate scripts, workflow structure and suppressed manifests
+        run: bash scripts/rage-quit-validate.sh
+      - name: Build and check the exact publish candidate
+        run: |
+          docker build --platform linux/amd64 --tag calcifer-rage-quit:checked rage-quit
+          bash scripts/rage-quit-container-check.sh calcifer-rage-quit:checked
+          mkdir release-image
+          docker save --output release-image/image.tar calcifer-rage-quit:checked
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rage-quit-checked-image
+          path: release-image/image.tar
+          retention-days: 1
+          if-no-files-found: error
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: write
+    env:
+      IMAGE: ghcr.io/dmgiangi/calcifer-rage-quit
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.verify.outputs.source-sha }}
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: rage-quit-checked-image
+          path: release-image
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v4
+      - name: Publish tested immutable version and promote only Cloud
+        run: bash scripts/rage-quit-publish.sh

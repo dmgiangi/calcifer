@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rage-quit
+  namespace: web
+spec:
+  template:
+    spec:
+      containers:
+        - name: rage-quit
+          # No invented digest. The manual release promotes a tested digest here.
+          image: ghcr.io/dmgiangi/calcifer-rage-quit:operator-must-release

@@ -23,7 +23,7 @@ class IdentityPropertiesBindingTest {
             "identity.users.administrator.authentication-methods[0]=google",
             "identity.users.administrator.authentication-methods[1]=password",
             "identity.users.pugliens.email=pugliens@gmail.com",
-            "identity.users.pugliens.canonical-subject=user:pugliens",
+            "identity.users.pugliens.canonical-subject=user:moody",
             "identity.users.pugliens.groups[0]=rage-quit",
             "identity.users.pugliens.authentication-methods[0]=google",
             "identity.grafana.id=grafana",
@@ -82,7 +82,7 @@ class IdentityPropertiesBindingTest {
             assertThat(context.getBean(IdentityProperties.class).userByEmail("PUGLIENS@gmail.com"))
                 .isEqualTo(new IdentityProperties.User(
                     "pugliens@gmail.com",
-                    "user:pugliens",
+                    "user:moody",
                     java.util.Set.of("rage-quit"),
                     java.util.Set.of("google")
                 ));
@@ -102,6 +102,36 @@ class IdentityPropertiesBindingTest {
         contextRunner.withPropertyValues(
             "identity.users.pugliens.canonical-subject=user:admin"
         ).run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    void bindsCanonicalSubjectMethodAndExplicitRolesWithoutChangingLegacyClients() {
+        contextRunner.withPropertyValues(
+            "identity.clients.rage-quit.allowed-subjects[0]=user:moody",
+            "identity.clients.rage-quit.required-authentication-method=google",
+            "identity.users.pugliens.roles[0]=rage-quit-user"
+        ).run(context -> {
+            assertThat(context).hasNotFailed();
+            var properties = context.getBean(IdentityProperties.class);
+            assertThat(properties.clients().get("rage-quit").allowedSubjects()).containsExactly("user:moody");
+            assertThat(properties.clients().get("rage-quit").requiredAuthenticationMethod()).isEqualTo("google");
+            assertThat(properties.users().get("pugliens").effectiveRoles()).containsExactly("rage-quit-user");
+            assertThat(properties.clients().get("homepage").effectiveAllowedGroups()).containsExactly("admin");
+        });
+    }
+
+    @Test
+    void rejectsUnknownClientSubjectsSourcesGroupsAndPrivilegeEscalation() {
+        for (String invalid : java.util.List.of(
+            "identity.clients.rage-quit.allowed-subjects[0]=user:unknown",
+            "identity.clients.rage-quit.required-authentication-method=magic",
+            "identity.clients.rage-quit.required-authentication-method=",
+            "identity.clients.rage-quit.allowed-groups[0]=unknown",
+            "identity.users.pugliens.roles[0]=admin",
+            "identity.clients.rage-quit.secret=REPLACE_WITH_SECRET",
+            "identity.clients.rage-quit.secret=change-me")) {
+            contextRunner.withPropertyValues(invalid).run(context -> assertThat(context).hasFailed());
+        }
     }
 
     @Configuration(proxyBeanMethods = false)

@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light">
+  <title>Rage Quit · percorso condiviso</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="/index.html" aria-label="Rage Quit, pagina iniziale">Rage Quit</a>
+  <div class="account-tools">
+    <p id="session-alias" class="session-alias"></p>
+    <button id="logout-button" class="button button-quiet" type="button" data-mutation>Esci</button>
+  </div>
+</header>
+
+<div class="message-stack" aria-atomic="true">
+  <p id="status-message" class="notice" role="status" aria-live="polite" hidden></p>
+  <p id="error-message" class="notice notice-error" role="alert" aria-live="assertive" hidden></p>
+  <p id="login-prompt" class="notice" hidden>La sessione non è attiva. <a href="/login.html">Accedi di nuovo</a>.</p>
+</div>
+
+<main id="dashboard" class="page-shell" hidden>
+  <section class="intro" aria-labelledby="page-title">
+    <p class="eyebrow">Un passo alla volta</p>
+    <h1 id="page-title">Il tuo percorso</h1>
+    <p id="period-summary" class="muted"></p>
+  </section>
+
+  <section class="panel" aria-labelledby="record-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Registra un episodio</p>
+        <h2 id="record-title">Adesso o in un momento passato</h2>
+      </div>
+    </div>
+    <div class="now-actions" aria-label="Registra un episodio adesso">
+      <button id="smoke-now" class="button button-smoke" type="button" data-mutation>Ho fumato una sigaretta</button>
+      <button id="resist-now" class="button button-resist" type="button" data-mutation>Ho resistito</button>
+    </div>
+    <form id="backdate-form" class="form-grid">
+      <h3 class="form-title">Registra un episodio passato</h3>
+      <div class="field">
+        <label for="event-type">Tipo di episodio</label>
+        <select id="event-type" name="type" required>
+          <option value="SMOKED">Sigaretta fumata</option>
+          <option value="RESISTED">Resistenza</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="backdate-date">Data (fuso Europe/Rome)</label>
+        <input id="backdate-date" name="date" type="date" required>
+      </div>
+      <div class="field">
+        <label for="backdate-time">Ora di Roma</label>
+        <input id="backdate-time" name="time" type="time" step="1" required>
+      </div>
+      <div class="field">
+        <label for="backdate-offset">Offset Europe/Rome</label>
+        <select id="backdate-offset" name="offset" required aria-describedby="backdate-offset-help"></select>
+        <p id="backdate-offset-help" class="field-help">Scegli data e ora per calcolare l’offset valido di Roma.</p>
+      </div>
+      <div class="button-row form-submit">
+        <button id="backdate-smoke" class="button button-smoke" type="button" data-mutation>Registra sigaretta passata</button>
+        <button id="backdate-resist" class="button button-resist" type="button" data-mutation>Registra resistenza passata</button>
+        <button id="backdate-submit" class="button button-primary" type="submit" data-mutation>Registra il tipo selezionato</button>
+      </div>
+    </form>
+    <div class="retry-row">
+      <p id="retry-description" class="field-help">Se la connessione si interrompe durante l’invio, puoi ripetere la stessa richiesta senza duplicare l’episodio.</p>
+      <button id="retry-event" class="button button-quiet" type="button" data-mutation hidden>Riprova l’invio in sospeso</button>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="zero-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Resoconto del fumo</p>
+        <h2 id="zero-title">Conferma una giornata senza sigarette</h2>
+      </div>
+    </div>
+    <p class="muted">Una resistenza non conferma automaticamente una giornata senza sigarette. I dati di oggi restano in corso.</p>
+    <form id="zero-form" class="form-grid compact-form">
+      <div class="field">
+        <label for="zero-date">Giornata (Europe/Rome)</label>
+        <input id="zero-date" name="date" type="date" required>
+      </div>
+      <div class="field zero-summary-field">
+        <span class="field-label">Stato del resoconto</span>
+        <p id="zero-status" class="zero-status" aria-live="polite"></p>
+      </div>
+      <div class="button-row form-submit">
+        <button id="zero-confirm" class="button button-primary" type="submit" data-mutation>Conferma zero sigarette</button>
+        <button id="zero-withdraw" class="button button-quiet" type="button" data-mutation>Ritira la conferma</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel" aria-labelledby="personal-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">I tuoi dati</p>
+        <h2 id="personal-title">Giornate e intervalli</h2>
+      </div>
+    </div>
+    <dl id="personal-stats" class="stats-grid"></dl>
+    <div class="chart-block">
+      <h3>Penalità e resistenze giornaliere</h3>
+      <p class="muted">Le penalità sono sigarette; i punti resistenza restano separati. “Mancante” non significa zero.</p>
+      <ul class="chart-legend" aria-label="Legenda del grafico giornaliero">
+        <li><span class="legend-mark legend-cigarette" aria-hidden="true">▰</span> Sigarette / penalità</li>
+        <li><span class="legend-mark legend-resistance" aria-hidden="true">▱</span> Resistenze</li>
+        <li><span class="legend-mark legend-missing" aria-hidden="true">?</span> Resoconto mancante</li>
+        <li><span class="legend-mark legend-zero" aria-hidden="true">0</span> Zero confermato</li>
+      </ul>
+      <div id="personal-daily-chart" class="chart-scroll"></div>
+      <div id="personal-daily-table" class="table-scroll"></div>
+    </div>
+    <div class="chart-block">
+      <h3>Progressione degli intervalli tra sigarette</h3>
+      <p class="muted">Il tempo dall’ultima sigaretta è un intervallo ancora aperto; media e massimo usano solo intervalli completati.</p>
+      <div id="gap-chart" class="chart-scroll"></div>
+      <div id="gap-table" class="table-scroll"></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="history-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Solo tu puoi vedere questa cronologia</p>
+        <h2 id="history-title">Episodi recenti</h2>
+      </div>
+    </div>
+    <p class="muted">Puoi correggere tipo e orario oppure eliminare un episodio. Le modifiche aggiornano punteggi e grafici.</p>
+    <div id="history-events" class="table-scroll"></div>
+    <div class="history-zero-block">
+      <h3>Conferme di zero sigarette</h3>
+      <ul id="history-zeros" class="declaration-list"></ul>
+    </div>
+    <section id="event-edit-panel" class="edit-panel" aria-labelledby="event-edit-heading" hidden>
+      <h3 id="event-edit-heading">Correggi episodio</h3>
+      <p id="edit-event-version" class="field-help"></p>
+      <form id="event-edit-form" class="form-grid">
+        <div class="field">
+          <label for="edit-type">Tipo di episodio</label>
+          <select id="edit-type" required>
+            <option value="SMOKED">Sigaretta fumata</option>
+            <option value="RESISTED">Resistenza</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="edit-date">Data (fuso Europe/Rome)</label>
+          <input id="edit-date" type="date" required>
+        </div>
+        <div class="field">
+          <label for="edit-time">Ora di Roma</label>
+          <input id="edit-time" type="time" step="1" required>
+        </div>
+        <div class="field">
+          <label for="edit-offset">Offset Europe/Rome</label>
+          <select id="edit-offset" required aria-describedby="edit-offset-help"></select>
+          <p id="edit-offset-help" class="field-help">L’offset selezionato deve essere valido per la data e l’ora di Roma.</p>
+        </div>
+        <div class="button-row form-submit">
+          <button id="edit-save" class="button button-primary" type="submit" data-mutation>Salva correzione</button>
+          <button id="edit-cancel" class="button button-quiet" type="button">Annulla</button>
+        </div>
+      </form>
+    </section>
+  </section>
+
+  <section class="panel" aria-labelledby="group-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Periodo condiviso</p>
+        <h2 id="group-title">Confronto del gruppo</h2>
+      </div>
+    </div>
+    <p class="disclaimer">Dati auto-riportati, non verifiche indipendenti. La classifica usa solo il totale delle sigarette: a parità di penalità il rango è condiviso. Le resistenze sono punti separati e non cambiano il rango. Percentuale di resistenza = quota degli episodi registrati, non una misura clinica.</p>
+    <div id="leaderboard-table" class="table-scroll"></div>
+    <div class="chart-block">
+      <h3>Sigarette cumulative e copertura dei resoconti</h3>
+      <p class="muted">I tratti aperti indicano totali provvisori; i giorni senza resoconto sono indicati nella tabella.</p>
+      <ul id="smoke-chart-legend" class="chart-legend" aria-label="Partecipanti nel grafico delle sigarette"></ul>
+      <div id="smoke-cumulative-chart" class="chart-scroll"></div>
+    </div>
+    <div class="chart-block">
+      <h3>Resistenze cumulative</h3>
+      <p class="muted">I punti resistenza sono mostrati separatamente dalle penalità per sigarette.</p>
+      <ul id="resistance-chart-legend" class="chart-legend" aria-label="Partecipanti nel grafico delle resistenze"></ul>
+      <div id="resistance-cumulative-chart" class="chart-scroll"></div>
+    </div>
+    <div id="group-daily-table" class="table-scroll"></div>
+  </section>
+
+  <footer class="page-footer">
+    <p>Le date e gli orari sono interpretati nel fuso Europe/Rome. Le statistiche descrivono soltanto i dati registrati.</p>
+  </footer>
+</main>
+<noscript><p class="notice notice-error">Per usare Rage Quit è necessario attivare JavaScript.</p></noscript>
+</body>
+</html>

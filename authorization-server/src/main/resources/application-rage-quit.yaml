@@ -1,0 +1,21 @@
+# Opt-in on BOTH auth edges after configuring the shared participant catalog.
+# The default profile remains unchanged; unresolved catalog subjects or secret fail startup.
+identity:
+  users:
+    pugliens:
+      roles: [rage-quit-user]
+    frevadiscor:
+      roles: [rage-quit-user]
+  clients:
+    rage-quit:
+      id: rage-quit
+      secret: ${AUTH_CLIENT_RAGE_QUIT_SECRET:}
+      redirect-uris:
+        - https://rage-quit.calcifer.tech/login/oauth2/code/rage-quit
+      audience: rage-quit
+      scopes: [openid, profile, email]
+      grant-types: [authorization_code]
+      authentication-methods: [client_secret_basic]
+      require-proof-key: true
+      allowed-subjects: [user:admin, user:moody, user:frevadiscor]
+      required-authentication-method: google

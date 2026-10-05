@@ -156,7 +156,7 @@ class OidcUserInfoEndpointTest {
     }
 
     @Test
-    void rejectsMissingOpenidScopeAndMissingIdToken() throws Exception {
+    void rejectsMissingOpenidScope() throws Exception {
         save(
             Set.of("email"),
             "user:pugliens",
@@ -167,7 +167,13 @@ class OidcUserInfoEndpointTest {
         );
         mvc
             .perform(get("/userinfo").header("Authorization", "Bearer test-access"))
-            .andExpect(status().is4xxClientError());
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.error").value("insufficient_scope"));
+    }
+
+    @Test
+    void rejectsMissingIdToken() throws Exception {
+        // Use a fresh store so the token cannot match the preceding insufficient-scope authorization.
         save(
             Set.of("openid"),
             "user:pugliens",
@@ -178,7 +184,8 @@ class OidcUserInfoEndpointTest {
         );
         mvc
             .perform(get("/userinfo").header("Authorization", "Bearer test-access"))
-            .andExpect(status().isUnauthorized());
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error").value("invalid_token"));
     }
 
     @Test
@@ -329,7 +336,8 @@ class OidcUserInfoEndpointTest {
 
         @Bean
         SecurityFilterChain authorizationChain(HttpSecurity http, IdentityProperties properties) throws Exception {
-            return new AuthorizationServerConfiguration().authorizationServerSecurityFilterChain(http, properties);
+            return new AuthorizationServerConfiguration().authorizationServerSecurityFilterChain(http, properties,
+                authorizationService(), clients());
         }
     }
 }

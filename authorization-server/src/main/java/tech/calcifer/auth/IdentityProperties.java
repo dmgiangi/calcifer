@@ -106,13 +106,20 @@ public record IdentityProperties(
                 || user.groups().isEmpty()
                 || !groups.containsAll(user.groups())
                 || user.authenticationMethods().isEmpty()
-                || !Set.of("google", "password").containsAll(user.authenticationMethods())) {
+                || !Set.of("google", "password").containsAll(user.authenticationMethods())
+                || user.roles().stream().anyMatch(role -> !role.matches("[a-z][a-z0-9-]*"))
+                || (user.roles().contains("admin") && !user.groups().contains("admin"))) {
                 return false;
             }
         }
         for (ClientDefinition client : clients.values()) {
             if (client == null || !groups.containsAll(client.allowedGroups())
-                || (!client.allowedGroups().isEmpty()
+                || !subjects.containsAll(client.allowedSubjects())
+                || ("rage-quit".equals(client.id()) && isPlaceholderSecret(client.secret()))
+                || (client.requiredAuthenticationMethod() != null
+                    && !Set.of("google", "password").contains(client.requiredAuthenticationMethod()))
+                || ((!client.allowedGroups().isEmpty() || !client.allowedSubjects().isEmpty()
+                    || client.requiredAuthenticationMethod() != null)
                     && !client.grantTypes().contains("authorization_code"))) {
                 return false;
             }
@@ -160,6 +167,13 @@ public record IdentityProperties(
         return null;
     }
 
+    String authenticationMethodFor(Authentication authentication) {
+        if (userFor(authentication) == null) {
+            return null;
+        }
+        return authentication instanceof OAuth2AuthenticationToken ? "google" : "password";
+    }
+
     /** Legacy accessors retained for integrations that read the administrator identity. */
     public String allowedGoogleEmail() {
         return users.values().stream()
@@ -194,6 +208,18 @@ public record IdentityProperties(
             .orElse(clientId);
     }
 
+    private static boolean isPlaceholderSecret(String secret) {
+        if (secret == null || secret.isBlank()) {
+            return true;
+        }
+        String normalized = secret.strip().toLowerCase(java.util.Locale.ROOT)
+            .replace('-', '_').replace(' ', '_');
+        return normalized.equals("replace") || normalized.startsWith("replace_")
+            || normalized.equals("changeme") || normalized.startsWith("change_me")
+            || normalized.equals("placeholder") || normalized.startsWith("placeholder_")
+            || normalized.equals("example") || normalized.startsWith("example_");
+    }
+
     public record Client(
         @NotBlank String id,
         @NotBlank String secret,
@@ -205,11 +231,22 @@ public record IdentityProperties(
         @NotBlank @Email String email,
         @NotBlank String canonicalSubject,
         @NotEmpty Set<@NotBlank String> groups,
-        @NotEmpty Set<@NotBlank String> authenticationMethods
+        @NotEmpty Set<@NotBlank String> authenticationMethods,
+        Set<@NotBlank String> roles
     ) {
+        @ConstructorBinding
         public User {
             groups = groups == null ? Set.of() : Set.copyOf(groups);
             authenticationMethods = authenticationMethods == null ? Set.of() : Set.copyOf(authenticationMethods);
+            roles = roles == null ? Set.of() : Set.copyOf(roles);
+        }
+
+        public User(String email, String canonicalSubject, Set<String> groups, Set<String> authenticationMethods) {
+            this(email, canonicalSubject, groups, authenticationMethods, Set.of());
+        }
+
+        Set<String> effectiveRoles() {
+            return roles.isEmpty() ? groups : roles;
         }
     }
 
@@ -223,7 +260,9 @@ public record IdentityProperties(
         String audience,
         boolean requireProofKey,
         Duration accessTokenTtl,
-        Set<@NotBlank String> allowedGroups
+        Set<@NotBlank String> allowedGroups,
+        Set<@NotBlank String> allowedSubjects,
+        String requiredAuthenticationMethod
     ) {
 
         @ConstructorBinding
@@ -234,6 +273,15 @@ public record IdentityProperties(
             authenticationMethods = authenticationMethods == null || authenticationMethods.isEmpty() ? Set.of(
                 "client_secret_basic") : Set.copyOf(authenticationMethods);
             allowedGroups = allowedGroups == null ? Set.of() : Set.copyOf(allowedGroups);
+            allowedSubjects = allowedSubjects == null ? Set.of() : Set.copyOf(allowedSubjects);
+        }
+
+        public ClientDefinition(
+            String id, String secret, Set<String> redirectUris, Set<String> scopes, Set<String> grantTypes,
+            Set<String> authenticationMethods, String audience, boolean requireProofKey, Duration accessTokenTtl,
+            Set<String> allowedGroups) {
+            this(id, secret, redirectUris, scopes, grantTypes, authenticationMethods, audience, requireProofKey,
+                accessTokenTtl, allowedGroups, Set.of(), null);
         }
 
         public ClientDefinition(
@@ -273,7 +321,8 @@ public record IdentityProperties(
             if (!grantTypes.contains("authorization_code")) {
                 return Set.of();
             }
-            return allowedGroups.isEmpty() ? Set.of("admin") : allowedGroups;
+            // An explicit subject allowlist replaces the legacy admin default, not an explicit group restriction.
+            return allowedGroups.isEmpty() && allowedSubjects.isEmpty() ? Set.of("admin") : allowedGroups;
         }
 
         static ClientDefinition browser(Client client) {

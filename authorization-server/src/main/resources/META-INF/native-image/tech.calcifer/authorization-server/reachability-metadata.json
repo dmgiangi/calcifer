@@ -1,6 +1,24 @@
 {
 	"reflection": [
 		{
+			"type": "tech.calcifer.auth.IdentityProperties",
+			"allDeclaredFields": true,
+			"allDeclaredConstructors": true,
+			"allPublicMethods": true
+		},
+		{
+			"type": "tech.calcifer.auth.IdentityProperties$User",
+			"allDeclaredFields": true,
+			"allDeclaredConstructors": true,
+			"allPublicMethods": true
+		},
+		{
+			"type": "tech.calcifer.auth.IdentityProperties$ClientDefinition",
+			"allDeclaredFields": true,
+			"allDeclaredConstructors": true,
+			"allPublicMethods": true
+		},
+		{
 			"type": "org.hibernate.validator.internal.constraintvalidators.bv.AssertTrueValidator",
 			"methods": [
 				{

@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
 import org.springframework.security.oauth2.server.authorization.oidc.authentication.OidcUserInfoAuthenticationContext;
+import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 
 
 /**
@@ -46,9 +47,11 @@ final class CatalogOidcUserInfoMapper implements Function<OidcUserInfoAuthentica
     );
 
     private final IdentityProperties properties;
+    private final RegisteredClientRepository clients;
 
-    CatalogOidcUserInfoMapper(IdentityProperties properties) {
+    CatalogOidcUserInfoMapper(IdentityProperties properties, RegisteredClientRepository clients) {
         this.properties = properties;
+        this.clients = clients;
     }
 
     @Override
@@ -57,9 +60,12 @@ final class CatalogOidcUserInfoMapper implements Function<OidcUserInfoAuthentica
         IdentityProperties.User user = principal instanceof Authentication authentication ? properties.userFor(
             authentication) : null;
         var authorizedIdToken = context.getAuthorization().getToken(OidcIdToken.class);
+        var client = clients.findById(context.getAuthorization().getRegisteredClientId());
         if (user == null || authorizedIdToken == null || !user
             .canonicalSubject()
-            .equals(authorizedIdToken.getToken().getSubject())) {
+            .equals(authorizedIdToken.getToken().getSubject())
+            || client == null || !new InteractiveClientGroupPolicy(properties).allows(client.getClientId(),
+                (Authentication) principal)) {
             throw new OAuth2AuthenticationException(OAuth2ErrorCodes.INVALID_TOKEN);
         }
         Map<String, Object> claims = new LinkedHashMap<>();
@@ -74,9 +80,10 @@ final class CatalogOidcUserInfoMapper implements Function<OidcUserInfoAuthentica
         }
         if (context.getAccessToken().getScopes().contains(OidcScopes.EMAIL)) {
             claims.put("email", user.email());
+            claims.put("email_verified", true);
         }
         claims.put("groups", user.groups());
-        claims.put("roles", user.groups());
+        claims.put("roles", user.effectiveRoles());
         return new OidcUserInfo(claims);
     }
 }

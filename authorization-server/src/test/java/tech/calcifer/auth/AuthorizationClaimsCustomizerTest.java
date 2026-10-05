@@ -71,12 +71,12 @@ class AuthorizationClaimsCustomizerTest {
             PROPERTIES.grafana(),
             PROPERTIES.grafanaApi(),
             PROPERTIES.localLogin(),
-            Map.of()
+            InteractiveClientGroupPolicyTest.properties().clients()
         );
         var context = context(
             AuthorizationGrantType.AUTHORIZATION_CODE,
             OAuth2TokenType.ACCESS_TOKEN,
-            "grafana",
+            "rage-quit",
             IdentityTestAuthentications.google("pugliens@gmail.com")
         );
 

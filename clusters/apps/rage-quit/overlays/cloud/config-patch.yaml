@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rage-quit-config
+  namespace: web
+data:
+  # Operator-selected midnight in Europe/Rome; persisted on first startup.
+  RAGE_QUIT_START_DATE: "2026-10-05"

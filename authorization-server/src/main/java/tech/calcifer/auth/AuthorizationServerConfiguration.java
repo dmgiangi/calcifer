@@ -33,6 +33,8 @@ import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationProvider;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeAuthenticationProvider;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationValidator;
 import org.springframework.security.oauth2.server.authorization.InMemoryOAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
@@ -62,7 +64,8 @@ import tech.calcifer.auth.state.AuthorizationStateProperties;
 class AuthorizationServerConfiguration {
 
     @Bean
-    SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, IdentityProperties properties)
+    SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, IdentityProperties properties,
+        OAuth2AuthorizationService authorizations, RegisteredClientRepository clients)
         throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServer = new OAuth2AuthorizationServerConfigurer();
         http
@@ -79,8 +82,16 @@ class AuthorizationServerConfiguration {
                             new OAuth2AuthorizationCodeRequestAuthenticationValidator()
                                 .andThen(new InteractiveClientGroupPolicy(properties)::validate)
                         ))))
+                    .tokenEndpoint(endpoint -> endpoint.authenticationProviders(providers -> {
+                        for (int index = 0; index < providers.size(); index++) {
+                            if (providers.get(index) instanceof OAuth2AuthorizationCodeAuthenticationProvider) {
+                                providers.set(index, new ClientPolicyAuthorizationCodeProvider(
+                                    providers.get(index), authorizations, properties));
+                            }
+                        }
+                    }))
                     .oidc(oidc -> oidc
-                        .userInfoEndpoint(endpoint -> endpoint.userInfoMapper(new CatalogOidcUserInfoMapper(properties)))
+                        .userInfoEndpoint(endpoint -> endpoint.userInfoMapper(new CatalogOidcUserInfoMapper(properties, clients)))
                         .providerConfigurationEndpoint(endpoint -> endpoint.providerConfigurationCustomizer(
                         provider -> {
                             provider.grantTypes(grants -> {
@@ -105,6 +116,8 @@ class AuthorizationServerConfiguration {
             )
             .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()))
             .requestCache(cache -> cache.requestCache(authorizationRequestCache()))
+            .addFilterAfter(new InteractiveClientAuthenticationFilter(properties, authorizationRequestCache()),
+                SecurityContextHolderFilter.class)
             .exceptionHandling(exceptions -> exceptions.defaultAuthenticationEntryPointFor(
                 new LoginUrlAuthenticationEntryPoint(
                     "/login"), new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
@@ -237,6 +250,12 @@ class AuthorizationServerConfiguration {
             throw new IllegalArgumentException("OAuth client scopes and grant types must not be empty: "
                 + definition.id());
         }
+        for (String redirect : definition.redirectUris()) {
+            java.net.URI uri = java.net.URI.create(redirect);
+            if (redirect.contains("*") || !uri.isAbsolute() || uri.getHost() == null || uri.getFragment() != null) {
+                throw new IllegalArgumentException("OAuth redirect URI must be exact and absolute: " + definition.id());
+            }
+        }
         if (definition.accessTokenTtl() != null && (definition.accessTokenTtl().isZero() || definition
             .accessTokenTtl()
             .isNegative())) {
@@ -290,7 +309,7 @@ class AuthorizationServerConfiguration {
         return new InMemoryUserDetailsManager(User
             .withUsername(user.email())
             .password(passwordHash)
-            .authorities(user.groups().stream().map(group -> new org.springframework.security.core.authority.SimpleGrantedAuthority(
+            .authorities(user.effectiveRoles().stream().map(group -> new org.springframework.security.core.authority.SimpleGrantedAuthority(
                 "ROLE_" + group.toUpperCase(java.util.Locale.ROOT).replace('-', '_'))).toList())
             .build());
     }
@@ -367,14 +386,16 @@ class AuthorizationServerConfiguration {
                 context.getClaims().claim("roles", Set.of("service"));
             } else {
                 IdentityProperties.User user = properties.userFor(context.getPrincipal());
-                if (user == null) {
+                if (user == null || !new InteractiveClientGroupPolicy(properties).allows(
+                    context.getRegisteredClient().getClientId(), context.getPrincipal())) {
                     throw new OAuth2AuthenticationException(new OAuth2Error(
                         OAuth2ErrorCodes.ACCESS_DENIED, "Interactive principal is not eligible under current identity policy", null));
                 }
                 context.getClaims().subject(user.canonicalSubject());
                 context.getClaims().claim("groups", user.groups());
-                context.getClaims().claim("roles", user.groups());
+                context.getClaims().claim("roles", user.effectiveRoles());
                 context.getClaims().claim("email", user.email());
+                context.getClaims().claim("email_verified", true);
             }
             if (OidcParameterNames.ID_TOKEN.equals(context.getTokenType().getValue())) {
                 context.getClaims().claim("email_verified", true);

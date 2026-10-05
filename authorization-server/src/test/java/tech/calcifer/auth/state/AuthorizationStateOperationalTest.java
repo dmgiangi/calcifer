@@ -247,6 +247,25 @@ class AuthorizationStateOperationalTest {
     }
 
     @Test
+    void nativeHintsCoverSubjectMethodRoleBindingAndCatalogValidation() throws Exception {
+        RuntimeHints hints = new RuntimeHints();
+        new AuthorizationStateRuntimeHints().registerHints(hints, getClass().getClassLoader());
+        for (var method : java.util.List.of(
+            tech.calcifer.auth.IdentityProperties.class.getMethod("isCatalogConfigurationValid"),
+            tech.calcifer.auth.IdentityProperties.User.class.getMethod("roles"),
+            tech.calcifer.auth.IdentityProperties.ClientDefinition.class.getMethod("allowedSubjects"),
+            tech.calcifer.auth.IdentityProperties.ClientDefinition.class.getMethod("requiredAuthenticationMethod"))) {
+            assertThat(RuntimeHintsPredicates.reflection().onMethodInvocation(method)).accepts(hints);
+        }
+        for (var type : java.util.List.of(tech.calcifer.auth.IdentityProperties.User.class,
+            tech.calcifer.auth.IdentityProperties.ClientDefinition.class)) {
+            for (var constructor : type.getConstructors()) {
+                assertThat(RuntimeHintsPredicates.reflection().onConstructorInvocation(constructor)).accepts(hints);
+            }
+        }
+    }
+
+    @Test
     void validatesEnabledRedisAndRecoveryConfiguration() {
         try (var factory = Validation.buildDefaultValidatorFactory()) {
             var validator = factory.getValidator();

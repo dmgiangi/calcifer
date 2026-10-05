@@ -7,7 +7,7 @@ Define private access for the three Rage Quit participants through the existing 
 ## ADDED Requirements
 
 ### Requirement: Only the three configured Google participants are admitted
-Rage Quit SHALL admit exactly `dem.gianluigi@gmail.com`, `pugliens@gmail.com`, and `frevadiscor@gmail.com` with verified Google identities through `https://auth.calcifer.tech`. It SHALL validate the issuer's signature, expiry, client audience, login state/nonce, verified email, and expected stable subject. It SHALL NOT support public signup, direct Google credentials, local-password-only admission, or machine-token admission.
+Rage Quit SHALL admit exactly `dem.gianluigi@gmail.com`, `pugliens@gmail.com`, and `frevadiscor@gmail.com` with verified Google identities through `https://auth.calcifer.tech`, mapped respectively to the stable subjects `user:admin`, `user:moody`, and `user:frevadiscor`. Those subjects identify people independently of client entitlements; this requirement SHALL NOT grant them access to other clients. The application SHALL validate the issuer's signature, expiry, client audience, login state/nonce, verified email, and expected stable subject. It SHALL NOT support public signup, direct Google credentials, local-password-only admission, or machine-token admission.
 
 #### Scenario: Configured participant completes Google login
 - **WHEN** any of the three configured participants completes the valid Google-backed OIDC flow

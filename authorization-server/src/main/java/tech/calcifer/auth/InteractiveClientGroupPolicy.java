@@ -34,12 +34,31 @@ final class InteractiveClientGroupPolicy {
 
     boolean allows(String clientId, Authentication authentication) {
         IdentityProperties.User user = properties.userFor(authentication);
-        IdentityProperties.ClientDefinition client = properties.configuredClients().stream()
-            .filter(definition -> definition.id().equals(clientId))
-            .findFirst()
-            .orElse(null);
+        IdentityProperties.ClientDefinition client = client(clientId);
         return user != null
             && client != null
-            && !Collections.disjoint(user.groups(), client.effectiveAllowedGroups());
+            && permitsIdentity(client, user)
+            && (client.requiredAuthenticationMethod() == null
+                || client.requiredAuthenticationMethod().equals(properties.authenticationMethodFor(authentication)));
+    }
+
+    boolean requiresGoogleAuthentication(String clientId, Authentication authentication) {
+        IdentityProperties.ClientDefinition client = client(clientId);
+        IdentityProperties.User user = properties.userFor(authentication);
+        return client != null && "google".equals(client.requiredAuthenticationMethod())
+            && (user == null || (permitsIdentity(client, user) && user.authenticationMethods().contains("google")))
+            && !"google".equals(properties.authenticationMethodFor(authentication));
+    }
+
+    private boolean permitsIdentity(IdentityProperties.ClientDefinition client, IdentityProperties.User user) {
+        return client.grantTypes().contains("authorization_code")
+            && (client.effectiveAllowedGroups().isEmpty()
+                || !Collections.disjoint(user.groups(), client.effectiveAllowedGroups()))
+            && (client.allowedSubjects().isEmpty() || client.allowedSubjects().contains(user.canonicalSubject()));
+    }
+
+    private IdentityProperties.ClientDefinition client(String clientId) {
+        return properties.configuredClients().stream()
+            .filter(definition -> definition.id().equals(clientId)).findFirst().orElse(null);
     }
 }

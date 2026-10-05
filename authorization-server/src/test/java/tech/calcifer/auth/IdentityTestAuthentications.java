@@ -1,7 +1,11 @@
 package tech.calcifer.auth;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
@@ -15,7 +19,9 @@ final class IdentityTestAuthentications {
 
     static UsernamePasswordAuthenticationToken password(String email) {
         var principal = User.withUsername(email).password("unused-test-hash").roles("ADMIN").build();
-        return new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        List<GrantedAuthority> authorities = new ArrayList<>(principal.getAuthorities());
+        authorities.add(FactorGrantedAuthority.fromAuthority(FactorGrantedAuthority.PASSWORD_AUTHORITY));
+        return new UsernamePasswordAuthenticationToken(principal, null, authorities);
     }
 
     static OAuth2AuthenticationToken google(String email) {
@@ -32,7 +38,10 @@ final class IdentityTestAuthentications {
             .claim("email", email)
             .claim("email_verified", verified)
             .build();
-        var principal = new DefaultOidcUser(java.util.List.of(), token);
+        // Mirror the timestamped factor supplied by the production Google user service.
+        var factor = FactorGrantedAuthority.withAuthority(FactorGrantedAuthority.AUTHORIZATION_CODE_AUTHORITY)
+            .issuedAt(now).build();
+        var principal = new DefaultOidcUser(List.of(factor), token);
         return new OAuth2AuthenticationToken(principal, principal.getAuthorities(), registration);
     }
 }

@@ -8,6 +8,8 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
@@ -17,6 +19,22 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 
 
 class GoogleAdminOidcUserServiceTest {
+
+    @ParameterizedTest
+    @ValueSource(strings = {"dem.gianluigi@gmail.com", "pugliens@gmail.com", "frevadiscor@gmail.com"})
+    void admitsTheThreeVerifiedParticipantsWithOnlyTheirConfiguredRoles(String email) {
+        @SuppressWarnings("unchecked") OAuth2UserService<OidcUserRequest, OidcUser> delegate = mock(OAuth2UserService.class);
+        var source = (OidcUser) RageQuitTestSupport.google(email).getPrincipal();
+        when(delegate.loadUser(null)).thenReturn(source);
+        var loaded = new GoogleAdminOidcUserService(delegate, RageQuitTestSupport.properties()).loadUser(null);
+        assertThat(loaded.getAuthorities()).extracting(authority -> authority.getAuthority())
+            .containsExactlyInAnyOrder(email.equals(RageQuitTestSupport.ADMIN) ? "ROLE_ADMIN" : "ROLE_RAGE_QUIT_USER",
+                FactorGrantedAuthority.AUTHORIZATION_CODE_AUTHORITY);
+        var authentication = new org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken(
+            loaded, loaded.getAuthorities(), "google");
+        assertThat(RageQuitTestSupport.properties().userFor(authentication).canonicalSubject())
+            .isEqualTo(RageQuitTestSupport.SUBJECTS.get(email));
+    }
 
     @Test
     void addsAuthorizationCodeFactorToVerifiedGoogleIdentity() {

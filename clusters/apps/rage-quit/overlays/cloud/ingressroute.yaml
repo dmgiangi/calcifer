@@ -1,0 +1,17 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: rage-quit
+  namespace: web
+spec:
+  entryPoints: [websecure]
+  routes:
+    - match: Host(`rage-quit.calcifer.tech`) && !PathPrefix(`/actuator`)
+      kind: Rule
+      middlewares:
+        - name: rage-quit-security-headers
+      services:
+        - name: rage-quit
+          port: 8080
+  tls:
+    secretName: rage-quit-tls
