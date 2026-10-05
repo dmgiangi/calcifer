@@ -85,12 +85,14 @@ handoff these Secret manifests had not been applied to either cluster.
 
 On 2026-10-05 the operator authorized deployment for testing and selected
 `2026-10-05` (the most recent Europe/Rome midnight) as the common start date.
-Both auth overlays now opt into the client profile, including explicit
-`rage-quit-user` participant roles. Authorization server `0.2.0` is Ready on both
-edges with an identical immutable digest, and Rage Quit `0.1.0` is active and
-Ready on Cloud with the configured date, Bound PVC and valid certificate.
-Native startup, CI ShellCheck, public HTTPS/API isolation, OAuth/PKCE initiation
-and actual pod-to-issuer HTTPS reachability passed; see
-`docs/rage-quit-acceptance.md` for release digests and the evidence boundary.
-Real-user login, mobile/desktop visual acceptance, live persistence restart and
-off-node production backup/recovery acceptance remain unverified.
+Both auth overlays opt into the client profile, including explicit
+`rage-quit-user` participant roles. Authorization server `0.2.1` is Ready on both
+edges with identical digest `sha256:e8aec9a7726cc982bd5c534c4ae9d9efcad11062dd84987611d5ea86f936b2cc`.
+Rage Quit `0.1.1` is Ready on Cloud with digest
+`sha256:d75365ffd9e834047f72d7b52e82678b6ed2ca53a38ca78012530570c91a29c7`,
+the configured date, Bound PVC and valid certificate. Anonymous HTTPS navigation
+was verified live through to the central Google login panel; API isolation and
+the CI/native and application tests passed. See `docs/rage-quit-acceptance.md`
+for release commits and evidence. Real-user login, mobile/desktop visual
+acceptance, live persistence restart and off-node production backup/recovery
+acceptance remain unverified.

@@ -97,7 +97,7 @@ profile, with explicit `rage-quit-user` roles for the two non-admin participants
   restore was performed. These remain required for operational sign-off; the
   service is deployed for the operator's requested testing, not fully accepted.
 
-### Central login redirect follow-up — local only
+### Central login redirect follow-up — authorized testing rollout — 2026-10-05
 
 - Anonymous navigation to `/` or `/index.html` automatically starts
   `/oauth2/authorization/rage-quit`; the authorization server then redirects
@@ -105,12 +105,24 @@ profile, with explicit `rage-quit-user` roles for the two non-admin participants
 - Existing password-backed sessions still require Google authentication for
   Rage Quit. Silent anonymous authorization does not show login or issue a code.
   API requests remain HTTP 401; OAuth state, nonce and S256 PKCE are preserved.
+- Source change is committed as `c34625f`. Authorization server `0.2.1` was
+  promoted to both Cloud and Home by `ebbcd7b`; both deployments rolled out
+  Ready `1/1` with digest
+  `sha256:e8aec9a7726cc982bd5c534c4ae9d9efcad11062dd84987611d5ea86f936b2cc`.
+- Rage Quit `0.1.1` passed its release workflow and was promoted Cloud-only by
+  `2021f413`. The deployment rolled out Ready `1/1` with digest
+  `sha256:d75365ffd9e834047f72d7b52e82678b6ed2ca53a38ca78012530570c91a29c7`;
+  Flux reports the `rage-quit` Kustomization Ready. The PVC remains Bound and
+  the TLS certificate Ready.
+- Live anonymous HTTPS navigation to `rage-quit.calcifer.tech/` followed three
+  redirects and ended at `https://auth.calcifer.tech/login` with HTTP 200 and
+  the Google login panel. Anonymous `/api/insights` returned HTTP 401 without a
+  redirect.
 - Maven `verify` passed: 68 application tests and 139 authorization-server tests,
-  zero failures/errors/skips. IDE build passed with existing Jackson `asText()`
-  deprecation warnings. These are synthetic JVM checks, not real-user login or
-  native-image execution of the follow-up.
-- This follow-up has not been released or deployed; the rollout evidence above
-  describes the previously deployed versions.
+  zero failures/errors/skips; both release workflows passed their CI gates,
+  including native auth compilation/tests and the app container check. IDE
+  build passed with existing Jackson `asText()` deprecation warnings. No real
+  Google login or production data/recovery acceptance is claimed.
 
 | Local criterion | Evidence command |
 | --- | --- |
