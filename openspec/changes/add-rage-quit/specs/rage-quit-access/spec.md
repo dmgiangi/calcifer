@@ -26,7 +26,7 @@ The application SHALL keep authentication in server-side sessions with Secure, H
 
 #### Scenario: Anonymous visitor requests tracking data
 - **WHEN** an unauthenticated visitor opens a protected page or calls a tracking API
-- **THEN** the page initiates login or the API denies access without returning group or personal data
+- **THEN** the page automatically starts the Rage Quit OIDC flow and shows the authorization server's login panel, preserving state, nonce and S256 PKCE, or the API returns HTTP 401 without redirects or group or personal data
 
 #### Scenario: Mutation lacks a valid CSRF token
 - **WHEN** an authenticated session submits a mutation without valid CSRF protection

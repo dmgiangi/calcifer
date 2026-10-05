@@ -90,9 +90,19 @@ class SecurityApiTest {
         assertThat(request("GET", "/api/session", null, null, null).statusCode()).isEqualTo(401);
         assertThat(request("GET", "/api/events", null, null, null).statusCode()).isEqualTo(401);
         assertThat(request("GET", "/api/insights", null, null, null).statusCode()).isEqualTo(401);
-        var page = request("GET", "/index.html", null, null, null);
-        assertThat(page.statusCode()).isEqualTo(302);
-        assertThat(URI.create(page.headers().firstValue("Location").orElseThrow()).getPath()).isEqualTo("/login.html");
+        for (String path : List.of("/", "/index.html")) {
+            var page = request("GET", path, null, null, null);
+            assertThat(page.statusCode()).isEqualTo(302);
+            String authorizationPath = URI.create(page.headers().firstValue("Location").orElseThrow()).getPath();
+            assertThat(authorizationPath).isEqualTo("/oauth2/authorization/rage-quit");
+            var authorization = request("GET", authorizationPath, cookie(page), null, null);
+            assertThat(authorization.statusCode()).isEqualTo(302);
+            var parameters = parameters(URI.create(authorization.headers().firstValue("Location").orElseThrow()).getRawQuery());
+            assertThat(parameters.get("client_id")).isEqualTo("rage-quit");
+            assertThat(parameters.get("code_challenge_method")).isEqualTo("S256");
+            assertThat(parameters.get("state")).isNotBlank();
+            assertThat(parameters.get("nonce")).isNotBlank();
+        }
         assertThat(request("GET", "/actuator/env", null, null, null).statusCode()).isNotEqualTo(200);
         assertThat(request("GET", "/actuator/health/readiness", null, null, null).statusCode()).isEqualTo(200);
         assertThat(request("GET", "/actuator/health/liveness", null, null, null).statusCode()).isEqualTo(200);

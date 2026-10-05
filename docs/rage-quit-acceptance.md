@@ -97,6 +97,21 @@ profile, with explicit `rage-quit-user` roles for the two non-admin participants
   restore was performed. These remain required for operational sign-off; the
   service is deployed for the operator's requested testing, not fully accepted.
 
+### Central login redirect follow-up — local only
+
+- Anonymous navigation to `/` or `/index.html` automatically starts
+  `/oauth2/authorization/rage-quit`; the authorization server then redirects
+  anonymous Rage Quit authorization requests to its `/login` panel.
+- Existing password-backed sessions still require Google authentication for
+  Rage Quit. Silent anonymous authorization does not show login or issue a code.
+  API requests remain HTTP 401; OAuth state, nonce and S256 PKCE are preserved.
+- Maven `verify` passed: 68 application tests and 139 authorization-server tests,
+  zero failures/errors/skips. IDE build passed with existing Jackson `asText()`
+  deprecation warnings. These are synthetic JVM checks, not real-user login or
+  native-image execution of the follow-up.
+- This follow-up has not been released or deployed; the rollout evidence above
+  describes the previously deployed versions.
+
 | Local criterion | Evidence command |
 | --- | --- |
 | Application tests and executable package | Maven `verify` with JDK 25 |

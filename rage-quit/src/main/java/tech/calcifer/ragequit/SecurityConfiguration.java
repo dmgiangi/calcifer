@@ -95,9 +95,9 @@ public class SecurityConfiguration {
                 .exceptionHandling(errors -> errors
                         .defaultAuthenticationEntryPointFor(new HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED),
                                 paths.matcher("/api/**"))
-                        .defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint("/login.html"),
+                        .defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint("/oauth2/authorization/rage-quit"),
                                 paths.matcher("/**")))
-                .oauth2Login(login -> login.loginPage("/login.html")
+                .oauth2Login(login -> login.loginPage("/oauth2/authorization/rage-quit")
                         .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(authorizationRequests))
                         .userInfoEndpoint(endpoint -> endpoint.oidcUserService(admittedUsers))
                         .defaultSuccessUrl("/index.html", true)

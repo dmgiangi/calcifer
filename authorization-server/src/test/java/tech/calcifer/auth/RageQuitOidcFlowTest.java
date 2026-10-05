@@ -132,6 +132,42 @@ class RageQuitOidcFlowTest {
     }
 
     @Test
+    void anonymousUserSeesCentralLoginAndKeepsTheEntireAuthorizationRequest() throws Exception {
+        var result = mvc.perform(get("/oauth2/authorize").queryParam("response_type", "code")
+            .queryParam("client_id", "rage-quit").queryParam("redirect_uri", RageQuitTestSupport.CALLBACK)
+            .queryParam("scope", "openid profile email").queryParam("state", "test-state")
+            .queryParam("nonce", "test-nonce").queryParam("code_challenge", challenge())
+            .queryParam("code_challenge_method", "S256")).andExpect(status().isFound()).andReturn();
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/login");
+        var session = (MockHttpSession) result.getRequest().getSession(false);
+        var callback = new MockHttpServletRequest("GET", "/login/oauth2/code/google");
+        callback.setSession(session);
+        var response = new MockHttpServletResponse();
+        var cache = context.getBean(RequestCache.class);
+        String original = cache.getRequest(callback, response).getRedirectUrl();
+        assertThat(original).contains("client_id=rage-quit", "state=test-state", "nonce=test-nonce",
+            "code_challenge=", "code_challenge_method=S256", "redirect_uri=");
+        var principal = google(RageQuitTestSupport.ADMIN);
+        new AuthorizationServerConfiguration().oauth2LoginSuccessHandler(cache)
+            .onAuthenticationSuccess(callback, response, principal);
+        assertThat(response.getRedirectedUrl()).isEqualTo(original);
+        var resumed = mvc.perform(get(URI.create(original)).session(session).with(authentication(principal))).andReturn();
+        assertThat(query(resumed, "code")).isNotBlank();
+        assertThat(query(resumed, "state")).isEqualTo("test-state");
+        assertThat(cache.getRequest(callback, response)).isNull();
+    }
+
+    @Test
+    void silentAnonymousAuthorizationDoesNotShowLoginOrIssueCode() throws Exception {
+        var result = mvc.perform(get("/oauth2/authorize").param("response_type", "code")
+            .param("client_id", "rage-quit").param("redirect_uri", RageQuitTestSupport.CALLBACK)
+            .param("scope", "openid").param("prompt", "none")
+            .param("code_challenge", challenge()).param("code_challenge_method", "S256"))
+            .andExpect(status().isUnauthorized()).andReturn();
+        assertThat(result.getResponse().getRedirectedUrl()).isNull();
+    }
+
+    @Test
     void passwordSessionStartsGoogleAndPreservesTheEntireSavedRequest() throws Exception {
         var result = authorize(RageQuitTestSupport.password(), "rage-quit", RageQuitTestSupport.CALLBACK,
             "openid profile email", challenge());
