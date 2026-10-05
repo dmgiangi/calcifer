@@ -64,9 +64,38 @@ authorization.
 The operator explicitly requested deployment for testing and selected the most
 recent midnight in `Europe/Rome`: `2026-10-05T00:00:00+02:00`. The Cloud overlay
 sets `RAGE_QUIT_START_DATE=2026-10-05`; both auth overlays enable the `rage-quit`
-profile. The app remains suspended until symmetric auth rollout and immutable
-app image promotion pass. No real Google login, visual acceptance, live backup
-or production restore is implied by this authorization or configuration.
+profile, with explicit `rage-quit-user` roles for the two non-admin participants.
+
+- Authorization server `0.2.0` release passed, including native compilation,
+  native tests, the JVM suite and both overlay builds. Both clusters rolled out
+  Ready `1/1` with the same digest
+  `sha256:c8717b276e6c5f69f8c1977f8e1097081c64b32a90d5314f7806c69cce3ba608`.
+- Synthetic native startup with the client profile and local administrator
+  fallback enabled passed liveness and OIDC discovery checks. Local auth tests
+  passed (137 total plus 11 focused post-configuration regressions); app tests
+  passed (68), as did all 9 Node UI fixtures and the IDE/structural checks.
+- Both live auth edges returned HTTP 200 for liveness, readiness and discovery.
+  Anonymous Rage Quit authorization correctly starts Google authentication;
+  both edges generate the expected Google callback. This is not a completed
+  real-user login or an authenticated existing-client acceptance test.
+- Rage Quit `0.1.0` release passed all verification/publication gates. The first
+  attempt stopped before publishing on ShellCheck diagnostics; helper source
+  lookup and unused variables were corrected, and the subsequent CI run passed.
+  Anonymous registry pull access was verified. Cloud uses digest
+  `sha256:1cc803debce028e48504268ba03880239ffa05c8dadaca05c55a9fe890bf43c0`.
+- Cloud activation is committed in `ebf918e`. Flux reconciliation and Deployment
+  rollout passed; the single app replica is Ready, `rage-quit-data` is Bound and
+  certificate `rage-quit` is Ready. Home has no Rage Quit workload.
+- Public `/login.html` returned HTTPS 200, anonymous `/api/insights` returned 401,
+  public `/actuator/health` returned 404, and HTTP redirects to HTTPS. HSTS, CSP,
+  frame and content-type protections are present. Internal app liveness and
+  readiness returned 200. OAuth initiation uses the exact callback and S256 PKCE.
+- A transient Java HTTP probe inside the app pod reached issuer discovery and
+  JWK endpoints over validated HTTPS (both 200), checking actual pod egress.
+- No real Google login, user tracking-data read/write, viewport-based visual
+  acceptance, live persistence restart, off-node production backup or production
+  restore was performed. These remain required for operational sign-off; the
+  service is deployed for the operator's requested testing, not fully accepted.
 
 | Local criterion | Evidence command |
 | --- | --- |
@@ -87,7 +116,7 @@ real browser's charts. The single-writer offline container intentionally has no
 issuer access: successful liveness/readiness proves an auth outage alone does
 not restart it, but does not prove live DNS/CNI routing or Google login.
 
-## Operator-only live acceptance (all pending until authorization)
+## Operator-only live acceptance checklist
 
 1. **Prerequisites:** confirm explicit approvals, Cloud context, authentic image
    digest, agreed start date, exact shared OIDC callback/client/PKCE/scopes,

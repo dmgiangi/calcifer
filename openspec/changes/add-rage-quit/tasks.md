@@ -86,6 +86,11 @@ handoff these Secret manifests had not been applied to either cluster.
 On 2026-10-05 the operator authorized deployment for testing and selected
 `2026-10-05` (the most recent Europe/Rome midnight) as the common start date.
 Both auth overlays now opt into the client profile, including explicit
-`rage-quit-user` participant roles; Cloud app activation still waits for the
-symmetric auth release and immutable app image. Full workflow/shell lint,
-real-user login and mobile/desktop visual acceptance remain unverified.
+`rage-quit-user` participant roles. Authorization server `0.2.0` is Ready on both
+edges with an identical immutable digest, and Rage Quit `0.1.0` is active and
+Ready on Cloud with the configured date, Bound PVC and valid certificate.
+Native startup, CI ShellCheck, public HTTPS/API isolation, OAuth/PKCE initiation
+and actual pod-to-issuer HTTPS reachability passed; see
+`docs/rage-quit-acceptance.md` for release digests and the evidence boundary.
+Real-user login, mobile/desktop visual acceptance, live persistence restart and
+off-node production backup/recovery acceptance remain unverified.
