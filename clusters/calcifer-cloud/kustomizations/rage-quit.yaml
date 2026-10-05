@@ -4,9 +4,9 @@ metadata:
   name: rage-quit
   namespace: flux-system
 spec:
-  # Explicit operator gate: DNS, auth on both edges, encrypted client secret,
-  # immutable image and the common start date must exist before unsuspending.
-  suspend: true
+  # Operator-authorized testing rollout on 2026-10-05 after symmetric auth,
+  # DNS, encrypted secret, immutable app image and start-date checks passed.
+  suspend: false
   interval: 10m
   path: ./clusters/apps/rage-quit/overlays/cloud
   prune: true
