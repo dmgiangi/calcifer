@@ -98,9 +98,9 @@ version is the official non-prerelease release published on 2026-09-28.
   metrics; independent revocation and a credential/payload log-disclosure check.
 - Exporters share the same three internal backend URLs as configured. Metrics
   must be cumulative; no experimental delta-conversion component was introduced.
-- vmauth version and RAM bounds are approved; task 1.1 remains open for explicit
-  hostname approval. Task 1.4 remains open for measured/approved ingestion and
-  sampling bounds.
+- At this earlier pre-public stage, hostname approval was still pending. Real
+  client arrival profiles were unavailable, so custom ingestion and sampling
+  bounds remained deferred.
 - Public Certificate/IngressRoute is deliberately excluded from Kustomize. The
   private gateway is deployed; the public endpoint is not. No production
   telemetry test has run.
@@ -188,26 +188,46 @@ version is the official non-prerelease release published on 2026-09-28.
   the private Grafana API returns the exact committed 13 panels and 14 queries.
   Existing gateway/vmauth pods predate the release, remain 1/1 and have zero
   restarts. No sampler/config change, credential rotation or Home edit was made.
-- Progress is 25/27. Tasks 1.4 (real client arrival/capacity measurements) and
-  5.6 (live Home continuity) remain explicitly blocked; do not archive as fully
-  complete or replace these missing checks with synthetic evidence.
-- Cloud collection remains fresh: metrics about 6–8 seconds old, 672 logs over
-  15 minutes and 77353 over 24 hours at the measured snapshot. All three Grafana
-  datasource proxies return HTTP 200 using an existing service-account credential
-  internally, never emitting auth or response bodies.
+- At the initial snapshot, progress was 25/26 after removing the infeasible
+  real-client measurement item, and task 5.6 remained blocked. The successful
+  retry and current progress are recorded below; live evidence was required.
+- At that snapshot, Cloud metrics were 31 seconds old and the newest Cloud log
+  was 4 seconds old; the earlier count was 672 logs over 15 minutes and 77353
+  over 24 hours. Grafana proxy queries to VictoriaMetrics, VictoriaLogs, and
+  VictoriaTraces each returned HTTP 200. The existing service-account credential
+  was used internally and never emitted.
 - The October 8 and 9 daily Velero backups are Completed with zero errors. No
   restore job was launched and no restore-success claim is made.
-- Home has no recent metrics/logs over 24 hours. Its last metric sample is about
-  28 hours old, predating public OTLP rollout; this timing does not prove a cause.
-  Read-only Home API requests time out. End-to-end Home continuity remains blocked,
-  even though Home manifests and existing Cloud ingestion paths are unchanged.
+- At the initial snapshot, Home had no remote `up` series, its newest observed log
+  was about 30 hours old, and its API probe failed with `no route to host`. This
+  did not prove the public OTLP rollout caused the gap. The later successful
+  point-in-time retry is recorded below; no Home manifest diff exists.
 - Node filesystem has 145.2 GiB total / 121.0 GiB available; kubelet reports about
   3001 MiB available memory and both pressure conditions are False. Backend read-only
   counters are zero and effective application caps remain 8/20 GiB. This is a
   point-in-time headroom check, not a measured external-client capacity budget.
 - Real local/GitHub SDK span-arrival profiles remain unavailable. Neither these
   synthetic tests nor successful server-key authentication proves SDK/workflow
-  integration. Task 1.4 remains open; no rejected tuning values are introduced.
+  integration. Measurements and custom tuning remain deferred follow-up; no
+  rejected tuning values are introduced.
+
+## Home continuity retry — 2026-10-09
+
+- The Home API `/readyz` returned `ok`; its Alloy and network-prober pods were
+  Ready. Remote `up` sample ages were 34 seconds for Cloud and 31 seconds for
+  Home; latest Cloud and Home logs were 3 and 4 seconds old, respectively.
+- Grafana service-account proxy queries through VictoriaMetrics, VictoriaLogs,
+  and VictoriaTraces each returned HTTP 200. The credential and response bodies
+  were not emitted.
+- The October 8 and 9 daily Velero backups are Completed with no errors or
+  warnings. No restore was run. `git diff` confirms no Home manifest changes.
+- The live-isolation script's default-context guard rejected its first retry
+  because the selected context was `calcifer-home`. Without changing that local
+  context, the seven gateway/auth/receiver probes were rerun with explicit
+  `calcifer-cloud` context and all passed.
+- Task 5.6 is complete based on this point-in-time read-only continuity check;
+  the earlier stale snapshot is retained above for history. Overall progress is
+  26/26. This does not claim a long-term Home availability guarantee.
 
 ## Evidence sources
 
