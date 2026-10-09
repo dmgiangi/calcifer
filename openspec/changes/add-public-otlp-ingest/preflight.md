@@ -182,6 +182,15 @@ version is the official non-prerelease release published on 2026-09-28.
   valid results against the live metrics backend and server schema dry-run passes.
   Process RSS is used because container working-set series are not collected;
   these different memory measurements must not be equated.
+- Dashboard/acceptance commit `2073086` was pushed and reconciled through
+  `observability-grafana`. Both it and `cloud-apps` are Ready at that revision.
+  The GrafanaDashboard reports DashboardSynchronized=True / ApplySuccessful;
+  the private Grafana API returns the exact committed 13 panels and 14 queries.
+  Existing gateway/vmauth pods predate the release, remain 1/1 and have zero
+  restarts. No sampler/config change, credential rotation or Home edit was made.
+- Progress is 25/27. Tasks 1.4 (real client arrival/capacity measurements) and
+  5.6 (live Home continuity) remain explicitly blocked; do not archive as fully
+  complete or replace these missing checks with synthetic evidence.
 - Cloud collection remains fresh: metrics about 6–8 seconds old, 672 logs over
   15 minutes and 77353 over 24 hours at the measured snapshot. All three Grafana
   datasource proxies return HTTP 200 using an existing service-account credential

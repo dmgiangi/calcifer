@@ -182,6 +182,9 @@ failures, process RSS and backend disk size/free space/read-only pressure. Its
 14 queries were validated against live metrics. Failure series may be absent
 until an event occurs; missing scrape data is never evidence of zero traffic.
 Process RSS is not the limiter's Go heap measurement or container working set.
+Dashboard release `2073086` is reconciled by Flux; Grafana reports successful
+synchronization and its imported panels match the committed definition. The
+gateway and authentication pods were not replaced or restarted for this release.
 
 Read-only checks on 2026-10-09 verified fresh Cloud metrics/logs, HTTP 200 through
 all three Grafana datasource proxies and the last two daily Velero backups
