@@ -3,7 +3,8 @@
 Read-only checks performed on 2026-10-08 against `calcifer-cloud`. No new
 dependencies, credentials, deployments, or Git commits were created during that
 preflight. Implementation/credential provisioning and local checks on 2026-10-09
-are recorded below; no Git commit/push or live rollout has occurred.
+are recorded below. Commit `a7f263c` was pushed and the private gateway reconciled
+on 2026-10-09; the public route remains excluded and disabled.
 
 ## Confirmed prerequisites
 
@@ -79,6 +80,14 @@ version is the official non-prerelease release published on 2026-09-28.
 - Seven provisioning unit tests, Cloud rendering/reference/regression checks,
   Kubernetes server dry-run for new workloads/TLS/policies, strict OpenSpec
   validation, whitespace checks and IDE build passed.
+- Commit `a7f263c556fd8dee5f1015ad93d6b27b714824e2` was fetched and applied by
+  Flux `cloud-apps`; its Ready revision matches that commit. Both private
+  deployments are Ready 1/1, and all four ClusterIP services have ready endpoints.
+- VictoriaLogs and VictoriaTraces HelmReleases report `UpgradeSucceeded`; their
+  live StatefulSet flags are `retentionPeriod=6M` and disk caps `8GiB`/`20GiB`.
+  PVC requests remain unchanged. The SOPS Secret exists; only metadata was read.
+- The public `IngressRoute` and `Certificate` are absent from the cluster and
+  their manifest remains excluded from the Flux Kustomization.
 - Isolated Docker tests against the pinned Victoria images passed authentication
   for both aliases/all signals; missing/invalid/revoked keys; wrong routes/GET;
   stored identity/spoofing; span/resource force-keep; absent/false/string 50%
@@ -89,14 +98,16 @@ version is the official non-prerelease release published on 2026-09-28.
 - vmauth version and RAM bounds are approved; task 1.1 remains open for explicit
   hostname approval. Task 1.4 remains open for measured/approved ingestion and
   sampling bounds.
-- Public Certificate/IngressRoute is deliberately excluded from Kustomize. No
-  public gateway has been deployed and no production telemetry test has run.
+- Public Certificate/IngressRoute is deliberately excluded from Kustomize. The
+  private gateway is deployed; the public endpoint is not. No production
+  telemetry test has run.
 - Inherited request/sampler/exporter defaults are not newly approved settings;
   custom request/rate/timing/cache/queue values were not added. Memory limiter
   thresholds leave headroom below the approved Alloy container RAM limit.
-- Live TLS/NetworkPolicy denial, real-key acceptance, late-span/cache and resource
-  pressure tests, post-rollout regressions and Flux/effective retention remain
-  pending. All manifests are local changes until an approved GitOps rollout.
+- Live TLS/NetworkPolicy enforcement, production-key acceptance, late-span/cache
+  behavior, observed resource pressure, client/load acceptance and post-rollout
+  collection regressions remain pending. Flux reconciliation and effective
+  retention were verified; no public endpoint has been enabled.
 
 ## Evidence sources
 
