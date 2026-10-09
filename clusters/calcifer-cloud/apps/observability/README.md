@@ -15,8 +15,9 @@ Deployment settings:
   quotas: they use shared node storage. Disk-pressure cleanup can therefore evict
   data before its age retention expires; the caps do not guarantee six months of
   stored history. These retention settings are deployed and verified.
-- The public OTLP route on `otlp.calcifer.tech` is included for the authorized
-  rollout, with custom ingestion limits deferred; see [Public OTLP ingestion](PUBLIC-OTLP.md)
+- The authenticated public OTLP route on `otlp.calcifer.tech` is live, with
+  TLS/all-signal smoke checks passed and custom ingestion limits deferred;
+  see [Public OTLP ingestion](PUBLIC-OTLP.md)
   for client setup, credential handling, inherited defaults, and acceptance status.
 - Disaster recovery: Velero with Kopia File System Backup schedules daily backups
   of observability PVCs to the private `backups` container in `stcalciferbackupitn`.

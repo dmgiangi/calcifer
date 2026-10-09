@@ -125,9 +125,24 @@ version is the official non-prerelease release published on 2026-09-28.
   DiskPressure are False. This idle snapshot is not a load-capacity measurement.
 - Updated manifest contracts, seven credential unit tests, Cloud rendering,
   route/Certificate server dry-run, strict OpenSpec validation and IDE build pass.
-- Public Flux rollout, TLS issuance and tiny server-key telemetry acceptance
-  follow this commit. Real SDK/GitHub workflows, live revocation, late spans and
-  queue/resource/storage-pressure tests remain deferred.
+- Public commit `f6a9fbc0fb92d13257f3af5de30f5c6cd4794f8e` was pushed and
+  reconciled by Flux `cloud-apps` (Ready). Certificate `public-otlp` is Ready,
+  valid through 2027-01-07T05:32:11Z; default HTTPS hostname/CA checks passed.
+- `check_public_otlp_live.py --accept-live-telemetry` passed: both real server
+  keys accept all three signal paths, missing/invalid keys return 401, and
+  management/query/unsupported paths and GET return 404.
+- Two synthetic logs, two gauge points and two two-span boolean-force-kept
+  traces were queried privately in their backends. Both aliases overwrite spoofed
+  identity; captured recent gateway/Traefik logs contain no server key or test
+  payload marker. No credentials/headers/payloads were printed or passed in argv.
+  These tiny synthetic records remain stored under normal retention.
+- Live isolation passed again after opening. Gateway/vmauth remain 1/1 and
+  use about 45/5 MiB at idle. All other monitoring workloads remain Ready; the
+  Velero daily schedule is Enabled with its last backup at 2026-10-09T02:00:40Z.
+- Eleven unit tests pass, including four new fail-closed cluster/opt-in guards.
+  Real SDK/GitHub workflows, live key revocation, late spans and queue/resource/
+  storage-pressure tests remain deferred. No six-month minimum-history or
+  validated load-capacity claim is made.
 
 ## Evidence sources
 

@@ -198,8 +198,8 @@ metadata and pass/fail results. Each destination receives only its own token.
 - OpenSpec CLI strict validation, pinned image validators, local Docker
   acceptance and Kubernetes server dry-run passed. Real client arrival patterns,
   resource/queue pressure and late/cache behavior remain unverified. The private
-  Flux rollout is complete; public TLS and live isolation/acceptance checks are
-  in progress. See `preflight.md`.
+  and public Flux rollouts are complete; public TLS, live isolation and tiny
+  identity/storage smoke checks passed. See `preflight.md`.
 
 ## References
 

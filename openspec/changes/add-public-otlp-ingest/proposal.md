@@ -61,5 +61,6 @@ need an explicit way to exempt important traces from sampling.
 - Strict OpenSpec validation passes. The private gateway, retention and disk
   bounds have been reconciled by Flux. The user's instruction to proceed after
   the public-opening clarification authorizes `otlp.calcifer.tech` with custom
-  request/sampling bounds deferred. Public TLS/authentication acceptance is in
-  progress; load and real SDK acceptance remain separate. See `preflight.md`.
+  request/sampling bounds deferred. Public commit `f6a9fbc` is reconciled and
+  TLS/authentication/identity/storage smoke checks passed; load and real SDK
+  acceptance remain separate. See `preflight.md`.

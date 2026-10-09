@@ -1,10 +1,11 @@
 # Public OTLP ingestion — `calcifer-cloud`
 
-> **Status: public rollout authorized, acceptance in progress.** The private
-> gateway, `vmauth`, NetworkPolicies and retention are deployed. The user directed
-> opening `otlp.calcifer.tech` on 2026-10-09 without the rejected custom limits;
-> `public-otlp-ingress.yaml` is now included in `kustomization.yaml`. Live receiver
-> and management isolation probes passed; public TLS/telemetry checks follow Flux.
+> **Status: live on 2026-10-09.** Flux reconciled public rollout commit `f6a9fbc`;
+> the Certificate is Ready and HTTPS hostname/CA verification passed. Both server
+> keys work for all three signals; missing/invalid keys and private paths are
+> rejected. Live receiver/management isolation and tiny backend-storage/identity
+> checks passed. No rejected custom ingestion limits were added. Real SDK,
+> GitHub workflow, late-span/cache and load acceptance remain separate.
 
 ## Endpoint and client setup
 
@@ -135,7 +136,7 @@ Actual encrypted credentials also passed the pinned vmauth dry-run via stdin,
 with output suppressed; gateway/route/policy schemas passed Kubernetes server
 dry-run. `check_public_otlp_live.py --network-only` confirms Traefik reaches auth
 but cannot bypass it to receivers or management ports; authorized scraper health
-controls pass. Public TLS/real-server-key acceptance runs after Flux using
+controls pass. Public TLS/real-server-key acceptance passed after Flux using
 `check_public_otlp_live.py --accept-live-telemetry`. This explicit opt-in test
 writes only two logs, two gauge points and two two-span force-kept traces, uses
 loopback-only private query tunnels, and prints pass/fail without credentials or
