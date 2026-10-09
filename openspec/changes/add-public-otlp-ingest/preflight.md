@@ -144,6 +144,62 @@ version is the official non-prerelease release published on 2026-09-28.
   storage-pressure tests remain deferred. No six-month minimum-history or
   validated load-capacity claim is made.
 
+## Advanced acceptance and read-only regressions — 2026-10-09
+
+- The unchanged production-default sampler passed kept/dropped late-span tests
+  for both aliases, including late boolean force-keep on previously dropped
+  traces. While a decision remains resident, kept traces receive their late spans
+  and dropped traces stay dropped; a late marker does not resurrect old spans.
+- The unchanged exporter configuration passed a disposable backend outage:
+  20 accepted log records were held queued/in-flight and subsequently recovered,
+  with no terminal send/enqueue losses. Docker may remap ephemeral query ports
+  on restart; the acceptance harness now refreshes those mappings.
+- Fresh trace search visibility in pinned VictoriaTraces is delayed by about
+  30 seconds independently of tail sampling. Accelerated tests must wait for
+  backend visibility, not infer loss from an earlier negative query.
+- All 28 provisioning/live-guard/isolation unit tests pass. The base pinned-image
+  Docker acceptance, updated manifest contract, IDE build, OpenSpec strict and
+  repeated read-only live receiver/management isolation checks also pass.
+- Additional explicitly accelerated sandbox stages passed: an 8-slot sampler
+  evicted a pending trace and re-evaluated evicted IDs without recovering old
+  spans; a 2-request exporter queue recovered 2 accepted records and rejected 18;
+  reduced memory produced retryable 503 for logs and force-kept spans from both
+  aliases, with matching pinned memory-limiter counters and no OOM.
+- Direct VictoriaLogs disk checks use a minimal synthetic protobuf fixture,
+  matching the real exporter encoding. Under artificial free-space pressure,
+  valid writes returned retryable 429 and were not stored. JSON is accepted by
+  the Alloy receiver, not this backend API; a direct JSON probe would return 400
+  for invalid encoding and cannot validate the storage guard.
+- A 1-byte TEST-ONLY disk target evicted the oldest of three daily log partitions
+  but preserved the latest two even above its target. This is not a hard quota;
+  application caps can shorten retained history without guaranteeing a ceiling.
+  The final full `check_public_otlp_advanced.py` run passed every stage, captured
+  credential/body log guards and exact-owned-ID cleanup. No production stress
+  or disk changes were made.
+- A private Grafana dashboard contains 13 panels for auth errors, sampling,
+  resident traces, early loss, queues/in-flight operations, refusals/exporter
+  failures, process RSS and backend storage pressure. All 14 queries return
+  valid results against the live metrics backend and server schema dry-run passes.
+  Process RSS is used because container working-set series are not collected;
+  these different memory measurements must not be equated.
+- Cloud collection remains fresh: metrics about 6–8 seconds old, 672 logs over
+  15 minutes and 77353 over 24 hours at the measured snapshot. All three Grafana
+  datasource proxies return HTTP 200 using an existing service-account credential
+  internally, never emitting auth or response bodies.
+- The October 8 and 9 daily Velero backups are Completed with zero errors. No
+  restore job was launched and no restore-success claim is made.
+- Home has no recent metrics/logs over 24 hours. Its last metric sample is about
+  28 hours old, predating public OTLP rollout; this timing does not prove a cause.
+  Read-only Home API requests time out. End-to-end Home continuity remains blocked,
+  even though Home manifests and existing Cloud ingestion paths are unchanged.
+- Node filesystem has 145.2 GiB total / 121.0 GiB available; kubelet reports about
+  3001 MiB available memory and both pressure conditions are False. Backend read-only
+  counters are zero and effective application caps remain 8/20 GiB. This is a
+  point-in-time headroom check, not a measured external-client capacity budget.
+- Real local/GitHub SDK span-arrival profiles remain unavailable. Neither these
+  synthetic tests nor successful server-key authentication proves SDK/workflow
+  integration. Task 1.4 remains open; no rejected tuning values are introduced.
+
 ## Evidence sources
 
 - https://github.com/grafana/helm-charts/releases/tag/alloy-1.12.1

@@ -100,6 +100,12 @@ caches. Omission is not an unlimited sampler and does not mean these defaults
 are a measured client capacity budget. They remain unchanged for the authorized
 best-effort public rollout. Exporter/request defaults have the same status.
 
+Isolated unchanged-default tests verify that resident kept decisions forward
+late spans and resident dropped decisions reject late spans/force-keep markers.
+With decision caches inactive, buffer eviction allows later spans to be evaluated
+again; this cannot recover previously discarded spans or preserve a lost marker.
+An explicitly test-only small buffer demonstrated this boundary and early loss.
+
 The 50% rate is probabilistic across traces, not an exact count per request or
 sampling of half the spans in each trace. Logs and metrics bypass trace sampling.
 The marker never bypasses authentication, overload controls, or backend retention.
@@ -196,10 +202,14 @@ metadata and pass/fail results. Each destination receives only its own token.
   This is deferred tuning work, not an opening gate. Do not invent values or
   infer headroom from retention.
 - OpenSpec CLI strict validation, pinned image validators, local Docker
-  acceptance and Kubernetes server dry-run passed. Real client arrival patterns,
-  resource/queue pressure and late/cache behavior remain unverified. The private
-  and public Flux rollouts are complete; public TLS, live isolation and tiny
-  identity/storage smoke checks passed. See `preflight.md`.
+  acceptance and Kubernetes server dry-run passed. Advanced isolated checks passed
+  default late-span/retry behavior, accelerated buffer/queue overflow, memory 503
+  refusals (including force-keep), backend disk-pressure 429 refusals using valid
+  protobuf, and oldest-partition disk-cap cleanup preserving the latest two days.
+  Reduced bounds exercise mechanisms, not production saturation. Real client
+  arrival profiles remain unavailable and Home continuity is blocked by stale
+  collection and API timeouts. Private/public Flux rollouts, public TLS, live
+  isolation and tiny identity/storage smoke checks passed. See `preflight.md`.
 
 ## References
 

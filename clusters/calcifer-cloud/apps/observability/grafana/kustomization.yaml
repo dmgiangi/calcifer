@@ -13,4 +13,5 @@ resources:
   - authorization-server-outcomes.yaml
   - home-forwarding-dashboard.yaml
   - home-network-dashboard.yaml
+  - public-otlp-dashboard.yaml
   - grafana-traefik.yaml

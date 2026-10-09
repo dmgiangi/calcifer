@@ -4,8 +4,9 @@
 > the Certificate is Ready and HTTPS hostname/CA verification passed. Both server
 > keys work for all three signals; missing/invalid keys and private paths are
 > rejected. Live receiver/management isolation and tiny backend-storage/identity
-> checks passed. No rejected custom ingestion limits were added. Real SDK,
-> GitHub workflow, late-span/cache and load acceptance remain separate.
+> checks passed. No rejected custom ingestion limits were added. Isolated
+> late-span/cache and queued-retry acceptance also passed. Real SDK integration,
+> GitHub workflow execution and production load sizing remain separate.
 
 ## Endpoint and client setup
 
@@ -61,9 +62,14 @@ quota); logs and metrics bypass trace sampling.
 The deployed Alloy configuration omits custom tail-sampler sizing. With pinned
 Alloy `v1.19.2`, upstream defaults are a 30-second decision wait and 50,000 trace
 slots **per alias sampler**; decision caches are inactive by default. These are
-inherited defaults, not a measured client-capacity budget. A late span may miss a
-decision, and in-memory pending traces can be lost on restart or overload. No
-late-span or cache-behavior test has been run.
+inherited defaults, not a measured client-capacity budget. Isolated tests with
+the deployed configuration unchanged verified that, while the decision remains
+resident, late spans of kept traces are forwarded and late spans/true markers of
+dropped traces stay dropped. Once an ID is evicted from the resident buffer,
+later spans can form a new sampling decision; this never recovers old discarded
+spans or guarantees the original force-keep decision survives eviction. A small
+test-only buffer verified this boundary and pending overflow. Restart loses
+in-memory sampler state; force-keep is not a losslessness guarantee.
 
 ## Capacity and retention
 
@@ -81,6 +87,9 @@ configuration does not select these as a measured capacity budget. With the
 pinned `vmauth:v1.153.0` image and no explicit overrides, its source defaults are
 100 concurrent requests per user, 1,000 globally, and a 10-second queue duration.
 Those defaults are likewise not a measured public-ingestion capacity budget.
+An isolated temporary log-backend outage using the unchanged gateway defaults
+recovered all 20 accepted records. This is a bounded retry acceptance check, not
+a claim about indefinite outages, restart persistence or production saturation.
 Do not infer a safe request ceiling, no-loss behavior, or availability promise
 from these defaults. The user directed public rollout with these inherited
 defaults unchanged; custom tuning awaits client measurements and approval.
@@ -94,6 +103,13 @@ quota. Disk pressure can cause earlier deletion than the age setting; `6M` is no
 a minimum-history guarantee. Trace disk usage was not measurable when the cap was
 selected, so 20 GiB is an allowance, not a stored-size forecast. These retention
 and cap settings were verified on the live StatefulSets after Flux reconciliation.
+
+The isolated log-backend cap test removed the oldest of three daily partitions
+while preserving the latest two, even above a tiny test target: cleanup is not a
+hard quota. Artificial free-space pressure rejected valid protobuf writes with
+retryable HTTP 429. A frontend success still does not guarantee eventual storage
+if exporter retries expire or the process restarts. Monitor read-only state and
+terminal export failures as well as free bytes.
 
 ## Credentials and rotation
 
@@ -131,6 +147,16 @@ not send telemetry to the production cluster:
   stored attribution, unsampled logs/metrics and whole-trace boolean/50% tests.
   The test starts bounded disposable containers with loopback-only query ports,
   then removes its own containers/network and temporary synthetic auth file.
+- `python3 -B -m unittest discover -s scripts/tests -p 'test_public_otlp*.py'` —
+  28 provisioning, live opt-in/cluster and sandbox-isolation unit tests passed.
+- `python3 -B scripts/tests/check_public_otlp_advanced.py` extends acceptance with
+  default late spans/resident decisions and exporter retry, plus accelerated
+  test-only buffer/queue overflow, memory refusal and disk-pressure/cap stages.
+  The final full run passed; no production saturation was exercised.
+  Synthetic credentials remain in an owner-only mounted file; subprocess output,
+  response bodies and container logs
+  are captured. Containers have explicit CPU/RAM/tmpfs/time bounds and cleanup
+  uses only their exact owned IDs. No production saturation test is implied.
 
 Actual encrypted credentials also passed the pinned vmauth dry-run via stdin,
 with output suppressed; gateway/route/policy schemas passed Kubernetes server
@@ -142,10 +168,29 @@ writes only two logs, two gauge points and two two-span force-kept traces, uses
 loopback-only private query tunnels, and prints pass/fail without credentials or
 payloads. It does not rotate/revoke keys or modify client workflows.
 
-Validate real SDK temporality, span arrival, late-span/cache behavior and
-queue/resource pressure separately. None is claimed by the smoke test. In
+Validate real SDK temporality, span arrival and production capacity separately.
+None is claimed by the live smoke test or bounded isolated acceptance. In
 particular, testing the GitHub server credential does not prove a GitHub Actions
 workflow or SDK is configured; those client changes remain outside this rollout.
+
+## Monitoring and regression status
+
+The private Grafana dashboard **Public OTLP Ingestion** (`public-otlp`) has
+13 panels covering scrape health, authentication failures, sampling decisions,
+resident IDs/early buffer loss, queues/in-flight requests, refusals/exporter
+failures, process RSS and backend disk size/free space/read-only pressure. Its
+14 queries were validated against live metrics. Failure series may be absent
+until an event occurs; missing scrape data is never evidence of zero traffic.
+Process RSS is not the limiter's Go heap measurement or container working set.
+
+Read-only checks on 2026-10-09 verified fresh Cloud metrics/logs, HTTP 200 through
+all three Grafana datasource proxies and the last two daily Velero backups
+Completed with zero errors. No backup restore was run. Home collection is not
+verified: its last metric is about 28 hours old, no metrics/logs arrived over
+24 hours, and its API times out. That last sample predates public OTLP rollout;
+the timing alone does not establish a cause. Home manifests and private Cloud
+ingestion paths remain unchanged. Restore Home access/collection and obtain real
+client arrival profiles before closing the remaining acceptance tasks.
 
 Pinned references: [Alloy tail sampling](https://grafana.com/docs/alloy/v1.19/reference/components/otelcol/otelcol.processor.tail_sampling/),
 [Alloy OTLP/HTTP exporter](https://grafana.com/docs/alloy/v1.19/reference/components/otelcol/otelcol.exporter.otlphttp/),

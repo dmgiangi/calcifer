@@ -88,6 +88,26 @@ def main():
     assert not run(["git", "diff", "--name-only", "HEAD", "--", "clusters/calcifer-home"]).strip()
     print("PASS: existing Alloy/collection/backups unchanged; PVCs preserved; Home unchanged")
 
+    grafana = objects(run(["kubectl", "kustomize", AREA + "/grafana"]))
+    dashboard = grafana[("GrafanaDashboard", "public-otlp")]["spec"]
+    assert dashboard["folderRef"] == "observability"
+    assert dashboard["instanceSelector"] == {"matchLabels": {"dashboards": "grafana"}}
+    reference = dashboard["configMapRef"]
+    content = json.loads(grafana[("ConfigMap", reference["name"])]["data"][reference["key"]])
+    assert content["uid"] == "public-otlp" and len(content["panels"]) == 13
+    assert len({panel["id"] for panel in content["panels"]}) == 13
+    expressions = []
+    for panel in content["panels"]:
+        assert panel["datasource"]["uid"] == "victoriametrics"
+        for target in panel["targets"]:
+            assert 'cluster="calcifer-cloud"' in target["expr"]
+            expressions.append(target["expr"])
+    for metric in ("vmauth_http_request_errors_total", "count_traces_sampled_total",
+                   "sampling_trace_dropped_too_early", "otelcol_exporter_queue_size",
+                   "receiver_refused", "memory_limiter_", "free_disk_space_bytes", "storage_is_read_only"):
+        assert any(metric in expression for expression in expressions)
+    print("PASS: private Grafana dashboard references and auth/sampling/queue/storage coverage")
+
 
 if __name__ == "__main__":
     try:

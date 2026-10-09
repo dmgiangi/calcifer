@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: public-otlp-dashboard
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/managed-by: grafana-operator
+data:
+  json: |
+    {
+      "uid": "public-otlp",
+      "title": "Public OTLP Ingestion",
+      "description": "Best-effort ingestion with pinned defaults, not a measured client capacity budget. Missing scrape data is not zero traffic. Process memory is shared by both alias limiters. Backend disk caps are cleanup targets, not hard filesystem quotas.",
+      "tags": ["calcifer-cloud", "otlp", "alloy", "vmauth"],
+      "timezone": "browser", "schemaVersion": 39, "version": 1,
+      "time": {"from": "now-6h", "to": "now"}, "refresh": "30s",
+      "panels": [
+        {"id": 1, "type": "stat", "title": "Gateway/auth scrape health (must both be 1)", "gridPos": {"h": 5, "w": 12, "x": 0, "y": 0}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "min by (service) (up{cluster=\"calcifer-cloud\",service=~\"alloy-otlp-gateway-internal|otlp-vmauth-internal\"})", "legendFormat": "{{service}}"}], "options": {"reduceOptions": {"calcs": ["lastNotNull"]}}},
+        {"id": 2, "type": "timeseries", "title": "Authentication HTTP errors (includes missing/invalid tokens)", "gridPos": {"h": 5, "w": 12, "x": 12, "y": 0}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "sum by (reason) (rate(vmauth_http_request_errors_total{cluster=\"calcifer-cloud\",service=\"otlp-vmauth-internal\"}[5m]))", "legendFormat": "{{reason}}"}]},
+        {"id": 3, "type": "timeseries", "title": "Authenticated backend errors and concurrency rejections", "gridPos": {"h": 7, "w": 12, "x": 0, "y": 5}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "sum by (__name__) (rate({__name__=~\"vmauth_(user_request_backend_errors|concurrent_requests_limit_reached|user_concurrent_requests_limit_reached)_total\",cluster=\"calcifer-cloud\",service=\"otlp-vmauth-internal\"}[5m]) keep_metric_names)", "legendFormat": "{{__name__}}"}]},
+        {"id": 4, "type": "timeseries", "title": "Sampling decisions per alias", "gridPos": {"h": 7, "w": 12, "x": 12, "y": 5}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "sum by (component_id, decision) (rate(otelcol_processor_tail_sampling_global_count_traces_sampled_total{cluster=\"calcifer-cloud\",service=\"alloy-otlp-gateway-internal\"}[5m]))", "legendFormat": "{{component_id}} {{decision}}"}]},
+        {"id": 5, "type": "timeseries", "title": "Resident trace IDs (default 50000 slots per sampler)", "gridPos": {"h": 7, "w": 12, "x": 0, "y": 12}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "sum by (component_id) (otelcol_processor_tail_sampling_sampling_traces_on_memory{cluster=\"calcifer-cloud\",service=\"alloy-otlp-gateway-internal\"})", "legendFormat": "{{component_id}}"}]},
+        {"id": 6, "type": "timeseries", "title": "Early buffer loss and sampling errors", "gridPos": {"h": 7, "w": 12, "x": 12, "y": 12}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "sum by (__name__, component_id) (rate({__name__=~\"otelcol_processor_tail_sampling_(sampling_trace_dropped_too_early|sampling_policy_evaluation_error)_total\",cluster=\"calcifer-cloud\",service=\"alloy-otlp-gateway-internal\"}[5m]) keep_metric_names)", "legendFormat": "{{component_id}} {{__name__}}"}]},
+        {"id": 7, "type": "timeseries", "title": "Exporter queue occupancy (percent of inherited capacity)", "gridPos": {"h": 7, "w": 12, "x": 0, "y": 19}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "fieldConfig": {"defaults": {"unit": "percent"}}, "targets": [{"refId": "A", "expr": "100 * sum by (exporter, data_type) (otelcol_exporter_queue_size{cluster=\"calcifer-cloud\",service=\"alloy-otlp-gateway-internal\"}) / sum by (exporter, data_type) (otelcol_exporter_queue_capacity{cluster=\"calcifer-cloud\",service=\"alloy-otlp-gateway-internal\"})", "legendFormat": "{{exporter}} {{data_type}}"}]},
+        {"id": 8, "type": "timeseries", "title": "Exporter in-flight operations (includes retry waits)", "gridPos": {"h": 7, "w": 12, "x": 12, "y": 19}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "sum by (exporter, data_type) (otelcol_exporter_in_flight_requests{cluster=\"calcifer-cloud\",service=\"alloy-otlp-gateway-internal\"})", "legendFormat": "{{exporter}} {{data_type}}"}]},
+        {"id": 9, "type": "timeseries", "title": "Refusals and terminal send/enqueue failures", "description": "Some failure series are emitted only after an error. No data can mean no events; check scrape health separately. A retry in progress is not a terminal send failure. Metric names are preserved with VictoriaMetrics MetricsQL to keep events and signal units separate.", "gridPos": {"h": 7, "w": 24, "x": 0, "y": 26}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "sum by (__name__, component_id) (rate({__name__=~\"otelcol_(exporter_(send|enqueue)_failed|receiver_refused|processor_(memory_limiter_)?refused)_(log_records|metric_points|spans)_total\",cluster=\"calcifer-cloud\",service=\"alloy-otlp-gateway-internal\"}[5m]) keep_metric_names)", "legendFormat": "{{component_id}} {{__name__}}"}]},
+        {"id": 10, "type": "timeseries", "title": "Process resident memory (container limits: Alloy 512 MiB; auth 128 MiB)", "description": "RSS is observable via the existing service scrape. It is not the container working set or the memory limiter's Go heap measurement.", "gridPos": {"h": 7, "w": 12, "x": 0, "y": 33}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "fieldConfig": {"defaults": {"unit": "bytes"}}, "targets": [{"refId": "A", "expr": "max by (service) (process_resident_memory_bytes{cluster=\"calcifer-cloud\",service=~\"alloy-otlp-gateway-internal|otlp-vmauth-internal\"})", "legendFormat": "{{service}}"}]},
+        {"id": 11, "type": "timeseries", "title": "Backend shared filesystem free space", "gridPos": {"h": 7, "w": 12, "x": 12, "y": 33}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "fieldConfig": {"defaults": {"unit": "bytes"}}, "targets": [{"refId": "A", "expr": "min by (service) ({__name__=~\"(vl|vt)_free_disk_space_bytes\",cluster=\"calcifer-cloud\",service=~\"victoria-logs|victoria-traces\"})", "legendFormat": "{{service}}"}]},
+        {"id": 12, "type": "timeseries", "title": "Backend data size and disk cleanup targets (not hard quotas)", "gridPos": {"h": 7, "w": 12, "x": 0, "y": 40}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "fieldConfig": {"defaults": {"unit": "bytes"}}, "targets": [{"refId": "A", "expr": "sum by (service) ({__name__=~\"(vl|vt)_data_size_bytes\",cluster=\"calcifer-cloud\",service=~\"victoria-logs|victoria-traces\"})", "legendFormat": "{{service}} stored"}, {"refId": "B", "expr": "max by (service) ({__name__=~\"(vl|vt)_max_disk_space_usage_bytes\",cluster=\"calcifer-cloud\",service=~\"victoria-logs|victoria-traces\"})", "legendFormat": "{{service}} cleanup target"}]},
+        {"id": 13, "type": "stat", "title": "Backend read-only due to disk pressure (must be 0)", "gridPos": {"h": 7, "w": 12, "x": 12, "y": 40}, "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"refId": "A", "expr": "max by (service) ({__name__=~\"(vl|vt)_storage_is_read_only\",cluster=\"calcifer-cloud\",service=~\"victoria-logs|victoria-traces\"})", "legendFormat": "{{service}}"}], "options": {"reduceOptions": {"calcs": ["lastNotNull"]}}}
+      ],
+      "annotations": {"list": []}
+    }
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: public-otlp
+  namespace: monitoring
+spec:
+  resyncPeriod: 5m
+  folderRef: observability
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  configMapRef:
+    name: public-otlp-dashboard
+    key: json
