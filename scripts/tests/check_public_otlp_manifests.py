@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate rendered Cloud staging and preservation of existing collection."""
+"""Validate public OTLP routing and preservation of existing Cloud collection."""
 
 import json
 from pathlib import Path
@@ -38,9 +38,20 @@ def main():
     assert gateway["replicas"] == 1 and gateway["strategy"]["type"] == "Recreate"
     assert rendered[("Deployment", "otlp-vmauth")]["spec"]["template"]["spec"]["volumes"][0]["secret"]["secretName"] == "public-otlp-auth"
     assert rendered[("Secret", "public-otlp-auth")]["stringData"]["auth.yaml"].startswith("ENC[")
-    assert ("IngressRoute", "public-otlp") not in rendered
-    assert ("Certificate", "public-otlp") not in rendered
-    print("PASS: rendered ConfigMap/Secret references; one replica; public route excluded")
+    route = rendered[("IngressRoute", "public-otlp")]["spec"]
+    assert route["entryPoints"] == ["websecure"]
+    assert route["tls"] == {"secretName": "public-otlp-tls"}
+    rules = route["routes"]
+    assert len(rules) == 1 and "middlewares" not in rules[0]
+    assert rules[0]["match"] == (
+        'Host(`otlp.calcifer.tech`) && Method(`POST`) && '
+        '(Path(`/v1/traces`) || Path(`/v1/logs`) || Path(`/v1/metrics`))')
+    assert rules[0]["services"] == [{"name": "otlp-vmauth", "port": 8427}]
+    certificate = rendered[("Certificate", "public-otlp")]["spec"]
+    assert certificate["secretName"] == route["tls"]["secretName"]
+    assert certificate["dnsNames"] == ["otlp.calcifer.tech"]
+    assert certificate["issuerRef"] == {"kind": "ClusterIssuer", "name": "letsencrypt-production-azure"}
+    print("PASS: ConfigMap/Secret references; single replica; TLS/exact POST paths to vmauth only")
 
     def allowed(policy, labels, port):
         return any(any(peer.get("podSelector", {}).get("matchLabels") == labels and
@@ -69,8 +80,10 @@ def main():
     for name in ("victoria-traces", "victoria-logs", "victoria-metrics"):
         filename = f"{AREA}/{name}-ingress-network-policy.yaml"
         old = objects(run(["git", "show", f"HEAD:{filename}"]))[("NetworkPolicy", name + "-ingress")]
-        old["spec"]["ingress"][0]["from"].insert(1, {
-            "podSelector": {"matchLabels": {"app.kubernetes.io/name": "alloy-otlp-gateway"}}})
+        peer = {"podSelector": {"matchLabels": {"app.kubernetes.io/name": "alloy-otlp-gateway"}}}
+        peers = old["spec"]["ingress"][0]["from"]
+        if peer not in peers:
+            peers.insert(1, peer)
         assert old["spec"] == rendered[("NetworkPolicy", name + "-ingress")]["spec"]
     assert not run(["git", "diff", "--name-only", "HEAD", "--", "clusters/calcifer-home"]).strip()
     print("PASS: existing Alloy/collection/backups unchanged; PVCs preserved; Home unchanged")

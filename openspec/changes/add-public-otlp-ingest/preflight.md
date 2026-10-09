@@ -4,12 +4,14 @@ Read-only checks performed on 2026-10-08 against `calcifer-cloud`. No new
 dependencies, credentials, deployments, or Git commits were created during that
 preflight. Implementation/credential provisioning and local checks on 2026-10-09
 are recorded below. Commit `a7f263c` was pushed and the private gateway reconciled
-on 2026-10-09; the public route remains excluded and disabled.
+on 2026-10-09. The subsequent instruction to proceed after the public-opening
+clarification authorizes the public route without adding the rejected custom
+limits; public rollout and acceptance are recorded separately below.
 
 ## Confirmed prerequisites
 
-- `otlp.calcifer.tech` resolves to `136.144.222.128`; explicit hostname approval
-  remains task 1.1, even though DNS is present.
+- `otlp.calcifer.tech` resolves to `136.144.222.128`; the subsequent instruction
+  to proceed after the public-opening clarification completes task 1.1.
 - The local `CALCIFER_OTLP_API_KEY` entry and named GitHub repository secret are
   absent at preflight. `gh` reports push/admin permissions for
   `dmgiangi/peer-reviewer`. Absence was rechecked before provisioning on 2026-10-09;
@@ -63,11 +65,12 @@ earlier guesses: maximum request size, request rate/burst, concurrency, tail
 decision delay, per-client pending trace count, trace size, decision cache, and
 exporter queue/batch/retry bounds. No traffic/span-arrival profile is available
 to size these settings. Select and validate them with the user using relevant
-client measurements. Do not expose or enable the public route until ingestion
-limits and bounded sampler behavior are agreed and tested. The `v1.153.0`
+client measurements. The subsequent instruction authorizes best-effort public
+rollout with inherited pinned defaults unchanged; measurements and custom tuning
+remain follow-up work, not public-opening gates. The `v1.153.0`
 version is the official non-prerelease release published on 2026-09-28.
 
-## Implementation and validation — 2026-10-09
+## Private implementation and validation — 2026-10-09
 
 - Added private one-replica/Recreate Alloy and vmauth Deployments, split receiver
   identities and salted samplers, explicit protobuf signal exporters, separate
@@ -108,6 +111,23 @@ version is the official non-prerelease release published on 2026-09-28.
   behavior, observed resource pressure, client/load acceptance and post-rollout
   collection regressions remain pending. Flux reconciliation and effective
   retention were verified; no public endpoint has been enabled.
+
+## Public rollout — 2026-10-09
+
+- The user instructed “procedi” after the explicit public-opening clarification.
+  `public-otlp-ingress.yaml` is included for rollout on `otlp.calcifer.tech`.
+  No rejected custom rate/size/timing/buffer/queue limits were introduced.
+- Pre-opening isolation probes passed: Traefik reaches vmauth (401 without a
+  key), but receiver ports 4318/4319 and management ports 8428/12345 reject its
+  connections. Authorized existing Alloy scraper health controls return 200.
+  K3s denies these connections with refusal, not necessarily a timeout.
+- At this check, gateway/vmauth memory is 44/5 MiB and node MemoryPressure and
+  DiskPressure are False. This idle snapshot is not a load-capacity measurement.
+- Updated manifest contracts, seven credential unit tests, Cloud rendering,
+  route/Certificate server dry-run, strict OpenSpec validation and IDE build pass.
+- Public Flux rollout, TLS issuance and tiny server-key telemetry acceptance
+  follow this commit. Real SDK/GitHub workflows, live revocation, late spans and
+  queue/resource/storage-pressure tests remain deferred.
 
 ## Evidence sources
 

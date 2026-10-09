@@ -3,7 +3,7 @@
 ### Requirement: Authenticated public OTLP HTTP ingestion
 The system SHALL provide an HTTPS OTLP/HTTP ingestion endpoint on `calcifer-cloud`
 for POST requests to `/v1/traces`, `/v1/logs`, and `/v1/metrics`. The proposed
-hostname is `otlp.calcifer.tech`, subject to approval before deployment. All three
+hostname is `otlp.calcifer.tech`, approved for public rollout on 2026-10-09. All three
 signals SHALL require a valid bearer API key before reaching the collector.
 
 #### Scenario: Authorized signal ingestion
@@ -91,8 +91,11 @@ they submit identical trace IDs. Logs and metrics SHALL bypass trace sampling.
 - **THEN** all accepted records SHALL bypass trace-sampling decisions and enter the corresponding backend exporter
 
 ### Requirement: Bounded ingestion with private existing collection preserved
-Public request rates, request sizes, collector buffers/memory, and exporter
-queues SHALL have explicit validated limits. Credentials and request bodies SHALL
+Collector memory SHALL use the approved explicit limits. Custom public request
+rates/sizes, sampler buffers/caches and exporter queue bounds SHALL remain deferred
+until measured and approved; the authorized initial public rollout SHALL use the
+documented pinned-version defaults without claiming validated load capacity or
+lossless ingestion. Credentials and request bodies SHALL
 not appear in access logs or diagnostic telemetry. The existing Cloud Alloy
 DaemonSet, private Home ingestion, and internal backend query paths SHALL remain
 available without changing `calcifer-home` manifests or requiring public keys.

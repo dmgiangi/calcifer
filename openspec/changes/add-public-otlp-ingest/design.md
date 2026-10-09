@@ -9,13 +9,14 @@ their age-based retention.
 
 Two external clients require distinct credentials: `peer-reviewer-local` and
 `peer-reviewer-github`. Both may request trace sampling exemption. The proposed
-public hostname is `otlp.calcifer.tech`, subject to user approval.
+public hostname is `otlp.calcifer.tech`, approved for rollout on 2026-10-09 after
+the public-opening clarification.
 
-Implementation has started: retention, the private vmauth/Alloy gateway, and
-NetworkPolicies are in GitOps manifests, not yet deployed. Two independent keys
-have been encrypted and delivered to the local startup file and GitHub secret.
-The public Certificate/IngressRoute is staged but excluded from Kustomize. Local
-Docker acceptance passed; findings and remaining gates are in `preflight.md`.
+Retention, the private vmauth/Alloy gateway and NetworkPolicies are deployed via
+Flux. Two independent keys have been encrypted and delivered to the local
+startup file and GitHub secret. The public Certificate/IngressRoute is now
+included for the authorized rollout, without custom ingestion limits. Local
+Docker acceptance passed; live findings and deferred checks are in `preflight.md`.
 
 ## Goals / Non-Goals
 
@@ -86,17 +87,18 @@ Absent, false, string `"true"`, or numeric values do not request exemption.
 Clients must export the required spans rather than head-sampling them away. They
 should set the boolean marker early and consistently on the relevant spans or
 resource; marking only a late-ending root span is not a reliable exemption.
-Use a bounded decision window, trace buffer, and sampled/non-sampled decision
-caches, but choose their values only after measuring client span arrival patterns
-and obtaining approval. No numeric sampler limits are approved yet; keep the
-public route disabled until safe bounded values are configured and tested. Late
-markers cannot restore previously discarded spans. Document restart, overflow,
-and late-span behavior explicitly.
+Choose custom decision-window, trace-buffer and sampled/non-sampled cache values
+only after measuring client span arrival patterns and obtaining approval. The
+user directed public rollout without the rejected guessed limits, so those
+measurements are follow-up work, not public-opening gates. Late markers cannot
+restore previously discarded spans. Document restart, overflow and late-span
+behavior explicitly; no load or late-span acceptance is implied by opening TLS.
 
-The private staging configuration omits custom sizing, inheriting Alloy's
+The deployed configuration omits custom sizing, inheriting Alloy's
 30-second decision wait, 50000 trace slots per sampler and disabled decision
 caches. Omission is not an unlimited sampler and does not mean these defaults
-are approved for public use. Exporter/request defaults have the same status.
+are a measured client capacity budget. They remain unchanged for the authorized
+best-effort public rollout. Exporter/request defaults have the same status.
 
 The 50% rate is probabilistic across traces, not an exact count per request or
 sampling of half the spans in each trace. Logs and metrics bypass trace sampling.
@@ -185,16 +187,19 @@ metadata and pass/fail results. Each destination receives only its own token.
 ## Open Questions / Approval Gates
 
 - The user approved vmauth `v1.153.0` and the proposed memory requests/limits on
-  2026-10-09. Obtain explicit approval for `otlp.calcifer.tech` before routing it.
+  2026-10-09, then instructed public opening on `otlp.calcifer.tech` following
+  the explicit clarification, without adding the rejected custom limits.
 - Shared six-month retention and the 8/20 GiB application caps were approved;
   existing PVC requests and shared-backend scope remain unchanged.
-- Measure client traffic/span arrival patterns and agree on request size/rate,
-  concurrency, decision timing, trace-buffer/cache, and queue bounds before
-  enabling the public route. Do not invent values or infer headroom from retention.
+- Measure client traffic/span arrival patterns before proposing custom request
+  size/rate, concurrency, decision timing, trace-buffer/cache and queue bounds.
+  This is deferred tuning work, not an opening gate. Do not invent values or
+  infer headroom from retention.
 - OpenSpec CLI strict validation, pinned image validators, local Docker
   acceptance and Kubernetes server dry-run passed. Real client arrival patterns,
-  resource/queue pressure, live receiver isolation, TLS and Flux rollout remain
-  unverified; see `preflight.md`.
+  resource/queue pressure and late/cache behavior remain unverified. The private
+  Flux rollout is complete; public TLS and live isolation/acceptance checks are
+  in progress. See `preflight.md`.
 
 ## References
 

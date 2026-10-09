@@ -21,7 +21,7 @@ resources:
   - otlp-vmauth.yaml
   - otlp-gateway.yaml
   - otlp-gateway-network-policy.yaml
-# public-otlp-ingress.yaml is staged separately: do NOT enable before approvals.
+  - public-otlp-ingress.yaml
 configMapGenerator:
   - name: alloy-otlp-gateway
     namespace: monitoring

@@ -1,5 +1,5 @@
-# STAGED ONLY: deliberately NOT included by kustomization.yaml.
-# Enable only after hostname approval, agreed capacity settings and acceptance.
+# Public rollout approved on 2026-10-09; custom ingestion limits remain deferred.
+# Expose only authenticated OTLP/HTTP POST paths, never management/query endpoints.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:

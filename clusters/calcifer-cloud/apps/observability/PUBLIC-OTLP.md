@@ -1,14 +1,14 @@
 # Public OTLP ingestion — `calcifer-cloud`
 
-> **Status: staged, not live.** Gateway, `vmauth`, and NetworkPolicy manifests
-> are staged files, not a completed rollout. `public-otlp-ingress.yaml` is
-> explicitly excluded from `kustomization.yaml`; the public route is closed.
-> No rollout or public telemetry acceptance test has occurred. The proposed
-> hostname also requires explicit approval before routing.
+> **Status: public rollout authorized, acceptance in progress.** The private
+> gateway, `vmauth`, NetworkPolicies and retention are deployed. The user directed
+> opening `otlp.calcifer.tech` on 2026-10-09 without the rejected custom limits;
+> `public-otlp-ingress.yaml` is now included in `kustomization.yaml`. Live receiver
+> and management isolation probes passed; public TLS/telemetry checks follow Flux.
 
 ## Endpoint and client setup
 
-The prospective endpoint is `https://otlp.calcifer.tech`. The intended interface
+The endpoint is `https://otlp.calcifer.tech`. The interface
 is OTLP/HTTP only: POST protobuf or JSON payloads to `/v1/traces`, `/v1/logs`, or
 `/v1/metrics`. OTLP/gRPC, query APIs, and collector administration are not exposed.
 Set `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` explicitly. Use the
@@ -57,10 +57,10 @@ decision cannot be recovered. A timely true marker keeps the received trace as a
 unit. Other traces are sampled probabilistically at 50% (not an exact per-request
 quota); logs and metrics bypass trace sampling.
 
-The staged Alloy configuration omits custom tail-sampler sizing. With pinned
+The deployed Alloy configuration omits custom tail-sampler sizing. With pinned
 Alloy `v1.19.2`, upstream defaults are a 30-second decision wait and 50,000 trace
 slots **per alias sampler**; decision caches are inactive by default. These are
-inherited defaults, not measured or approved bounds. A late span may miss a
+inherited defaults, not a measured client-capacity budget. A late span may miss a
 decision, and in-memory pending traces can be lost on restart or overload. No
 late-span or cache-behavior test has been run.
 
@@ -76,23 +76,23 @@ No custom request-size, request-rate/burst, concurrency, tail-buffer/cache,
 exporter-queue, batching, or retry limits have been approved or configured.
 Each Alloy exporter inherits pinned `v1.19.2` defaults, including an in-memory
 1,000-request queue, 10 consumers, and a five-minute retry expiry; the
-configuration does not select these as an approved capacity budget. With the
+configuration does not select these as a measured capacity budget. With the
 pinned `vmauth:v1.153.0` image and no explicit overrides, its source defaults are
 100 concurrent requests per user, 1,000 globally, and a 10-second queue duration.
-Those defaults are likewise not a measured or approved public-ingestion policy.
+Those defaults are likewise not a measured public-ingestion capacity budget.
 Do not infer a safe request ceiling, no-loss behavior, or availability promise
-from these defaults. Keep the public route closed until measured traffic informs
-explicit limits and the behavior is tested.
+from these defaults. The user directed public rollout with these inherited
+defaults unchanged; custom tuning awaits client measurements and approval.
 
-VictoriaLogs and VictoriaTraces are staged for `6M` native fixed-duration
-retention; VictoriaMetrics remains at 365 days. The staged application cleanup
+VictoriaLogs and VictoriaTraces use `6M` native fixed-duration
+retention; VictoriaMetrics remains at 365 days. The application cleanup
 caps are 8 GiB for logs and 20 GiB for traces. Existing PVC requests remain
 unchanged: 8 GiB for logs and 10 GiB for traces, both using `local-path`. This
 StorageClass uses shared node storage rather than enforcing a per-claim filesystem
 quota. Disk pressure can cause earlier deletion than the age setting; `6M` is not
 a minimum-history guarantee. Trace disk usage was not measurable when the cap was
 selected, so 20 GiB is an allowance, not a stored-size forecast. These retention
-and cap settings have not been deployed.
+and cap settings were verified on the live StatefulSets after Flux reconciliation.
 
 ## Credentials and rotation
 
@@ -133,13 +133,18 @@ not send telemetry to the production cluster:
 
 Actual encrypted credentials also passed the pinned vmauth dry-run via stdin,
 with output suppressed; gateway/route/policy schemas passed Kubernetes server
-dry-run. These checks do not deploy resources. Before opening the route, still
-verify hostname approval, TLS issuance, live NetworkPolicy isolation and
-direct-receiver denial, production-key acceptance and resource/load behavior.
-Validate real client SDK temporality and late-span and
-queue-loss behavior explicitly; no test of those defaults is claimed. Review
-Flux reconciliation and effective retention after an approved rollout. Do not
-enable `public-otlp-ingress.yaml` until these gates are complete.
+dry-run. `check_public_otlp_live.py --network-only` confirms Traefik reaches auth
+but cannot bypass it to receivers or management ports; authorized scraper health
+controls pass. Public TLS/real-server-key acceptance runs after Flux using
+`check_public_otlp_live.py --accept-live-telemetry`. This explicit opt-in test
+writes only two logs, two gauge points and two two-span force-kept traces, uses
+loopback-only private query tunnels, and prints pass/fail without credentials or
+payloads. It does not rotate/revoke keys or modify client workflows.
+
+Validate real SDK temporality, span arrival, late-span/cache behavior and
+queue/resource pressure separately. None is claimed by the smoke test. In
+particular, testing the GitHub server credential does not prove a GitHub Actions
+workflow or SDK is configured; those client changes remain outside this rollout.
 
 Pinned references: [Alloy tail sampling](https://grafana.com/docs/alloy/v1.19/reference/components/otelcol/otelcol.processor.tail_sampling/),
 [Alloy OTLP/HTTP exporter](https://grafana.com/docs/alloy/v1.19/reference/components/otelcol/otelcol.exporter.otlphttp/),

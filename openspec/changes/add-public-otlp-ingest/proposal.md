@@ -23,10 +23,11 @@ need an explicit way to exempt important traces from sampling.
 - Increase the existing VictoriaLogs and VictoriaTraces time-retention settings
   to six backend-native months (`6M`), including infrastructure data. Keep the
   existing 365-day metrics retention and shared backends.
-- Bound public request size, rate, collector memory, sampling buffers, and
-  exporter queues after measurements and explicit approval; until then keep the
-  public route disabled. Monitor losses and storage pressure without logging
-  credentials or payloads.
+- Retain approved collector memory limits. Defer custom request size/rate,
+  sampling buffers and exporter queues until measurements and explicit approval;
+  the user directed public rollout with the documented pinned defaults on
+  2026-10-09. Monitor losses and storage pressure without logging credentials or
+  payloads; this is best-effort ingestion, not validated load capacity.
 
 ## Capabilities
 
@@ -57,8 +58,8 @@ need an explicit way to exempt important traces from sampling.
   log and 20 GiB trace disk-cleanup caps, and existing 8/10 GiB PVC requests, do
   not guarantee six months of actual history; disk-pressure cleanup can evict
   older data before its age-based retention expires.
-- Strict OpenSpec validation now passes. Retention and disk bounds are prepared
-  in GitOps manifests, but have not been deployed. Hostname and ingestion-resource
-  approvals remain gates; vmauth version and memory limits are approved, while
-  request/sampling bounds are deferred pending measurements.
-  See `preflight.md`. Runtime acceptance is still pending.
+- Strict OpenSpec validation passes. The private gateway, retention and disk
+  bounds have been reconciled by Flux. The user's instruction to proceed after
+  the public-opening clarification authorizes `otlp.calcifer.tech` with custom
+  request/sampling bounds deferred. Public TLS/authentication acceptance is in
+  progress; load and real SDK acceptance remain separate. See `preflight.md`.
