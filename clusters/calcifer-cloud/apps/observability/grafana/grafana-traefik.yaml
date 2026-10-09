@@ -41,6 +41,18 @@ spec:
   entryPoints:
     - websecure
   routes:
+    # Grafana native service-account tokens (glsa_*) are validated by Grafana
+    # itself. Bypass the authorization-server forward-auth for them so they are
+    # not rejected as malformed JWTs, while still stripping spoofable proxy-auth
+    # headers.
+    - match: Host(`grafana.calcifer.tech`) && PathPrefix(`/api`) && HeaderRegexp(`Authorization`, `^Bearer\s+glsa_`)
+      kind: Rule
+      priority: 200
+      middlewares:
+        - name: grafana-strip-auth-headers
+      services:
+        - name: grafana-service
+          port: 3000
     - match: Host(`grafana.calcifer.tech`) && PathPrefix(`/api`)
       kind: Rule
       priority: 100
