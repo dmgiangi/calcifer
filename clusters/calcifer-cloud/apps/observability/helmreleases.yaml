@@ -156,8 +156,8 @@ spec:
     server:
       fullnameOverride: victoria-traces
       replicaCount: 1
-      retentionPeriod: 7d
-      retentionDiskSpaceUsage: 8
+      retentionPeriod: 6M
+      retentionDiskSpaceUsage: "20GiB"
       podAnnotations:
         backup.velero.io/backup-volumes: server-volume
       podLabels:
@@ -257,8 +257,8 @@ spec:
     server:
       fullnameOverride: victoria-logs
       replicaCount: 1
-      retentionPeriod: 14d
-      retentionDiskSpaceUsage: 8
+      retentionPeriod: 6M
+      retentionDiskSpaceUsage: "8GiB"
       podLabels:
         observability.calcifer.tech/logs-backend: victoria-logs
       podAnnotations:

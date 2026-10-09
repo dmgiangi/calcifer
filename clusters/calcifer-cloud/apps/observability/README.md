@@ -6,10 +6,17 @@ VictoriaTraces, Grafana Operator, and Velero in the `monitoring` namespace.
 Deployment settings:
 
 - Grafana hostname: `grafana.calcifer.tech`
-- Metrics retention: 365 days on local ext4 persistent volume, enforced by VictoriaMetrics.
-- Logs retention: 14 days on local ext4 persistent volume, enforced by VictoriaLogs (excluded from remote Velero backup).
-- Trace retention: 7 days with an 8 GiB data cap on a 10 GiB local persistent
-  volume, enforced by VictoriaTraces.
+- Metrics retention: 365 days on the existing 8 GiB `local-path` volume, enforced by VictoriaMetrics.
+- Logs retention: `6M` (fixed-duration months) with an 8 GiB VictoriaLogs disk-usage
+  cap on the existing 8 GiB `local-path` PVC (excluded from remote Velero backup).
+- Trace retention: `6M` (fixed-duration months) with a 20 GiB VictoriaTraces
+  disk-usage cap on the existing 10 GiB `local-path` PVC.
+- `local-path` PVC sizes are unchanged and do not impose per-claim filesystem
+  quotas: they use shared node storage. Disk-pressure cleanup can therefore evict
+  data before its age retention expires; the caps do not guarantee six months of
+  stored history. These retention settings are staged and have not been rolled out.
+- The public OTLP gateway is staged but closed; see [Public OTLP ingestion](PUBLIC-OTLP.md)
+  for client setup, credential handling, safety limits, and rollout gates.
 - Disaster recovery: Velero with Kopia File System Backup schedules daily backups
   of observability PVCs to the private `backups` container in `stcalciferbackupitn`.
 - Azure credentials for Velero use a dedicated service principal with

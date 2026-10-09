@@ -1,0 +1,223 @@
+logging {
+  level  = "warn"
+  format = "logfmt"
+}
+
+// Private staging only: sampler/queue/receiver tuning is deliberately omitted.
+// Omission uses upstream defaults, NOT unlimited capacity or approved sizing.
+// Do not register public-otlp-ingress.yaml until these defaults are reviewed.
+otelcol.receiver.otlp "local" {
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+  output {
+    traces  = [otelcol.processor.memory_limiter.local.input]
+    logs    = [otelcol.processor.memory_limiter.local.input]
+    metrics = [otelcol.processor.memory_limiter.local.input]
+  }
+}
+
+otelcol.receiver.otlp "github" {
+  http {
+    endpoint = "0.0.0.0:4319"
+  }
+  output {
+    traces  = [otelcol.processor.memory_limiter.github.input]
+    logs    = [otelcol.processor.memory_limiter.github.input]
+    metrics = [otelcol.processor.memory_limiter.github.input]
+  }
+}
+
+// Leave headroom beneath the approved 512 MiB container limit.
+otelcol.processor.memory_limiter "local" {
+  check_interval = "1s"
+  limit          = "384MiB"
+  spike_limit    = "64MiB"
+  output {
+    traces  = [otelcol.processor.transform.local.input]
+    logs    = [otelcol.processor.transform.local.input]
+    metrics = [otelcol.processor.transform.local.input]
+  }
+}
+
+otelcol.processor.memory_limiter "github" {
+  check_interval = "1s"
+  limit          = "384MiB"
+  spike_limit    = "64MiB"
+  output {
+    traces  = [otelcol.processor.transform.github.input]
+    logs    = [otelcol.processor.transform.github.input]
+    metrics = [otelcol.processor.transform.github.input]
+  }
+}
+
+otelcol.processor.transform "local" {
+  error_mode = "propagate"
+  trace_statements {
+    context = "resource"
+    statements = [
+      `set(attributes["calcifer.ingest.client"], "peer-reviewer-local")`,
+      `delete_key(attributes, "calcifer_ingest_client")`,
+    ]
+  }
+  trace_statements {
+    context = "span"
+    statements = [
+      `delete_key(attributes, "calcifer.ingest.client")`,
+      `delete_key(attributes, "calcifer_ingest_client")`,
+    ]
+  }
+  log_statements {
+    context = "resource"
+    statements = [
+      `set(attributes["calcifer.ingest.client"], "peer-reviewer-local")`,
+      `delete_key(attributes, "calcifer_ingest_client")`,
+    ]
+  }
+  log_statements {
+    context = "log"
+    statements = [
+      `delete_key(attributes, "calcifer.ingest.client")`,
+      `delete_key(attributes, "calcifer_ingest_client")`,
+    ]
+  }
+  metric_statements {
+    context = "resource"
+    statements = [
+      `set(attributes["calcifer.ingest.client"], "peer-reviewer-local")`,
+      `delete_key(attributes, "calcifer_ingest_client")`,
+    ]
+  }
+  metric_statements {
+    context = "datapoint"
+    statements = [
+      `delete_key(attributes, "calcifer_ingest_client")`,
+      `set(attributes["calcifer.ingest.client"], resource.attributes["calcifer.ingest.client"])`,
+    ]
+  }
+  output {
+    traces  = [otelcol.processor.tail_sampling.local.input]
+    logs    = [otelcol.exporter.otlphttp.logs.input]
+    metrics = [otelcol.exporter.otlphttp.metrics.input]
+  }
+}
+
+otelcol.processor.transform "github" {
+  error_mode = "propagate"
+  trace_statements {
+    context = "resource"
+    statements = [
+      `set(attributes["calcifer.ingest.client"], "peer-reviewer-github")`,
+      `delete_key(attributes, "calcifer_ingest_client")`,
+    ]
+  }
+  trace_statements {
+    context = "span"
+    statements = [
+      `delete_key(attributes, "calcifer.ingest.client")`,
+      `delete_key(attributes, "calcifer_ingest_client")`,
+    ]
+  }
+  log_statements {
+    context = "resource"
+    statements = [
+      `set(attributes["calcifer.ingest.client"], "peer-reviewer-github")`,
+      `delete_key(attributes, "calcifer_ingest_client")`,
+    ]
+  }
+  log_statements {
+    context = "log"
+    statements = [
+      `delete_key(attributes, "calcifer.ingest.client")`,
+      `delete_key(attributes, "calcifer_ingest_client")`,
+    ]
+  }
+  metric_statements {
+    context = "resource"
+    statements = [
+      `set(attributes["calcifer.ingest.client"], "peer-reviewer-github")`,
+      `delete_key(attributes, "calcifer_ingest_client")`,
+    ]
+  }
+  metric_statements {
+    context = "datapoint"
+    statements = [
+      `delete_key(attributes, "calcifer_ingest_client")`,
+      `set(attributes["calcifer.ingest.client"], resource.attributes["calcifer.ingest.client"])`,
+    ]
+  }
+  output {
+    traces  = [otelcol.processor.tail_sampling.github.input]
+    logs    = [otelcol.exporter.otlphttp.logs.input]
+    metrics = [otelcol.exporter.otlphttp.metrics.input]
+  }
+}
+
+otelcol.processor.tail_sampling "local" {
+  policy {
+    name = "force-keep"
+    type = "boolean_attribute"
+    boolean_attribute {
+      key   = "calcifer.sampling.keep"
+      value = true
+    }
+  }
+  policy {
+    name = "default-50-percent"
+    type = "probabilistic"
+    probabilistic {
+      sampling_percentage = 50
+      hash_salt           = "peer-reviewer-local"
+    }
+  }
+  output {
+    traces = [otelcol.exporter.otlphttp.traces.input]
+  }
+}
+
+otelcol.processor.tail_sampling "github" {
+  policy {
+    name = "force-keep"
+    type = "boolean_attribute"
+    boolean_attribute {
+      key   = "calcifer.sampling.keep"
+      value = true
+    }
+  }
+  policy {
+    name = "default-50-percent"
+    type = "probabilistic"
+    probabilistic {
+      sampling_percentage = 50
+      hash_salt           = "peer-reviewer-github"
+    }
+  }
+  output {
+    traces = [otelcol.exporter.otlphttp.traces.input]
+  }
+}
+
+otelcol.exporter.otlphttp "traces" {
+  encoding        = "proto"
+  traces_endpoint = "http://victoria-traces.monitoring.svc.cluster.local:10428/insert/opentelemetry/v1/traces"
+  client {
+    endpoint = "http://victoria-traces.monitoring.svc.cluster.local:10428/insert/opentelemetry"
+  }
+}
+
+otelcol.exporter.otlphttp "logs" {
+  encoding      = "proto"
+  logs_endpoint = "http://victoria-logs.monitoring.svc.cluster.local:9428/insert/opentelemetry/v1/logs"
+  client {
+    endpoint = "http://victoria-logs.monitoring.svc.cluster.local:9428/insert/opentelemetry"
+  }
+}
+
+otelcol.exporter.otlphttp "metrics" {
+  // Clients must export cumulative sums/histograms for VictoriaMetrics.
+  encoding         = "proto"
+  metrics_endpoint = "http://victoria-metrics.monitoring.svc.cluster.local:8428/opentelemetry/v1/metrics"
+  client {
+    endpoint = "http://victoria-metrics.monitoring.svc.cluster.local:8428/opentelemetry"
+  }
+}

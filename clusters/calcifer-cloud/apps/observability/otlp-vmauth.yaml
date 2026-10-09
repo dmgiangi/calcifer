@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otlp-vmauth
+  namespace: monitoring
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: otlp-vmauth
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: otlp-vmauth
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: vmauth
+          image: victoriametrics/vmauth:v1.153.0
+          args:
+            - -auth.config=/etc/vmauth/auth.yaml
+            - -httpListenAddr=:8427
+            - -httpInternalListenAddr=:8428
+            - -configCheckInterval=10s
+            - -logInvalidAuthTokens=false
+            - -loggerLevel=WARN
+          ports:
+            - name: ingest
+              containerPort: 8427
+            - name: internal
+              containerPort: 8428
+          resources:
+            requests:
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: internal
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: internal
+          volumeMounts:
+            - name: auth
+              mountPath: /etc/vmauth
+              readOnly: true
+      volumes:
+        - name: auth
+          secret:
+            secretName: public-otlp-auth
+            defaultMode: 0440
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otlp-vmauth
+  namespace: monitoring
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: otlp-vmauth
+  ports:
+    - name: ingest
+      port: 8427
+      targetPort: ingest
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otlp-vmauth-internal
+  namespace: monitoring
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "8428"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: otlp-vmauth
+  ports:
+    - name: internal
+      port: 8428
+      targetPort: internal

@@ -17,3 +17,13 @@ resources:
   - victoria-traces-ingress-network-policy.yaml
   - victoria-metrics-ingress-network-policy.yaml
   - victoria-logs-ingress-network-policy.yaml
+  - public-otlp-auth.sops.yaml
+  - otlp-vmauth.yaml
+  - otlp-gateway.yaml
+  - otlp-gateway-network-policy.yaml
+# public-otlp-ingress.yaml is staged separately: do NOT enable before approvals.
+configMapGenerator:
+  - name: alloy-otlp-gateway
+    namespace: monitoring
+    files:
+      - config.alloy=otlp-gateway.alloy

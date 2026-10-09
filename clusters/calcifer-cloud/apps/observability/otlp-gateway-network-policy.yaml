@@ -1,0 +1,58 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: alloy-otlp-gateway-ingress
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: alloy-otlp-gateway
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: otlp-vmauth
+      ports:
+        - protocol: TCP
+          port: 4318
+        - protocol: TCP
+          port: 4319
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: alloy
+              app.kubernetes.io/name: alloy
+      ports:
+        - protocol: TCP
+          port: 12345
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: otlp-vmauth-ingress
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: otlp-vmauth
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 8427
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: alloy
+              app.kubernetes.io/name: alloy
+      ports:
+        - protocol: TCP
+          port: 8428

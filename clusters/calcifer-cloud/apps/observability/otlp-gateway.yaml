@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alloy-otlp-gateway
+  namespace: monitoring
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alloy-otlp-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: alloy-otlp-gateway
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: alloy
+          image: grafana/alloy:v1.19.2
+          args:
+            - run
+            - /etc/alloy/config.alloy
+            - --storage.path=/tmp/alloy
+            - --server.http.listen-addr=0.0.0.0:12345
+            - --disable-reporting
+          ports:
+            - name: otlp-local
+              containerPort: 4318
+            - name: otlp-github
+              containerPort: 4319
+            - name: internal
+              containerPort: 12345
+          resources:
+            requests:
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: internal
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: internal
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alloy
+              readOnly: true
+            - name: temporary
+              mountPath: /tmp
+      volumes:
+        - name: config
+          configMap:
+            name: alloy-otlp-gateway
+        - name: temporary
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alloy-otlp-gateway
+  namespace: monitoring
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: alloy-otlp-gateway
+  ports:
+    - name: otlp-local
+      port: 4318
+      targetPort: otlp-local
+    - name: otlp-github
+      port: 4319
+      targetPort: otlp-github
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alloy-otlp-gateway-internal
+  namespace: monitoring
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "12345"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: alloy-otlp-gateway
+  ports:
+    - name: internal
+      port: 12345
+      targetPort: internal

@@ -1,0 +1,41 @@
+## 1. Approval and preflight
+
+- [ ] 1.1 Approve `otlp.calcifer.tech`, the vmauth dependency and pinned version, and the shared-backend scope of six-month log/trace retention. vmauth and shared retention are approved; explicit public-hostname approval remains pending.
+- [x] 1.2 Restore an approved OpenSpec CLI and run strict validation for `add-public-otlp-ingest`; resolve schema issues before implementation.
+- [x] 1.3 Verify pinned Alloy/chart and backend OTLP features, TLS/DNS conventions, existing Network Policies, and Flux SOPS decryption without exposing credentials. Pinned image validators and Docker OTLP-to-backend round trips passed; policy/TLS schemas passed server dry-run. Live isolation remains an acceptance gate.
+- [ ] 1.4 Measure client span arrival patterns and storage/resource headroom; approve decision-window, request-rate/size, buffer, memory, queue, and disk-capacity bounds without unapproved expansion.
+
+## 2. Safe credential provisioning
+
+- [x] 2.1 Check only metadata/presence for the local export and GitHub secret, verify `gh` repository write access and SOPS tooling, and obtain approval before replacing an existing credential. Both destinations were absent on 2026-10-08; GitHub push/admin permissions and local SOPS decryption passed without displaying plaintext.
+- [x] 2.2 Generate two independent keys with at least 256 bits of entropy without tool-visible plaintext; keep temporary material owner-only and prevent tracing/history/argv exposure. Generated in memory on 2026-10-09 with `secrets.token_urlsafe(32)` twice.
+- [x] 2.3 Encrypt the server auth configuration as a Kubernetes Secret using the existing SOPS rules; commit only ciphertext and mount it without inline HelmRelease/ConfigMap keys. SOPS encryption and internal round-trip passed; no Git commit made.
+- [x] 2.4 Provision the local token as `CALCIFER_OTLP_API_KEY` in `/home/dmgiangi/.bashrc`, preserving unrelated lines and restricting file/backup permissions; verify presence without displaying or sourcing it to inspect the value. Both startup file and backup are mode 0600.
+- [x] 2.5 Use `gh` stdin to set `CALCIFER_OTLP_API_KEY` as the repository Actions secret in `dmgiangi/peer-reviewer`; verify metadata only and document workflow/SDK use separately. Submission succeeded; secret-name metadata confirmed.
+- [x] 2.6 Verify each consumer received its own credential using internal comparisons/pass-fail output and remove temporary plaintext through an approved scoped operation. Local value and encrypted server keys compared internally; distinct GitHub key submitted via stdin and metadata verified (GitHub does not permit secret readback). No temporary plaintext files created.
+
+## 3. Public authentication and collector gateway
+
+- [x] 3.1 Add approved vmauth deployment/chart with two named bearer users, exact ingestion-path routing, removed forwarded Authorization, and no public management/query routes. Pinned vmauth validates decrypted Secret through stdin; Docker checks authentication, private paths and independent revocation. Public route remains excluded.
+- [x] 3.2 Add a dedicated one-replica Alloy gateway with separate private receivers and samplers per alias, preserving the existing DaemonSet and using a non-overlapping rollout strategy. Private Deployment uses Recreate; pinned Alloy v1.19.2 configuration validation passed. Not deployed.
+- [x] 3.3 Apply trusted `calcifer.ingest.client` attribution from receiver identity, remove spoofed conflicting attributes, and verify identity survives backend conversion/querying. Docker queries verified both aliases for traces/logs/gauge and cumulative metrics, including normalized metric-label spoofing.
+- [ ] 3.4 Configure explicit OTLP/HTTP exporters for VictoriaTraces, VictoriaLogs, and VictoriaMetrics; validate encodings, metric temporality, and batch/retry behavior. Exact protobuf exporters and JSON receiver payloads passed pinned-backend tests; cumulative metric requirement documented. Queue/retry bounds and failure behavior remain deferred.
+- [ ] 3.5 Configure boolean `calcifer.sampling.keep=true` exemption plus 50% probabilistic trace sampling, bounded decision buffers/caches, and direct unsampled log/metric pipelines. Both boolean policies and independent salted 50% samplers passed Docker tests. No custom timing/buffer/cache values set; inherited defaults are documented and not approved for public rollout.
+- [ ] 3.6 Add TLS/public Traefik routing and Network Policies restricting private receiver access; enforce the approved public rate/size limits and keep UI/metrics/backend query services private.
+- [ ] 3.7 Add resource/queue bounds and operational monitoring for authentication failures, sampling decisions, buffer losses, exporter failures, and storage pressure without logging secrets or payloads.
+
+## 4. Retention and documentation
+
+- [x] 4.1 Change existing VictoriaLogs and VictoriaTraces time retention to `6M` without recreating PVCs or deleting stored data; keep VictoriaMetrics at `365d`.
+- [x] 4.2 Apply the approved disk bounds: retain the 8 GiB log cap (over twice the 1.05 GiB six-month projection) and set the trace cap to 20 GiB (over twice the 9.2 GiB raw-ingress projection); document that trace disk use was not measurable and disk-pressure cleanup may preempt age retention.
+- [x] 4.3 Document endpoint/client header setup, typed force-keep attributes, sampling timing, local/GitHub variable names, key rotation/revocation, resource limits, and client workflow permissions without example secrets. See Cloud PUBLIC-OTLP.md; public route and SDK/workflow changes are explicitly pending.
+
+## 5. Validation and rollout
+
+- [x] 5.1 Render only the relevant Cloud manifests/charts and validate schemas, Secret references, supported Alloy configuration, TLS rules, and Network Policies without printing decrypted auth data. Kustomize references, pinned Alloy/vmauth validators, and server dry-run passed; public route exclusion is asserted by the manifest check.
+- [ ] 5.2 Verify both valid keys for all three signals, missing/invalid/revoked keys, wrong paths/methods, identity spoofing, independent revocation, and direct receiver bypass prevention. Docker synthetic-key tests passed except Kubernetes receiver isolation/public TLS matching, which require an approved rollout.
+- [ ] 5.3 Verify boolean keep on resource/span retains the received trace; absent/false/string markers follow 50%; test cross-client identical IDs, late spans, and decision-cache behavior. Docker tests passed boolean whole-trace retention, absent/false/string populations and cross-client identical IDs. Late-span/cache behavior remains pending agreed settings.
+- [x] 5.4 Verify representative trace retention is statistically consistent with 50%, while logs/metrics are unsampled; check queryable telemetry from both aliases. Isolated Docker tests used pinned backends, 100 independent IDs per unmarked category and both aliases; backend queries verified unsampled logs/metrics. This is local acceptance, not a production/load test.
+- [ ] 5.5 Test documented request-size/rate, memory/buffer/queue protections and storage pressure; verify no auth headers, keys, bodies, or environment dumps enter logs or test output.
+- [ ] 5.6 Regression-check existing Cloud collection, private Home ingestion, Grafana queries, and backups; confirm no Home manifests changed. Static comparison against HEAD passed: only approved retention changes in existing HelmReleases, additive backend peers, unchanged PVCs/DaemonSet/backup settings and Home manifests. Live regressions remain pending rollout.
+- [ ] 5.7 Run the IDE build and relevant repository checks, then obtain rollout approval and verify Flux reconciliation and effective retention flags without exposing secrets. IDE build, seven provisioning unit tests, Docker runtime and manifest contracts, strict OpenSpec validation and whitespace checks passed. No Git commit/push or rollout performed.
