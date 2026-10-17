@@ -5,6 +5,5 @@ resources:
   - private-transit.yaml
   - cert-manager-install.yaml
   - cert-manager-config.yaml
-  - lan-dns-install.yaml
   - home-apps.yaml
   - authorization-server.yaml

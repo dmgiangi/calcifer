@@ -132,7 +132,8 @@ not certificate or ingress aliases. Do not add them back as OAuth endpoint
 profiles or DNS overrides.
 
 Homepage uses the same split-horizon pattern: public `calcifer.tech` resolves
-to Cloud, while the Home `DNSEndpoint` resolves it to `192.168.0.102`. See
+to Cloud, while a static record on the Home router resolves it to
+`192.168.0.102`. See
 `docs/homepage-operations.md` for catalog, OIDC client, and rollout procedures.
 
 ## Azure DNS and certificates

@@ -1,7 +1,8 @@
 # home-assistant-workload Specification
 
 ## Purpose
-TBD - created by archiving change add-home-assistant-home-edge. Update Purpose after archive.
+Define Home Assistant's persistent workload, secure edge access, and routing
+between direct Home LAN access and the Cloud edge.
 ## Requirements
 ### Requirement: Dedicated Home Assistant deployment on Home cluster
 The system SHALL run Home Assistant Core as a single-replica workload on `calcifer-home` using persistent storage for `/config` backed by the `local-path` storage class and a `Recreate` update strategy to prevent concurrent SQLite database access.

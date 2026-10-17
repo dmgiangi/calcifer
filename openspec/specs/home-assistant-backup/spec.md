@@ -1,7 +1,8 @@
 # home-assistant-backup Specification
 
 ## Purpose
-TBD - created by archiving change add-home-assistant-home-edge. Update Purpose after archive.
+Define how Home Assistant configuration and state are backed up to encrypted,
+off-cluster Azure Blob Storage snapshots and retained for recovery.
 ## Requirements
 ### Requirement: Automated periodic backup of Home Assistant configuration to Azure Blob Storage
 The system SHALL run a scheduled backup job on `calcifer-home` to archive the Home Assistant `/config` volume and upload encrypted snapshots to the designated private container in the migrated Italy North Azure Blob Storage account.

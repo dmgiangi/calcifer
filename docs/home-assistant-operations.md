@@ -9,8 +9,8 @@ name directly to the Home node, while Internet clients enter through
 Create and retain an Azure DNS `A` record for `home.calcifer.tech` pointing to
 `136.144.222.128` outside Flux. This is the public Cloud Traefik edge.
 
-The Home `DNSEndpoint` overrides the same name to `192.168.0.102` for LAN
-clients. Do not create an inbound Home router port-forward; public requests
+A static record on the Home router overrides the same name to `192.168.0.102`
+for LAN clients. Do not create an inbound Home router port-forward; public requests
 must use Cloud Traefik and `172.31.255.2:443` over WireGuard.
 
 ## Workload checks

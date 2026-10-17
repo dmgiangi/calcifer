@@ -2,45 +2,40 @@
 
 ## Purpose
 
-Define the declarative Home LAN resolver and its operational availability
-constraint.
+Define how the Home LAN resolves Home service names, and its operational
+constraints.
 
 ## Requirements
 
-### Requirement: Home provides a declarative LAN DNS resolver
-The system SHALL run a dedicated CoreDNS resolver with the `k8s-gateway`
-plugin on `calcifer-home`, separate from K3s cluster DNS. It SHALL be exposed
-at the static Home address on both UDP and TCP port 53, and it SHALL watch only
-the `DNSEndpoint` resources required to resolve selected Home service names in
-the `calcifer.tech` zone.
+### Requirement: The Home router resolves Home service names
+The Home LAN router SHALL hold static DNS records that resolve the selected
+Home service hostnames in the `calcifer.tech` zone to the static Home address
+`192.168.0.102`. The cluster SHALL NOT run a LAN DNS resolver; K3s cluster DNS
+serves only in-cluster workloads.
 
-#### Scenario: Router resolves a declared Home service name
-- **WHEN** the LAN router forwards a DNS query for a declared Home service
-  hostname to `192.168.0.102`
-- **THEN** the resolver SHALL return the target recorded in its corresponding
-  Kubernetes `DNSEndpoint`
+#### Scenario: LAN client resolves a Home service name
+- **WHEN** a LAN client queries the router for a Home service hostname that has
+  a static record
+- **THEN** the router SHALL return `192.168.0.102`
 
-### Requirement: LAN DNS preserves public resolution for undeclared names
-The system SHALL forward undeclared queries directly to `1.1.1.1` and SHALL
-not forward them back to the LAN router. A Cloud-hosted canonical name without
-a Home `DNSEndpoint` SHALL therefore retain its public DNS answer.
+### Requirement: The router preserves public resolution for other names
+The router SHALL forward queries that do not match a static record to public
+upstream resolvers and SHALL NOT use DNS servers learned dynamically from the
+ISP (peer DNS disabled). A Cloud-hosted canonical name without a static record
+SHALL therefore retain its public DNS answer.
 
-#### Scenario: Router queries a Cloud-hosted name
-- **WHEN** the LAN router queries the Home resolver for an undeclared
-  Cloud-hosted `calcifer.tech` hostname
-- **THEN** the resolver SHALL return the public upstream answer without a DNS
-  forwarding loop
+#### Scenario: LAN client queries a Cloud-hosted name
+- **WHEN** a LAN client queries the router for a Cloud-hosted `calcifer.tech`
+  hostname that has no static record
+- **THEN** the router SHALL return the public upstream answer
 
-### Requirement: Router fallback does not bypass local routing during health
-The Home LAN router SHALL use the Home resolver as its primary upstream and
-Cloudflare as fallback where that configuration is supported. In the deployed
-environment, the router cannot implement that fallback configuration; this is
-an accepted operational constraint and SHALL be documented for monitoring and
-incident recovery.
+### Requirement: Home service records are maintained on the router
+Each Home service hostname that must resolve to the Home address SHALL have a
+matching static record on the router. The record set is not managed by Flux and
+SHALL be restored from the documented router configuration when the router is
+replaced or reset.
 
-#### Scenario: Home resolver becomes unavailable
-- **WHEN** the Home LAN DNS resolver is unavailable
-- **THEN** the router SHALL report DNS failure until the Home resolver is
-  restored, because the deployed router cannot provide the intended Cloudflare
-  fallback. It SHALL not expose or successfully resolve the declared Home
-  record through a public destination.
+#### Scenario: A new Home service is published
+- **WHEN** a new Home service hostname is added to the repository
+- **THEN** the operator SHALL add the matching static router record before LAN
+  clients are expected to reach it

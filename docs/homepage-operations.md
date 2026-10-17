@@ -2,7 +2,7 @@
 
 Homepage is deployed from `clusters/apps/homepage/web-base` and the
 `cloud-web`/`home-web` overlays. Both instances use `https://calcifer.tech`,
-while Home publishes a LAN-only `DNSEndpoint` for split-horizon DNS.
+while the Home router holds a LAN-only static DNS record for split-horizon DNS.
 
 ## Add or update a dashboard service
 

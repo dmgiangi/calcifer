@@ -18,5 +18,4 @@ spec:
       name: sops-age
   dependsOn:
     - name: cert-manager-config
-    - name: lan-dns-install
     - name: private-transit

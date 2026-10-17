@@ -7,7 +7,7 @@ Define stable platform and application-domain namespace boundaries for both Calc
 ## Requirements
 
 ### Requirement: Clusters use platform and domain namespace boundaries
-The system SHALL preserve dedicated namespaces for platform capabilities and SHALL place application resources in domain namespaces rather than one namespace per workload. `flux-system`, `kube-system`, `cert-manager`, `monitoring`, `authorization`, and `private-transit` SHALL remain separate platform namespaces on clusters where they are installed, and `lan-dns` SHALL remain a separate Home platform namespace.
+The system SHALL preserve dedicated namespaces for platform capabilities and SHALL place application resources in domain namespaces rather than one namespace per workload. `flux-system`, `kube-system`, `cert-manager`, `monitoring`, `authorization`, and `private-transit` SHALL remain separate platform namespaces on clusters where they are installed.
 
 #### Scenario: Home application placement is reconciled
 - **WHEN** Flux reconciles the post-migration state on `calcifer-home`

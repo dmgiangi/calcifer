@@ -1,7 +1,8 @@
 # home-assistant-oidc-auth Specification
 
 ## Purpose
-TBD - created by archiving change add-home-assistant-home-edge. Update Purpose after archive.
+Define Home Assistant's declarative OpenID Connect single sign-on integration
+and the local administrative recovery path.
 ## Requirements
 ### Requirement: Declarative OIDC client registration for Home Assistant
 The system SHALL configure an OIDC client definition for Home Assistant in `authorization-server` declaring authorization code grant, PKCE enforcement, OIDC standard scopes, and canonical redirect URI.

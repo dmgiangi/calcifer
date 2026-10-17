@@ -42,8 +42,8 @@ hostname and valid TLS certificate.
 #### Scenario: A service relies on Cloud-only access control
 - **WHEN** a selected service depends on an authorization middleware available
   only at the Cloud edge
-- **THEN** its LAN DNS override SHALL remain disabled until an equivalent Home
-  control is configured
+- **THEN** its static LAN DNS record on the Home router SHALL NOT exist until an
+  equivalent Home control is configured
 
 #### Scenario: A protected Home service supports direct LAN access
 - **WHEN** an authorized LAN client uses an enabled canonical hostname that
@@ -54,8 +54,8 @@ hostname and valid TLS certificate.
 ### Requirement: Decommissioned edge-test route is absent
 
 The system SHALL NOT publish `edge-test.calcifer.tech` through the Cloud or
-Home edge path after the deprovisioning change. It SHALL remove the managed
-Home LAN DNS record, edge routes, backend service, and certificates associated
+Home edge path after the deprovisioning change. It SHALL remove the Home router
+static LAN DNS record, edge routes, backend service, and certificates associated
 with that hostname, without changing routing for other selected Home services.
 
 #### Scenario: Flux reconciles the deprovisioned edge state
@@ -63,7 +63,8 @@ with that hostname, without changing routing for other selected Home services.
 - **WHEN** the Cloud and Home application Kustomizations reconcile the desired
   state after `edge-test` removal
 - **THEN** neither cluster SHALL retain an `edge-test` namespace or an
-  `edge-test` backend, Service, ingress route, DNS endpoint, or certificate
+  `edge-test` backend, Service, ingress route, or certificate, and the Home
+  router SHALL hold no `edge-test` static DNS record
 
 #### Scenario: Former edge-test hostname is no longer served by the platform
 

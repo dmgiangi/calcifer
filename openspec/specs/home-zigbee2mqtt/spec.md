@@ -1,7 +1,8 @@
 # home-zigbee2mqtt Specification
 
 ## Purpose
-TBD - created by syncing change add-zigbee2mqtt-mosquitto.
+Define the persistent Zigbee2MQTT workload, its MQTT connectivity, and secure
+LAN and Internet access through the Home and Cloud edges.
 
 ## Requirements
 
