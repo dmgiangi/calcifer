@@ -7,6 +7,8 @@ data:
   haproxy.cfg: |
     global
       log stdout format raw local0
+      nbthread 1
+      maxconn 256
     defaults
       mode tcp
       log global
@@ -39,7 +41,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: lan-proxy-v1
+        checksum/config: lan-proxy-v2
       labels:
         app.kubernetes.io/name: mosquitto-lan-proxy
     spec:
@@ -82,7 +84,7 @@ spec:
               cpu: 10m
               memory: 16Mi
             limits:
-              memory: 64Mi
+              memory: 128Mi
           volumeMounts:
             - name: config
               mountPath: /usr/local/etc/haproxy/haproxy.cfg
