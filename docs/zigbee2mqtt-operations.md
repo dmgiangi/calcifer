@@ -7,7 +7,7 @@ and Internet. Home Traefik routes to the OAuth2 Proxy sidecar in
 `home-automation`; Cloud Traefik forwards HTTPS from `web` over WireGuard with
 canonical SNI. Both edges require the `admin` role from the authorization
 server. The unprotected Zigbee2MQTT application port remains cluster-internal.
-A restricted LAN endpoint for MQTT is prepared but not yet deployed; see below.
+A restricted LAN endpoint for MQTT is described below.
 
 Verify both paths without reading Secret data:
 
@@ -56,9 +56,9 @@ retained discovery topics, and Home Assistant MQTT entities without re-pairing.
 
 ## Therment LAN MQTT
 
-Therment is intended to connect to `192.168.0.102:1883` over TCP. The prepared
-separate host-network HAProxy will bind only that Home node address and reject
-connections whose source is outside `192.168.0.0/24`, then forward to the
+Therment connects to `192.168.0.102:1883` over TCP. The separate
+host-network HAProxy binds only that Home node address and rejects
+connections whose source is outside `192.168.0.0/24`, then forwards to the
 existing ClusterIP Service. It is pinned to `calcifer-home`; a node address or
 hostname change requires updating the manifest. Increment its pod-template
 `checksum/config` annotation when changing its ConfigMap so Flux rolls it out.
@@ -93,7 +93,7 @@ local file when no longer needed. Rotate the SOPS secret if exposed; restart
 the broker after a secret update because the init container generates its
 password file only at pod start. Never log the decrypted data.
 
-### Proposed Therment contract and ACLs (not yet deployed)
+### Therment contract and proposed ACLs
 
 Initial device ID: `therment-01`. Other IDs must be stable, unique, and contain
 no `/`, `+`, or `#`. Payloads are UTF-8; temperatures are degrees Celsius.
@@ -142,9 +142,8 @@ compressor delay including after restart.
 
 ### Candidate Home Assistant discovery payload
 
-The following payload fixes the mapping of the proposed contract without adding
-firmware topics. Publish it retained to the discovery topic only after resolving
-the control limitation below and testing with the installed integration:
+The firmware publishes the following discovery mapping retained; validate it
+end-to-end with the installed integration and device:
 
 ```json
 {
