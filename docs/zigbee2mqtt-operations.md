@@ -104,10 +104,15 @@ requires end-to-end validation with the device and Home Assistant.
 | --- | --- | --- | --- |
 | `homeassistant/climate/therment-01/config` | write | read | discovery JSON; retained |
 | `therment/therment-01/temperature` | write | read | numeric temperature or literal `None` when invalid; retained |
-| `therment/therment-01/state` | write | read | JSON, e.g. `{"setpoint":16.0,"mode":"auto","action":"cooling","sensor":"ok"}`; retained |
+| `therment/therment-01/state` | write | read | JSON, e.g. `{"setpoint":16.0,"delta_lower":0.5,"delta_upper":0.5,"cooling_wait":false,"mode":"auto","action":"cooling","sensor":"ok"}`; retained |
 | `therment/therment-01/availability` | write | read | `online` or `offline`; retained |
 | `therment/therment-01/setpoint/set` | read | write | numeric requested setpoint; not retained |
 | `therment/therment-01/mode/set` | read | write | `auto` or `off`; not retained |
+| `therment/therment-01/delta_lower/set` | read | write | lower activation delta in °C; not retained |
+| `therment/therment-01/delta_upper/set` | read | write | upper activation delta in °C; not retained |
+| `homeassistant/number/therment-01-delta-lower/config` | write | read | lower delta discovery JSON; retained |
+| `homeassistant/number/therment-01-delta-upper/config` | write | read | upper delta discovery JSON; retained |
+| `homeassistant/binary_sensor/therment-01-compressor-wait/config` | write | read | compressor-wait discovery JSON; retained |
 
 `mode` is the applied `auto` or `off` mode; `off` turns both relays off
 and reports `action: idle`. The firmware persists the mode and defaults to
@@ -132,6 +137,22 @@ limits and step, `retain: false` for commands, `optimistic: false`, a
 `value_json.setpoint`, and an `action_topic` and `action_template` extracting
 `value_json.action`. The current temperature topic must pass `None` unchanged.
 Availability uses the stated topic and `online`/`offline` payloads.
+
+The delta controls are MQTT Number entities, with a 0.1–5.0 °C range,
+0.1 °C step and 0.5 °C initial value. Heating starts at setpoint minus
+`delta_lower`; cooling starts at setpoint plus `delta_upper`; both stop at
+setpoint. The firmware validates and persists each delta, reports the applied
+values in `state`, and republishes the unchanged state on rejection. The Number
+discovery uses that retained state and availability, non-retained commands,
+and `optimistic: false` so the UI displays the confirmed value.
+
+`cooling_wait` is a JSON boolean: true when automatic regulation requests
+cooling but the minimum compressor pause is still in effect. In that state
+`action` remains `idle`. The retained binary-sensor discovery creates
+`Attesa compressore`; its value template maps the boolean to `ON`/`OFF`, and
+it uses the device availability topic. It is false when regulation is off or
+the temperature is invalid. These states, the delay across restart, and
+availability still need a real-device test.
 
 Configure a retained `offline` Last Will, publish `online` only when ready,
 and, after every reconnect, restore the subscription and republish discovery,
@@ -181,7 +202,7 @@ commands; test the interface with the actual firmware before relying on it.
 
 Mosquitto ACLs are **not enabled**: authenticated users currently have broad
 topic access, including Therment. Enabling an ACL changes defaults for every
-client. The proposed exact Therment grants are the six rows above. Home
+client. The proposed exact Therment grants are the topic permissions in the table above. Home
 Assistant needs discovery and state reads and command writes, including its
 other MQTT integrations and birth/discovery lifecycle. Zigbee2MQTT needs its
 configured `zigbee2mqtt/#` and Home Assistant discovery paths, and the
@@ -194,7 +215,10 @@ allowlist.
 After GitOps reconciliation, check the proxy and broker deployments and their
 logs without displaying credentials. From an authorized LAN host, authenticate
 with the dedicated account and verify a test publish/subscribe on the agreed
-Therment topics; verify Home Assistant and Zigbee2MQTT remain connected. From a
+Therment topics; verify Home Assistant and Zigbee2MQTT remain connected.
+With the device, verify both delta controls and persistence after restart,
+invalid-command rejection, and the compressor-wait sensor throughout the delay
+and transition to cooling. From a
 different subnet, WireGuard, and an Internet client, test that TCP 1883 cannot
 reach the MQTT broker, and inspect router port forwards and SNAT rules. A TCP
 handshake alone is insufficient to verify the HAProxy source rejection: attempt
