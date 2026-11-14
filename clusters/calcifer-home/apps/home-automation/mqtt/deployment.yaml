@@ -36,6 +36,7 @@ spec:
               rm -f /generated/passwordfile
               mosquitto_passwd -b -c /generated/passwordfile "$ZIGBEE2MQTT_USERNAME" "$ZIGBEE2MQTT_PASSWORD"
               mosquitto_passwd -b /generated/passwordfile "$HOME_ASSISTANT_USERNAME" "$HOME_ASSISTANT_PASSWORD"
+              mosquitto_passwd -b /generated/passwordfile "$THERMENT_USERNAME" "$THERMENT_PASSWORD"
               chmod 0640 /generated/passwordfile
           env:
             - name: ZIGBEE2MQTT_USERNAME
@@ -58,6 +59,16 @@ spec:
                 secretKeyRef:
                   name: mosquitto-credentials
                   key: homeassistant-password
+            - name: THERMENT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: therment-mqtt-credentials
+                  key: username
+            - name: THERMENT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: therment-mqtt-credentials
+                  key: password
           securityContext:
             capabilities:
               drop:

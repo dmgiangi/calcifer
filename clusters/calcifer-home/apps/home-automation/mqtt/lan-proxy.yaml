@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mosquitto-lan-proxy
+  namespace: home-automation
+data:
+  haproxy.cfg: |
+    global
+      log stdout format raw local0
+    defaults
+      mode tcp
+      log global
+      timeout connect 5s
+      timeout client 2h
+      timeout server 2h
+    resolvers kubernetes
+      parse-resolv-conf
+      accepted_payload_size 8192
+      hold valid 10s
+    frontend mqtt_lan
+      bind 192.168.0.102:1883
+      tcp-request connection reject if !{ src 192.168.0.0/24 }
+      default_backend mqtt
+    backend mqtt
+      server broker mosquitto.home-automation.svc.cluster.local:1883 resolvers kubernetes init-addr libc,none check
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosquitto-lan-proxy
+  namespace: home-automation
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mosquitto-lan-proxy
+  template:
+    metadata:
+      annotations:
+        checksum/config: lan-proxy-v1
+      labels:
+        app.kubernetes.io/name: mosquitto-lan-proxy
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: calcifer-home
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 99
+        runAsGroup: 99
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: proxy
+          image: haproxy:3.2-alpine
+          args: ["-W", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+          ports:
+            - name: mqtt-lan
+              containerPort: 1883
+              hostPort: 1883
+              hostIP: 192.168.0.102
+          readinessProbe:
+            tcpSocket:
+              port: 1883
+              host: 192.168.0.102
+          livenessProbe:
+            tcpSocket:
+              port: 1883
+              host: 192.168.0.102
+            initialDelaySeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - name: config
+              mountPath: /usr/local/etc/haproxy/haproxy.cfg
+              subPath: haproxy.cfg
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: mosquitto-lan-proxy
