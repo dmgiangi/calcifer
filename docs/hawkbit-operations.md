@@ -30,8 +30,10 @@ The retained PVC protects against automatic volume deletion, not data loss.
 Backups contain the database, target tokens and firmware binaries: keep them on
 a trusted storage location, restrict access to the operator, and do not commit
 or upload them to an untrusted service. The PVC and backups are not encrypted at
-rest. No scheduled backup is currently configured. Establish a schedule and a
-retention policy on the chosen trusted storage before relying on this service.
+rest. No scheduled backup is currently configured. On the chosen trusted
+storage, a starting retention policy is seven daily and four weekly backups;
+verify available space and recovery needs before applying it. Establish the
+schedule and retention before relying on this service.
 
 For a consistent backup, suspend the `home-apps` Flux Kustomization, scale the
 hawkBit Deployment to zero, and wait until its pod has terminated. Mount the
@@ -54,7 +56,8 @@ empty PVC; do not overwrite the only existing volume. Retain the original PVC
 until the restored service has been verified.
 
 On 2026-11-16 an isolated restore from a stopped production PVC successfully
-started hawkBit and authenticated `therment-01` with its existing token. The
-temporary archive was kept in RAM and removed along with the test PVC. No real
-firmware artifact existed at the time, so recovery of an uploaded artifact has
-not yet been verified in this environment.
+started hawkBit and authenticated `therment-01` with its existing token. A
+synthetic, unassigned artifact uploaded by the publisher was downloaded from the
+restored instance and matched its original SHA-256. The temporary module,
+archive and test PVC were removed. The archive was kept in RAM. Recovery of an
+actual firmware release has not yet been tested.
