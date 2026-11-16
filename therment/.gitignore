@@ -9,3 +9,6 @@
 **/.DS_Store
 /.wifi-credentials.toml
 /.mqtt-credentials.toml
+
+# Local Python tooling cache
+__pycache__/

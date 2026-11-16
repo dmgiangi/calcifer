@@ -2,6 +2,11 @@
 .idea
 authorization-server/target
 
+# Generated Python bytecode and local Therment host-test artifacts
+__pycache__/
+*.py[cod]
+/therment/tests/ota-policy/target/
+
 # Local Linux Voice Assistant runtime data
 dev/linux-voice-assistant/.env
 dev/linux-voice-assistant/local/

@@ -1,12 +1,21 @@
+mod probe_mqtt;
+
 use crate::{Command, Snapshot, mqtt_credentials, wifi_credentials};
 use esp_idf_svc::eventloop::EspSystemEventLoop;
 use esp_idf_svc::hal::modem::Modem;
+use esp_idf_svc::handle::RawHandle;
 use esp_idf_svc::mqtt::client::{
     Details, EspMqttClient, EventPayload, LwtConfiguration, MqttClientConfiguration, QoS,
 };
 use esp_idf_svc::nvs::EspDefaultNvsPartition;
+use esp_idf_svc::sys;
 use esp_idf_svc::wifi::{ClientConfiguration, Configuration, EspWifi};
 use log::{info, warn};
+use probe_mqtt::{
+    CONTROL_PROBE_DISCOVERY, CONTROL_PROBE_SET, CONTROL_PROBE_STATE, PROBES_STATE,
+    PROBES_STATUS_STATE,
+};
+use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
@@ -25,10 +34,50 @@ const UPPER_DISCOVERY: &str = r#"{"name":"Delta superiore","unique_id":"therment
 
 const WAIT_DISCOVERY: &str = r#"{"name":"Attesa compressore","unique_id":"therment-01-compressor-wait","device":{"identifiers":["therment-01"]},"state_topic":"therment/therment-01/state","value_template":"{{ 'ON' if value_json.cooling_wait else 'OFF' }}","availability_topic":"therment/therment-01/availability","icon":"mdi:timer-sand"}"#;
 
+#[cfg(feature = "ota")]
+const OTA_DISCOVERY: &str = r#"{"name":"Firmware","unique_id":"therment-01-ota","device":{"identifiers":["therment-01"]},"device_class":"firmware","state_topic":"therment/therment-01/ota/state","json_attributes_topic":"therment/therment-01/ota/attributes","command_topic":"therment/therment-01/ota/set","payload_install":"INSTALL","availability_topic":"therment/therment-01/availability","retain":false}"#;
+
+#[cfg(feature = "ota")]
+const OTA_CHECK_DISCOVERY: &str = r#"{"name":"Check for updates","unique_id":"therment-01-ota-check","device":{"identifiers":["therment-01"]},"entity_category":"diagnostic","command_topic":"therment/therment-01/ota/set","payload_press":"INSTALL","availability_topic":"therment/therment-01/availability","retain":false}"#;
+
 enum Event {
     Connected,
     Disconnected,
     Received(String, Vec<u8>),
+}
+
+// embedded-svc 0.29 discards the retain flag in EventPayload::Received. Use the
+// native event for this command only; keep the existing callback for all others.
+unsafe extern "C" fn control_probe_event(
+    argument: *mut std::ffi::c_void,
+    _base: sys::esp_event_base_t,
+    _id: i32,
+    data: *mut std::ffi::c_void,
+) {
+    // SAFETY: ESP-IDF supplies a valid event for the duration of this callback.
+    let event = unsafe { &*data.cast::<sys::esp_mqtt_event_t>() };
+    if event.retain
+        || event.topic.is_null()
+        || event.topic_len != CONTROL_PROBE_SET.len() as i32
+        || event.data.is_null()
+        || !(1..=64).contains(&event.data_len)
+        || event.current_data_offset != 0
+        || event.data_len != event.total_data_len
+    {
+        return;
+    }
+    // SAFETY: The non-null event buffers have the lengths checked above and are
+    // borrowed only during this callback. The boxed sender outlives the client.
+    let (topic, payload, sender) = unsafe {
+        (
+            std::slice::from_raw_parts(event.topic.cast::<u8>(), event.topic_len as usize),
+            std::slice::from_raw_parts(event.data.cast::<u8>(), event.data_len as usize),
+            &*argument.cast::<mpsc::Sender<Event>>(),
+        )
+    };
+    if topic == CONTROL_PROBE_SET.as_bytes() {
+        let _ = sender.send(Event::Received(CONTROL_PROBE_SET.into(), payload.to_vec()));
+    }
 }
 
 pub fn run(
@@ -37,6 +86,8 @@ pub fn run(
     nvs: EspDefaultNvsPartition,
     commands: mpsc::Sender<Command>,
     snapshot: Arc<Mutex<Snapshot>>,
+    #[cfg(feature = "ota")] ota_trigger: mpsc::SyncSender<()>,
+    #[cfg(feature = "ota")] ota_status: Arc<Mutex<crate::ota_runtime::Status>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut wifi = EspWifi::new(modem, sys, Some(nvs))?;
     wifi.set_configuration(&Configuration::Client(ClientConfiguration {
@@ -67,6 +118,8 @@ pub fn run(
         }),
         ..Default::default()
     };
+    // Declared before the client so its stable callback context is dropped last.
+    let control_events = Box::new(events_tx.clone());
     let mut client = loop {
         let events_tx = events_tx.clone();
         match EspMqttClient::new_cb(&url, &config, move |event| {
@@ -78,7 +131,9 @@ pub fn run(
                     data,
                     details: Details::Complete,
                     ..
-                } if data.len() <= 64 => Some(Event::Received(topic.to_owned(), data.to_vec())),
+                } if data.len() <= 64 && topic != CONTROL_PROBE_SET => {
+                    Some(Event::Received(topic.to_owned(), data.to_vec()))
+                }
                 _ => None,
             };
             if let Some(message) = message {
@@ -92,10 +147,28 @@ pub fn run(
             }
         }
     };
+    // SAFETY: The boxed context remains alive until after client destruction,
+    // which stops MQTT callbacks. No subscription is made before registration.
+    sys::esp!(unsafe {
+        sys::esp_mqtt_client_register_event(
+            RawHandle::handle(&client),
+            sys::esp_mqtt_event_id_t_MQTT_EVENT_DATA,
+            Some(control_probe_event),
+            (&*control_events as *const mpsc::Sender<Event>)
+                .cast_mut()
+                .cast(),
+        )
+    })?;
     let mut connected = false;
     let mut subscribed = false;
+    let mut probe_state_reset = false;
+    let mut known_probes = BTreeSet::new();
+    let mut discovered_probes = BTreeSet::new();
+    let mut last_selector_discovery = None;
     let mut last_wifi_attempt = Instant::now() - Duration::from_secs(5);
     let mut last = None;
+    #[cfg(feature = "ota")]
+    let mut last_ota = None;
     loop {
         if !wifi.is_connected().unwrap_or(false)
             && last_wifi_attempt.elapsed() >= Duration::from_secs(5)
@@ -111,13 +184,24 @@ pub fn run(
                     info!("MQTT connected");
                     connected = true;
                     subscribed = false;
+                    probe_state_reset = false;
+                    discovered_probes.clear();
+                    last_selector_discovery = None;
                     last = None;
+                    #[cfg(feature = "ota")]
+                    {
+                        last_ota = None;
+                    }
                 }
                 Event::Disconnected => {
                     info!("MQTT disconnected; automatic reconnect enabled");
                     connected = false;
                     subscribed = false;
                     last = None;
+                    #[cfg(feature = "ota")]
+                    {
+                        last_ota = None;
+                    }
                 }
                 Event::Received(topic, data) => {
                     let value = String::from_utf8_lossy(&data).into_owned();
@@ -127,20 +211,53 @@ pub fn run(
                         let _ = commands.send(Command::Delta(topic == UPPER, value));
                     } else if topic == MODE {
                         let _ = commands.send(Command::Mode(value));
+                    } else if topic == CONTROL_PROBE_SET {
+                        let _ = commands.send(Command::ControlProbe(value));
+                    }
+                    #[cfg(feature = "ota")]
+                    if topic == "therment/therment-01/ota/set" && data == b"INSTALL" {
+                        let _ = ota_trigger.try_send(());
                     }
                     last = None;
                 }
             }
         }
-        if connected && !subscribed {
+        if connected && !probe_state_reset {
+            // Clear retained readings from previous runs before going online.
+            probe_state_reset = publish(&mut client, AVAIL, "offline")
+                && publish(&mut client, PROBES_STATE, "{}")
+                && publish(&mut client, PROBES_STATUS_STATE, "{}");
+        }
+        if connected && probe_state_reset && !subscribed {
             let setpoint_ok = client.subscribe(SETPOINT, QoS::AtLeastOnce).is_ok();
             let mode_ok = client.subscribe(MODE, QoS::AtLeastOnce).is_ok();
             let lower_ok = client.subscribe(LOWER, QoS::AtLeastOnce).is_ok();
             let upper_ok = client.subscribe(UPPER, QoS::AtLeastOnce).is_ok();
+            let control_probe_ok = client
+                .subscribe(CONTROL_PROBE_SET, QoS::AtLeastOnce)
+                .is_ok();
+            #[cfg(feature = "ota")]
+            let ota_ok = client
+                .subscribe("therment/therment-01/ota/set", QoS::AtLeastOnce)
+                .is_ok()
+                && publish(
+                    &mut client,
+                    "homeassistant/update/therment-01-ota/config",
+                    OTA_DISCOVERY,
+                )
+                && publish(
+                    &mut client,
+                    "homeassistant/button/therment-01-ota-check/config",
+                    OTA_CHECK_DISCOVERY,
+                );
+            #[cfg(not(feature = "ota"))]
+            let ota_ok = true;
             if setpoint_ok
                 && mode_ok
                 && lower_ok
                 && upper_ok
+                && control_probe_ok
+                && ota_ok
                 && publish(&mut client, DISCOVERY_TOPIC, DISCOVERY)
                 && publish(
                     &mut client,
@@ -165,29 +282,105 @@ pub fn run(
             }
         }
         if connected && subscribed {
-            let current = *snapshot.lock().unwrap();
-            if last != Some(current) {
-                let temperature = current
+            #[cfg(feature = "ota")]
+            {
+                let current_ota = ota_status.lock().unwrap().clone();
+                if last_ota.as_ref() != Some(&current_ota) {
+                    let mut state = serde_json::json!({
+                        "installed_version": current_ota.installed,
+                        "latest_version": current_ota.latest,
+                        "in_progress": current_ota.in_progress,
+                    });
+                    if let Some(progress) = current_ota.progress {
+                        state["update_percentage"] = progress.into();
+                    } else if !current_ota.in_progress {
+                        state["update_percentage"] = serde_json::Value::Null;
+                    }
+                    let state = state.to_string();
+                    let attributes = serde_json::json!({"phase": current_ota.phase, "outcome": current_ota.outcome}).to_string();
+                    if publish(&mut client, "therment/therment-01/ota/state", &state)
+                        && publish(
+                            &mut client,
+                            "therment/therment-01/ota/attributes",
+                            &attributes,
+                        )
+                    {
+                        last_ota = Some(current_ota);
+                    }
+                }
+            }
+            let current = snapshot.lock().unwrap().clone();
+            known_probes.extend(current.probes.iter().map(|probe| probe.rom));
+            for &rom in &known_probes {
+                if !discovered_probes.contains(&rom)
+                    && publish(
+                        &mut client,
+                        &probe_mqtt::probe_discovery_topic(rom),
+                        &probe_mqtt::probe_discovery(rom).to_string(),
+                    )
+                    && publish(
+                        &mut client,
+                        &probe_mqtt::probe_status_discovery_topic(rom),
+                        &probe_mqtt::probe_status_discovery(rom).to_string(),
+                    )
+                {
+                    discovered_probes.insert(rom);
+                }
+            }
+            let selector_discovery =
+                probe_mqtt::control_probe_discovery(&current.probes, current.control_probe);
+            if last_selector_discovery.as_ref() != Some(&selector_discovery)
+                && publish(
+                    &mut client,
+                    CONTROL_PROBE_DISCOVERY,
+                    &selector_discovery.to_string(),
+                )
+            {
+                last_selector_discovery = Some(selector_discovery);
+            }
+            if last.as_ref() != Some(&current) {
+                let control_temperature = current
                     .temperature
+                    .filter(|value| value.is_finite() && (-55.0..=125.0).contains(value));
+                let temperature = control_temperature
                     .map(|t| format!("{t:.2}"))
                     .unwrap_or_else(|| "None".into());
                 let state = format!(
-                    r#"{{"setpoint":{:.1},"delta_lower":{:.1},"delta_upper":{:.1},"cooling_wait":{},"mode":"{}","action":"{}","sensor":"{}"}}"#,
+                    r#"{{"setpoint":{:.1},"delta_lower":{:.1},"delta_upper":{:.1},"cooling_wait":{},"mode":"{}","action":"{}","sensor":"{}","control_probe":"{}"}}"#,
                     current.setpoint,
                     current.lower_delta,
                     current.upper_delta,
                     current.cooling_wait,
                     if current.enabled { "auto" } else { "off" },
                     current.action,
-                    if current.temperature.is_some() {
-                        "ok"
-                    } else {
-                        "error"
-                    }
+                    probe_mqtt::control_probe_health(current.control_probe, &current.probes),
+                    probe_mqtt::control_probe_state(current.control_probe)
                 );
                 let temp_ok = publish(&mut client, TEMP, &temperature);
                 let state_ok = publish(&mut client, STATE, &state);
-                if temp_ok && state_ok && publish(&mut client, AVAIL, "online") {
+                let probes_ok = publish(
+                    &mut client,
+                    PROBES_STATE,
+                    &probe_mqtt::probe_state(&current.probes).to_string(),
+                );
+                let probe_status_ok = publish(
+                    &mut client,
+                    PROBES_STATUS_STATE,
+                    &probe_mqtt::probe_status_state(&current.probes).to_string(),
+                );
+                // Only the accepted, persisted selection in Snapshot is reported.
+                let selection_ok = publish(
+                    &mut client,
+                    CONTROL_PROBE_STATE,
+                    &probe_mqtt::control_probe_state(current.control_probe),
+                );
+                if temp_ok
+                    && state_ok
+                    && probes_ok
+                    && probe_status_ok
+                    && selection_ok
+                    && publish(&mut client, AVAIL, "online")
+                {
                     last = Some(current);
                 }
             }

@@ -1,6 +1,8 @@
 use std::{env, fs, path::PathBuf};
 
 fn main() {
+    println!("cargo::rustc-check-cfg=cfg(esp_idf_bootloader_app_rollback_enable)");
+    println!("cargo::rustc-check-cfg=cfg(esp_idf_esp_task_wdt_panic)");
     embuild::espidf::sysenv::output();
 
     let manifest_dir =
@@ -37,7 +39,7 @@ fn main() {
     fs::write(out_dir.join("wifi_credentials.rs"), generated)
         .expect("Could not write generated Wi-Fi credentials module");
 
-    let mqtt_path = PathBuf::from(manifest_dir).join(".mqtt-credentials.toml");
+    let mqtt_path = PathBuf::from(&manifest_dir).join(".mqtt-credentials.toml");
     println!("cargo:rerun-if-changed={}", mqtt_path.display());
     let mqtt_contents = fs::read_to_string(&mqtt_path).unwrap_or_else(|_| {
         panic!("MQTT configuration missing: copy .mqtt-credentials.example.toml to .mqtt-credentials.toml and fill it in")
@@ -63,6 +65,50 @@ fn main() {
     );
     fs::write(out_dir.join("mqtt_credentials.rs"), generated)
         .expect("Could not write generated MQTT credentials module");
+
+    println!("cargo:rerun-if-env-changed=THERMENT_RELEASE_VERSION");
+    println!("cargo:rerun-if-env-changed=THERMENT_ALLOW_BOOT_FAILURE");
+    if env::var_os("CARGO_FEATURE_OTA").is_some() {
+        let version = env::var("THERMENT_RELEASE_VERSION")
+            .expect("THERMENT_RELEASE_VERSION is required for OTA builds");
+        if env::var_os("CARGO_FEATURE_OTA_TEST_BOOT_FAILURE").is_some() {
+            assert!(version == "rollback-test-2" && env::var("THERMENT_ALLOW_BOOT_FAILURE").as_deref() == Ok("1"),
+                "Intentional boot failure requires the dedicated test version and explicit test environment");
+        }
+        assert!(
+            !version.is_empty()
+                && version.len() <= 64
+                && version
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b)),
+            "THERMENT_RELEASE_VERSION must contain only letters, digits, dots, underscores or hyphens"
+        );
+        let secret_path = PathBuf::from(&manifest_dir).join("../clusters/calcifer-home/apps/home-automation/hawkbit/therment-01-ota-credentials.sops.yaml");
+        println!("cargo:rerun-if-changed={}", secret_path.display());
+        let result = std::process::Command::new("sops")
+            .arg("--decrypt")
+            .arg("--extract")
+            .arg("[\"stringData\"][\"target-token\"]")
+            .arg(&secret_path)
+            .output()
+            .expect("Could not run SOPS");
+        assert!(
+            result.status.success(),
+            "Could not decrypt OTA target credential"
+        );
+        let token = std::str::from_utf8(&result.stdout)
+            .expect("Invalid OTA credential encoding")
+            .trim();
+        assert!(
+            token.len() == 32 && token.bytes().all(|b| b.is_ascii_alphanumeric()),
+            "Invalid OTA credential"
+        );
+        let generated = format!(
+            "pub const OTA_TOKEN: &str = {token:?};\npub const RELEASE_VERSION: &str = {version:?};\n"
+        );
+        fs::write(out_dir.join("ota_credentials.rs"), generated)
+            .expect("Could not write generated OTA credentials module");
+    }
 }
 
 fn required_string<'a>(config: &'a toml::Value, key: &str) -> &'a str {

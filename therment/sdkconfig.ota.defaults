@@ -1,0 +1,10 @@
+# Experimental OTA build only. Do not use this profile to flash a device until
+# its partition layout, NVS recovery and relay behavior have been verified.
+CONFIG_ESP32_REV_MIN_1=y
+CONFIG_ESP_WIFI_ENABLED=y
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+CONFIG_ESP_TASK_WDT_PANIC=y
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=15
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y

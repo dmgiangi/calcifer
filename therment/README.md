@@ -1,22 +1,21 @@
 # Therment
 
-Firmware ESP32 per una cella di fermentazione. La regolazione resta locale;
-Wi-Fi e MQTT collegano il dispositivo a Home Assistant. Il modulo fa parte del
-repository Calcifer e vive in `therment/`; eseguire i comandi di questa guida
-da tale directory (`cd therment` dalla radice del repository). Il firmware
-non viene distribuito da Flux.
+Therment is ESP32 firmware for a fermentation chamber. Temperature regulation
+runs locally; Wi-Fi and MQTT connect the device to Home Assistant. The module
+is part of Calcifer under `therment/`; run the module commands from this
+directory. Flux deploys the Home services, not the firmware itself.
 
-## Prerequisiti di compilazione
+## Build prerequisites
 
-Su Linux servono Rust e Cargo tramite `rustup`, gli strumenti di build C/C++,
-Git, Python 3 con `venv` e `pip`, CMake, Ninja, Clang e le librerie di sviluppo
-libudev. Per esempio, su Debian o Ubuntu:
+On Linux, install Rust and Cargo via `rustup`, C/C++ build tools, Git, Python 3
+with `venv` and `pip`, CMake, Ninja, Clang and the libudev development files.
+For example, on Debian or Ubuntu:
 
 ```sh
 sudo apt-get install build-essential git curl pkg-config libudev-dev clang libclang-dev python3 python3-pip python3-venv cmake ninja-build flex bison gperf libffi-dev libssl-dev
 ```
 
-Installare il toolchain Espressif per ESP32, il linker `ldproxy` e `espflash`:
+Install the Espressif ESP32 toolchain, `ldproxy` and `espflash`:
 
 ```sh
 cargo install espup --locked
@@ -25,52 +24,122 @@ cargo install ldproxy --locked
 cargo install espflash --locked
 ```
 
-Caricare nella shell le variabili create da `espup` prima di compilare:
+Load the environment created by `espup` before building:
 
 ```sh
 source "$HOME/export-esp.sh"
 ```
 
-Se durante l'installazione è stato scelto un percorso diverso per il file di
-export, usare quello. `rust-toolchain.toml` seleziona il toolchain `esp`;
-`.cargo/config.toml` seleziona il target `xtensa-esp32-espidf` e ESP-IDF
-v5.4.4. Al primo avvio della build `esp-idf-sys` scarica e prepara ESP-IDF e
-gli strumenti richiesti: servono accesso alla rete e spazio su disco. La cache
-locale `.embuild/` e gli output `target/` sono generati e ignorati da Git;
-non vanno aggiunti al repository Calcifer. Una nuova macchina li ricreerà.
-`Cargo.lock` mantiene le versioni delle dipendenze Rust.
+Use the chosen alternative path if the export file was installed elsewhere.
+`rust-toolchain.toml` selects the `esp` toolchain; `.cargo/config.toml` selects
+`xtensa-esp32-espidf` and ESP-IDF v5.4.4. The first build downloads ESP-IDF and
+its tools, requiring network access and disk space. `.embuild/` and `target/`
+are generated, Git-ignored local data. `Cargo.lock` pins Rust dependencies.
 
-## Configurazione e flash USB
+## Device configuration
 
-Copiare
-`.wifi-credentials.example.toml` in `.wifi-credentials.toml` e
-`.mqtt-credentials.example.toml` in `.mqtt-credentials.toml`, quindi compilare
-i valori. I file reali sono ignorati da Git e devono restare locali. Il broker
-Home è `192.168.0.102:1883` e l’utente MQTT è `therment`; seguire la
-[guida operativa MQTT](../docs/zigbee2mqtt-operations.md#therment-lan-mqtt)
-per ottenere la password in sicurezza e consultare il contratto dei topic.
-MQTT sulla LAN non usa TLS: credenziali e messaggi transitano in chiaro. Le credenziali sono incorporate
-nel firmware: proteggere anche binari, artefatti e log di build.
+Copy `.wifi-credentials.example.toml` to `.wifi-credentials.toml` and
+`.mqtt-credentials.example.toml` to `.mqtt-credentials.toml`, then supply the
+values. The actual files are Git-ignored and must remain private. The Home
+broker is `192.168.0.102:1883`, with MQTT user `therment`; see the
+[MQTT operations guide](../docs/zigbee2mqtt-operations.md#therment-lan-mqtt)
+for credential handling, topics and network restrictions. LAN MQTT does not use
+TLS, so credentials and messages are transmitted in cleartext. Wi-Fi, MQTT and
+OTA target credentials are embedded in OTA-enabled firmware; protect the
+firmware and generated build files as secrets.
+
+GPIO13 connects to the shared OneWire probe bus, GPIO17 to heating and GPIO5 to cooling.
+The firmware assumes active-low relays. Verify the physical output levels during
+reset and boot; software cannot control the boot-ROM phase.
+
+## Temperature probes and control association
+
+Use externally powered DS18B20 probes on the shared bus (not parasite power).
+The firmware searches up to eight ROM paths per sample, validates addresses and
+reads each probe individually. The refrigerator chamber alone controls both
+relay decisions; the freezer probe is monitoring-only. Roles never follow bus
+order, probe temperature or the number of connected probes. Probes are sampled
+every 15 seconds.
+
+After installing this firmware for the first time, control remains `off` until
+an operator explicitly chooses a probe. Home Assistant discovers a **Control
+probe** configuration selector and a **Probe <ROM> temperature** sensor for
+each detected address. Warm one probe by hand to identify it before assigning
+the chamber; entity names can then be customized in Home Assistant.
+
+| MQTT topic | Purpose |
+| --- | --- |
+| `therment/therment-01/control_probe/set` | Non-retained command: detected 16-character hex ROM ID, or `None` to clear |
+| `therment/therment-01/control_probe/state` | Retained, actually accepted association; `None` means unassigned |
+| `therment/therment-01/probes/state` | Retained JSON map of ROM IDs to last valid temperature, or null when unavailable |
+| `therment/therment-01/probes/status` | Retained JSON map of ROM IDs to `ok`, `stale` or `fault` |
+| `therment/therment-01/temperature` | Existing climate temperature: selected probe only |
+
+Set climate mode to `off` and wait for action `idle` before changing the
+selection. The firmware rejects changes while control is enabled or an output
+is active, unknown/malformed addresses, and replayed retained selection commands. A
+successful choice is saved in local NVS before acknowledgment; a rejected
+choice leaves the published state unchanged. The selector includes a saved
+missing probe so its association stays visible.
+
+Changing the association requires a fresh sample and restarts the five-minute
+compressor delay. Enable `auto` separately after verifying the chosen probe.
+No selection means control cannot be enabled. A missing or invalid selected
+probe retains its last valid temperature for up to four consecutive failed
+samples (up to about 60 seconds). The sensor is marked `stale` during that grace
+period; after the fifth failure it is marked `fault`, its temperature becomes
+unavailable, and both outputs turn off at that control cycle (about 75 seconds
+after the last valid sample). A later valid sample clears the fault and resumes
+control. The
+`Probe <ROM> status` diagnostic entity reports `ok`, `stale` or `fault`. A bus
+I/O error counts as a failure for each tracked probe. No fallback to the freezer
+occurs.
+
+Valid readings are never clamped to the operating cutouts. Below -15 °C cooling
+is inhibited; above +40 °C heating is inhibited. The opposite direction remains
+eligible to move the temperature back toward the configured setpoint. Values
+outside these cutouts are not, by themselves, probe faults.
+
+The association survives restart and OTA in NVS; local control does not require
+MQTT or Home Assistant. MQTT discovery/state are retained, commands are not.
+MQTT 3.1.1 marks retained replays, not live deliveries of a retained publish;
+always send selection commands without retention.
+Missing/invalid probes are unavailable in Home Assistant, including previously
+discovered probes absent after a restart. A valid stored association retains
+the existing persisted `auto`/`off` behavior on later boots.
+
+Build and host tests do not verify wiring, electrical reset levels, physical
+shutdown, NVS durability or compressor timing. Keep loads safe during initial
+installation, identification and physical acceptance; see [OTA.md](OTA.md).
+
+## USB and OTA
+
+The ESP32 has been migrated to the two-slot OTA partition table. A normal
+`cargo build` uses the legacy `sdkconfig.defaults`; do not flash it over the
+migrated device with default partition settings. The OTA profile, USB recovery,
+release procedure and the tests still required are documented in [OTA.md](OTA.md).
+The initial `bootstrap-1` firmware and OTA updates through `acceptance-2`
+were installed while the connected loads were made safe. The operator later
+confirmed physical acceptance of selection persistence across restart,
+selected-probe-loss shutdown and compressor delay. The physical mapping of the
+selected ROM to the chamber was not recorded; see [OTA.md](OTA.md).
+
+## Python build environment
+
+ESP-IDF requires a Python interpreter with `venv` and `ensurepip`. On Ubuntu,
+install the matching `python3-venv` package (for example `python3.12-venv` for
+Python 3.12). If the system interpreter lacks it, a managed Python with `uv` can
+be selected for the current shell without changing system packages:
 
 ```sh
+uv python install 3.12
+therment_python_bin="${XDG_CACHE_HOME:-$HOME/.cache}/therment-python-bin"
+mkdir -p "$therment_python_bin"
+ln -sf "$(uv python find 3.12 --managed-python)" "$therment_python_bin/python3"
+source "$HOME/export-esp.sh"
+export PATH="$therment_python_bin:$PATH"
 cargo build --locked
-espflash flash --port /dev/ttyUSB0 --chip esp32 target/xtensa-esp32-espidf/debug/therment
-espflash monitor --port /dev/ttyUSB0 --chip esp32 -a hard-reset
 ```
 
-Il GPIO13 è collegato alla sonda OneWire, GPIO17 al riscaldamento e GPIO5 al
-raffreddamento. Il firmware assume relè attivi a livello basso.
-
-## Migrazione e OTA
-
-`partitions-ota.csv` è una proposta per due slot OTA: non è ancora configurata
-nella build e non va flashata separatamente. La NVS è prevista allo stesso
-offset della tabella ESP-IDF attuale; verificare la tabella effettiva del
-dispositivo prima di migrare. Il firmware attuale non implementa OTA.
-
-La direzione concordata è scaricare le immagini da un server HTTPS. Prima del
-primo flash OTA servono integrazione del client, configurazione del bootloader
-con rollback, verifiche di avvio, gestione dei relè e una procedura di
-migrazione USB che preservi i dati. La distribuzione su Calcifer deve inoltre
-gestire credenziali e artefatti firmware come segreti e fornire un certificato
-HTTPS verificabile dall'ESP32.
+The ESP-IDF setup can download toolchains and dependencies on the first build.
+Protect generated output: the resulting binary includes device credentials.

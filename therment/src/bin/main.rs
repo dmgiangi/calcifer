@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
+use crate::control_policy::Mode;
 use esp_idf_hal::delay::Ets;
 use esp_idf_hal::gpio::{PinDriver, Pull};
 use esp_idf_hal::peripherals::Peripherals;
@@ -12,7 +13,23 @@ use esp_idf_svc::{
 };
 use log::{info, warn};
 
+#[cfg(all(feature = "ota", not(esp_idf_bootloader_app_rollback_enable)))]
+compile_error!("OTA builds require an ESP-IDF bootloader with rollback enabled");
+#[cfg(all(feature = "ota", not(esp_idf_esp_task_wdt_panic)))]
+compile_error!("OTA builds require a restarting task watchdog for startup");
+
+mod control_policy;
 mod network;
+mod ota_http;
+mod ota_policy;
+#[cfg(feature = "ota")]
+mod ota_runtime;
+mod probes;
+
+#[cfg(feature = "ota")]
+mod ota_credentials {
+    include!(concat!(env!("OUT_DIR"), "/ota_credentials.rs"));
+}
 
 mod mqtt_credentials {
     include!(concat!(env!("OUT_DIR"), "/mqtt_credentials.rs"));
@@ -22,103 +39,53 @@ mod wifi_credentials {
     include!(concat!(env!("OUT_DIR"), "/wifi_credentials.rs"));
 }
 
-fn onewire_reset(
-    pin: &mut PinDriver<'_, esp_idf_hal::gpio::InputOutput>,
-) -> Result<bool, EspError> {
-    pin.set_low()?;
-    Ets::delay_us(480);
-    pin.set_high()?;
-    Ets::delay_us(70);
-    let presence = pin.is_low();
-    Ets::delay_us(410);
-    Ok(presence)
+struct ProbeBus<'a, 'd> {
+    pin: &'a mut PinDriver<'d, esp_idf_hal::gpio::InputOutput>,
 }
 
-fn onewire_write_byte(
-    pin: &mut PinDriver<'_, esp_idf_hal::gpio::InputOutput>,
-    byte: u8,
-) -> Result<(), EspError> {
-    for bit in 0..8 {
-        pin.set_low()?;
-        if (byte >> bit) & 1 == 1 {
+impl probes::Bus for ProbeBus<'_, '_> {
+    type Error = EspError;
+
+    fn reset(&mut self) -> Result<bool, EspError> {
+        self.pin.set_low()?;
+        Ets::delay_us(480);
+        self.pin.set_high()?;
+        Ets::delay_us(70);
+        let presence = self.pin.is_low();
+        Ets::delay_us(410);
+        Ok(presence)
+    }
+
+    fn write_bit(&mut self, bit: bool) -> Result<(), EspError> {
+        self.pin.set_low()?;
+        if bit {
             Ets::delay_us(6);
-            pin.set_high()?;
+            self.pin.set_high()?;
             Ets::delay_us(64);
         } else {
             Ets::delay_us(60);
-            pin.set_high()?;
+            self.pin.set_high()?;
             Ets::delay_us(10);
         }
+        Ok(())
     }
-    Ok(())
-}
 
-fn onewire_read_byte(
-    pin: &mut PinDriver<'_, esp_idf_hal::gpio::InputOutput>,
-) -> Result<u8, EspError> {
-    let mut byte = 0;
-    for bit in 0..8 {
-        pin.set_low()?;
+    fn read_bit(&mut self) -> Result<bool, EspError> {
+        self.pin.set_low()?;
         Ets::delay_us(6);
-        pin.set_high()?;
+        self.pin.set_high()?;
         Ets::delay_us(9);
-        if pin.is_high() {
-            byte |= 1 << bit;
-        }
+        let bit = self.pin.is_high();
         Ets::delay_us(55);
+        Ok(bit)
     }
-    Ok(byte)
+
+    fn wait_conversion(&mut self) {
+        std::thread::sleep(Duration::from_millis(750));
+    }
 }
 
-// A single externally powered DS18B20 is expected on the bus.
-fn read_temperature(
-    pin: &mut PinDriver<'_, esp_idf_hal::gpio::InputOutput>,
-) -> Result<Option<f32>, EspError> {
-    if !onewire_reset(pin)? {
-        return Ok(None);
-    }
-    onewire_write_byte(pin, 0xcc)?; // Skip ROM
-    onewire_write_byte(pin, 0x44)?; // Convert temperature
-    std::thread::sleep(Duration::from_millis(750));
-    if !onewire_reset(pin)? {
-        return Ok(None);
-    }
-    onewire_write_byte(pin, 0xcc)?;
-    onewire_write_byte(pin, 0xbe)?; // Read scratchpad
-    let mut data = [0u8; 9];
-    for byte in &mut data {
-        *byte = onewire_read_byte(pin)?;
-    }
-    let mut crc = 0u8;
-    for byte in &data[..8] {
-        let mut value = *byte;
-        for _ in 0..8 {
-            let mix = (crc ^ value) & 1;
-            crc >>= 1;
-            if mix != 0 {
-                crc ^= 0x8c;
-            }
-            value >>= 1;
-        }
-    }
-    if crc != data[8] || data.iter().all(|byte| *byte == 0) {
-        return Ok(None);
-    }
-    let temp = i16::from_le_bytes([data[0], data[1]]) as f32 / 16.0;
-    if !(-55.0..=125.0).contains(&temp) {
-        return Ok(None);
-    }
-    Ok(Some(temp))
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum Mode {
-    Off,
-    Heating,
-    Cooling,
-}
-
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, PartialEq)]
 struct Snapshot {
     setpoint: f32,
     lower_delta: f32,
@@ -127,24 +94,40 @@ struct Snapshot {
     enabled: bool,
     action: &'static str,
     temperature: Option<f32>,
+    probes: Vec<probes::MonitoredProbe>,
+    control_probe: Option<probes::Rom>,
     revision: u64,
 }
 enum Command {
     Setpoint(String),
     Mode(String),
     Delta(bool, String),
+    ControlProbe(String),
+    #[cfg(feature = "ota")]
+    OtaReady(mpsc::Sender<()>),
+    #[cfg(feature = "ota")]
+    OtaResume,
 }
 
 const DEFAULT_SETPOINT: f32 = 16.0;
 const DEFAULT_DELTA: u8 = 5; // tenths of a degree
+const PROBE_SAMPLE_INTERVAL: Duration = Duration::from_secs(15);
 const COMPRESSOR_DELAY: Duration = Duration::from_secs(300);
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     esp_idf_hal::sys::link_patches();
     EspLogger::initialize_default();
 
+    #[cfg(feature = "ota")]
+    EspError::convert(unsafe { esp_idf_hal::sys::esp_task_wdt_add(std::ptr::null_mut()) })?;
+
     let peripherals = Peripherals::take()?;
 
+    // Preload both GPIO output latches before enabling output drivers. Relay
+    // boards are active-low; boot-ROM and reset-time levels still require
+    // hardware verification and appropriate external pull-ups.
+    EspError::convert(unsafe { esp_idf_hal::sys::gpio_set_level(17, 1) })?;
+    EspError::convert(unsafe { esp_idf_hal::sys::gpio_set_level(5, 1) })?;
     let mut relay_17 = PinDriver::output(peripherals.pins.gpio17)?;
     let mut relay_5 = PinDriver::output(peripherals.pins.gpio5)?;
     // Common relay modules are active-low, so LOW energizes each relay.
@@ -153,6 +136,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut sensor = PinDriver::input_output_od(peripherals.pins.gpio13, Pull::Up)?;
 
     let system_event_loop = EspSystemEventLoop::take()?;
+    #[cfg(feature = "ota")]
+    esp_idf_svc::netif::NetifStack::initialize()?;
     let nvs = EspDefaultNvsPartition::take()?;
     let storage = EspDefaultNvs::new(nvs.clone(), "therment", true)?;
     let mut setpoint = storage
@@ -169,6 +154,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .filter(|v| (1..=50).contains(v))
         .unwrap_or(DEFAULT_DELTA);
     let mut enabled = storage.get_u8("enabled")? == Some(1);
+    let mut control_probe = storage
+        .get_u64("control_probe")?
+        .and_then(probes::Rom::from_storage);
+    if control_probe.is_none() && enabled {
+        // Migration never guesses which probe belongs to the chamber.
+        enabled = false;
+        storage.set_u8("enabled", 0)?;
+    }
     let snapshot = Arc::new(Mutex::new(Snapshot {
         setpoint,
         lower_delta: f32::from(lower_delta) / 10.0,
@@ -177,19 +170,43 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         enabled,
         action: "idle",
         temperature: None,
+        probes: Vec::new(),
+        control_probe,
         revision: 0,
     }));
     let (tx, rx) = mpsc::channel();
+    #[cfg(feature = "ota")]
+    let (network_ready_tx, network_ready_rx) = mpsc::sync_channel(1);
+    #[cfg(feature = "ota")]
+    let mut network_ready = Some(network_ready_tx);
+    #[cfg(feature = "ota")]
+    let (ota_trigger_tx, ota_trigger_rx) = mpsc::sync_channel(1);
+    #[cfg(feature = "ota")]
+    let ota_status = Arc::new(Mutex::new(ota_runtime::Status::default()));
+    #[cfg(feature = "ota")]
+    let ota_network_status = ota_status.clone();
+    #[cfg(feature = "ota")]
+    let ota_command_tx = tx.clone();
+    #[cfg(feature = "ota")]
+    let ota_nvs = nvs.clone();
     let network_snapshot = snapshot.clone();
     std::thread::Builder::new()
         .stack_size(12000)
         .spawn(move || {
+            #[cfg(feature = "ota")]
+            if network_ready_rx.recv().is_err() {
+                return;
+            }
             if let Err(error) = network::run(
                 peripherals.modem,
                 system_event_loop,
                 nvs,
                 tx,
                 network_snapshot,
+                #[cfg(feature = "ota")]
+                ota_trigger_tx,
+                #[cfg(feature = "ota")]
+                ota_network_status,
             ) {
                 warn!("Network stopped: {error}");
             }
@@ -197,9 +214,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut last_cooling_stop = Instant::now();
     let mut mode = Mode::Off;
-    let mut last_read = Instant::now() - Duration::from_secs(5);
+    let mut last_read = Instant::now() - PROBE_SAMPLE_INTERVAL;
     let mut temperature = None;
+    let mut probe_readings = Vec::new();
+    let mut probe_monitor = probes::ProbeMonitor::new(control_probe);
     let mut revision = 0u64;
+    #[cfg(feature = "ota")]
+    let mut ota_waiting: Option<mpsc::Sender<()>> = None;
+    #[cfg(feature = "ota")]
+    let mut ota_hold = false;
+    #[cfg(feature = "ota")]
+    let mut ota_startup = Some((ota_trigger_rx, ota_nvs, ota_command_tx, ota_status));
     loop {
         while let Ok(command) = rx.try_recv() {
             match command {
@@ -270,6 +295,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         _ => None,
                     };
                     match requested {
+                        Some(true) if control_probe.is_none() => {
+                            warn!("MQTT auto mode rejected: select a control probe first");
+                        }
                         Some(requested) if requested == enabled => info!(
                             "MQTT mode unchanged: {}",
                             if enabled { "auto" } else { "off" }
@@ -296,37 +324,78 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         None => warn!("MQTT mode rejected: expected auto or off"),
                     }
                 }
+                Command::ControlProbe(raw) => {
+                    match probes::selection_request(
+                        &raw,
+                        enabled,
+                        mode == Mode::Off,
+                        &probe_readings,
+                    ) {
+                        Ok(selected) if selected == control_probe => {
+                            info!("MQTT control probe unchanged");
+                        }
+                        Ok(selected) => {
+                            let stored = selected.map_or(0, probes::Rom::storage_value);
+                            match storage.set_u64("control_probe", stored) {
+                                Ok(()) => {
+                                    control_probe = selected;
+                                    temperature = None;
+                                    probe_monitor.reset_probe(selected);
+                                    // Require a fresh sample and a full restart delay
+                                    // before control can use the new association.
+                                    last_read = Instant::now() - PROBE_SAMPLE_INTERVAL;
+                                    last_cooling_stop = Instant::now();
+                                    info!("MQTT control probe association saved");
+                                }
+                                Err(error) => {
+                                    warn!("MQTT control probe rejected: storage error: {error}")
+                                }
+                            }
+                        }
+                        Err(reason) => warn!("MQTT control probe rejected: {reason}"),
+                    }
+                }
+                #[cfg(feature = "ota")]
+                Command::OtaReady(reply) => {
+                    ota_waiting = Some(reply);
+                }
+                #[cfg(feature = "ota")]
+                Command::OtaResume => {
+                    ota_waiting = None;
+                    ota_hold = false;
+                }
             }
             revision = revision.wrapping_add(1);
         }
-        if last_read.elapsed() >= Duration::from_secs(5) {
-            temperature = match read_temperature(&mut sensor) {
-                Ok(Some(value)) => Some(value),
-                Ok(None) => {
-                    warn!("Invalid or missing temperature reading");
-                    None
-                }
+        if last_read.elapsed() >= PROBE_SAMPLE_INTERVAL {
+            probe_readings = match probes::sample(&mut ProbeBus { pin: &mut sensor }) {
+                Ok(readings) => readings,
                 Err(error) => {
                     warn!("OneWire error: {error}");
-                    None
+                    Vec::new()
                 }
             };
+            probe_monitor.update(&probe_readings);
+            temperature = probe_monitor.temperature(control_probe);
+            if control_probe.is_some() && temperature.is_none() {
+                warn!("Control probe has no usable reading; outputs inhibited");
+            }
             last_read = Instant::now();
         }
-        let next = match (enabled, temperature) {
-            (true, Some(temp)) => match mode {
-                Mode::Heating if temp < setpoint => Mode::Heating,
-                Mode::Cooling if temp > setpoint => Mode::Cooling,
-                Mode::Off if temp <= setpoint - f32::from(lower_delta) / 10.0 => Mode::Heating,
-                Mode::Off
-                    if temp >= setpoint + f32::from(upper_delta) / 10.0
-                        && last_cooling_stop.elapsed() >= COMPRESSOR_DELAY =>
-                {
-                    Mode::Cooling
-                }
-                _ => Mode::Off,
-            },
-            _ => Mode::Off,
+        let next = control_policy::next_mode(
+            enabled,
+            mode,
+            temperature,
+            setpoint,
+            f32::from(lower_delta) / 10.0,
+            f32::from(upper_delta) / 10.0,
+            last_cooling_stop.elapsed() >= COMPRESSOR_DELAY,
+        );
+        #[cfg(feature = "ota")]
+        let next = if ota_hold || ota_startup.is_some() {
+            Mode::Off
+        } else {
+            next
         };
         if next != mode {
             relay_17.set_high()?;
@@ -358,8 +427,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Mode::Off => "idle",
             },
             temperature,
+            probes: probe_monitor.readings().to_vec(),
+            control_probe,
             revision,
         };
+        #[cfg(feature = "ota")]
+        if ota_policy::may_activate(mode == Mode::Heating, mode == Mode::Cooling, true)
+            && let Some(reply) = ota_waiting.take()
+        {
+            if reply.send(()).is_ok() {
+                ota_hold = true;
+            }
+        }
+        #[cfg(feature = "ota")]
+        if let Some((trigger, nvs, commands, status)) = ota_startup.take() {
+            #[cfg(feature = "ota-test-boot-failure")]
+            if ota_runtime::running_unverified()? {
+                warn!("Intentional rollback test: leaving the image unconfirmed");
+                loop {
+                    std::thread::sleep(Duration::from_secs(1));
+                }
+            }
+            // Confirm only after GPIO, NVS and the first local control cycle
+            // succeeded. A missing sensor remains safely off, not a boot failure.
+            ota_runtime::confirm_running_image(&storage)?;
+            EspError::convert(unsafe {
+                esp_idf_hal::sys::esp_task_wdt_delete(std::ptr::null_mut())
+            })?;
+            if let Some(ready) = network_ready.take() {
+                ready.send(())?;
+            }
+            std::thread::Builder::new()
+                .stack_size(24_576)
+                .spawn(move || {
+                    ota_runtime::run(trigger, nvs, commands, status);
+                })?;
+        }
         std::thread::sleep(Duration::from_millis(250));
     }
 }
