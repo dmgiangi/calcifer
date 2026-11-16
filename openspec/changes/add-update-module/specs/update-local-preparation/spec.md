@@ -39,9 +39,17 @@ Preparation SHALL preserve unrelated existing edits and SHALL stop without parti
 - **WHEN** a dependency update produces an unapproved file change
 - **THEN** no prepared changes are copied into the repository and the unexpected output is reported
 
+#### Scenario: Prepare a reproducible toolchain update
+- **WHEN** an operator requests a toolchain or base-image pin update
+- **THEN** preparation records the exact supported distribution/version or verified digest, validates the relevant isolated build/render, and refuses a candidate without source or compatibility evidence
+
 ### Requirement: Maintain an operator-controlled deployment boundary
 The module SHALL NOT commit, push, publish images, dispatch release workflows, modify live cluster resources or upgrade hosts. When a change cannot be represented safely in repository files, it SHALL report the limitation and actionable operator steps instead of claiming an update was applied.
 
 #### Scenario: K3s host upgrade
 - **WHEN** an operator selects a K3s update whose version is managed on a host
 - **THEN** the module reports the relevant host-managed procedure and does not modify the host or claim a GitOps change
+
+#### Scenario: Hawkbit migration requires persistent-data validation
+- **WHEN** a Hawkbit image migration is prepared
+- **THEN** the workflow requires an isolated rehearsal against a copy of persistent data and reviewed recovery guidance, and does not modify production data or deploy the image
