@@ -1,0 +1,6 @@
+# Build for the connected ESP32 ECO1 (revision v1.0).
+CONFIG_ESP32_REV_MIN_1=y
+CONFIG_ESP_WIFI_ENABLED=y
+
+# Rust needs more stack for the main task than ESP-IDF's small default.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192

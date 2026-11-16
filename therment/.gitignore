@@ -1,0 +1,11 @@
+/target/
+/.embuild/
+/.idea/
+/.vscode/
+/.zed/
+/.helix/
+/.nvim.lua
+**/*.rs.bk
+**/.DS_Store
+/.wifi-credentials.toml
+/.mqtt-credentials.toml

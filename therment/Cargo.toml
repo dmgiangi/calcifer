@@ -1,0 +1,29 @@
+[package]
+name = "therment"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+
+[[bin]]
+name = "therment"
+path = "src/bin/main.rs"
+harness = false
+
+[dependencies]
+esp-idf-hal = "0.47"
+esp-idf-svc = "0.53"
+log = "0.4"
+
+[build-dependencies]
+embuild = "0.33.5"
+toml = "1.2.1"
+
+[profile.dev]
+debug = true
+opt-level = "z"
+
+[profile.release]
+codegen-units = 1
+debug = 2
+lto = "fat"
+opt-level = "s"

@@ -97,8 +97,8 @@ password file only at pod start. Never log the decrypted data.
 
 Initial device ID: `therment-01`. Other IDs must be stable, unique, and contain
 no `/`, `+`, or `#`. Payloads are UTF-8; temperatures are degrees Celsius.
-The firmware contract is defined in the Therment project; integration still
-requires end-to-end validation with the device and Home Assistant.
+The [Therment firmware](../therment/README.md) is maintained in this repository;
+integration still requires end-to-end validation with the device and Home Assistant.
 
 | Exact topic | Therment | Home Assistant | Payload and retain |
 | --- | --- | --- | --- |
