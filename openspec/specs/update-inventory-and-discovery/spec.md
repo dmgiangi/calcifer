@@ -4,7 +4,7 @@
 
 Provide a complete, honest view of the components and dependency updates relevant to the repository and both clusters.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Discover components and coverage
 The module SHALL discover components and dependency declarations across both clusters, shared bases and overlays, Helm and K3s-managed infrastructure, custom services, build definitions, CI workflows and separately deployed firmware. It SHALL associate components with their source and affected clusters or identify them as external to cluster deployment. It SHALL report discovered components without an applicable strategy as unsupported and make the coverage check fail.
@@ -67,6 +67,14 @@ The inventory SHALL distinguish project language targets from the actual compile
 #### Scenario: Java distributions differ
 - **WHEN** projects use different Java distributions, including GraalVM Community and Eclipse Temurin
 - **THEN** each toolchain is checked against its own authoritative source and the project target version is not misreported as the installed patch version
+
+#### Scenario: Java build toolchain is not LTS
+- **WHEN** a CI build JDK declaration uses a non-LTS major line
+- **THEN** the module does not query or recommend a non-LTS candidate
+
+#### Scenario: Spring Boot BOM supplies an explicit dependency version
+- **WHEN** an unversioned dependency's effective version is sourced from the Spring Boot dependency BOM
+- **THEN** the module attributes the update to the Spring Boot parent instead of recommending an independent artifact upgrade
 
 #### Scenario: Espressif Rust toolchain is vendor-managed
 - **WHEN** firmware uses an Espressif-managed Rust toolchain

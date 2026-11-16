@@ -6,6 +6,7 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 from .versions import stable_version
+from .policies import allows, no_candidate
 
 _MODULE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._~+/-]*$')
 
@@ -51,10 +52,9 @@ def check_go(item, cache, fetch=proxy_versions):
         if item.name not in cache:
             cache[item.name] = fetch(item.name)
         versions = [(stable_version(v), v) for v in cache[item.name]]
-        versions = [(parsed, text) for parsed, text in versions if parsed is not None]
+        versions = [(parsed, text) for parsed, text in versions if allows(item, parsed, current)]
         if not versions:
-            item.status = 'unknown'
-            item.detail = 'No comparable stable Go module release'
+            no_candidate(item)
             return
         latest, tag = max(versions)
         item.candidate = tag

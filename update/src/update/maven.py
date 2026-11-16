@@ -5,6 +5,7 @@ import re
 import xml.etree.ElementTree as ET
 from .errors import describe_source_error
 from .cache import cached
+from .policies import allows, no_candidate
 
 
 _PART = re.compile(r'^[A-Za-z0-9_.-]+$')
@@ -34,6 +35,11 @@ def metadata(group, artifact):
 
 
 def check_maven(item, cache, fetch=metadata):
+    if item.metadata.get('managed_by') == 'org.springframework.boot:spring-boot-dependencies':
+        item.status = 'parent-managed'
+        item.detail = ('Version inherited from org.springframework.boot:spring-boot-dependencies; '
+                       'update org.springframework.boot:spring-boot-starter-parent instead of this artifact')
+        return
     current = numeric_version(item.metadata.get('effective_version') or item.declared or '')
     parts = item.name.split(':')
     if len(parts) != 2 or not all(_PART.fullmatch(part) for part in parts):
@@ -47,10 +53,9 @@ def check_maven(item, cache, fetch=metadata):
     key = tuple(parts)
     try:
         versions = [(numeric_version(v), v) for v in cached(cache, key, lambda: fetch(*key))]
-        versions = [(v, text) for v, text in versions if v is not None]
+        versions = [(v, text) for v, text in versions if allows(item, v, current)]
         if not versions:
-            item.status = 'unknown'
-            item.detail = 'No comparable stable Maven Central versions'
+            no_candidate(item)
             return
         latest, tag = max(versions)
         item.candidate = tag

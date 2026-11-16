@@ -23,6 +23,10 @@ class RetentionTest(unittest.TestCase):
     def test_invalid_timestamps_are_never_deleted(self):
         self.assertEqual(backup.expired_backups(["hawkbit-20269999T999999Z.tar"]), [])
 
+    def test_no_retention_mode_preserves_every_existing_archive(self):
+        names = ["hawkbit-20250101T000000Z.tar", "hawkbit-20261116T000000Z.tar"]
+        self.assertEqual(backup.retention_candidates(names, disabled=True), [])
+
 
 if __name__ == "__main__":
     unittest.main()

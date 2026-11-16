@@ -5,15 +5,16 @@ import yaml
 from .inventory import ManifestLoader
 
 
-def cluster_scopes(root: Path):
+def cluster_scopes(root: Path, starts=None, *, follow_flux=True):
     root = root.resolve()
     owners: dict[str, set[str]] = {}
     errors: list[str] = []
-    for cluster in ('home', 'cloud'):
-        start = root / 'clusters' / f'calcifer-{cluster}'
-        if not start.is_dir():
-            continue
-        pending = [start]
+    if starts is None:
+        starts = {cluster: [root / 'clusters' / f'calcifer-{cluster}']
+                  for cluster in ('home', 'cloud') if (root / 'clusters' / f'calcifer-{cluster}').is_dir()}
+    for cluster, entries in starts.items():
+        pending = [root / entry for entry in entries]
+        opaque = set()
         visited = set()
         while pending:
             candidate = pending.pop()
@@ -30,6 +31,8 @@ def cluster_scopes(root: Path):
                 visited.add(resolved)
                 relative = str(resolved.relative_to(root))
                 owners.setdefault(relative, set()).add(cluster)
+                if resolved in opaque:
+                    continue
                 if not resolved.is_file() or resolved.name.endswith('.sops.yaml'):
                     continue
                 if resolved.suffix not in ('.yaml', '.yml'):
@@ -42,12 +45,24 @@ def cluster_scopes(root: Path):
                         spec = doc.get('spec') or {}
                         path = spec.get('path') if isinstance(spec, dict) else None
                         source = (spec.get('sourceRef') or {}) if isinstance(spec, dict) else {}
-                        if path and source.get('kind') == 'GitRepository' and source.get('name') == 'flux-system':
+                        if follow_flux and path and source.get('kind') == 'GitRepository' and source.get('name') == 'flux-system':
                             pending.append(root / path)
                     elif api.startswith('kustomize.config.k8s.io/'):
                         refs = list(doc.get('resources') or []) + list(doc.get('bases') or [])
+                        refs += list(doc.get('components') or []) + list(doc.get('configurations') or [])
                         refs += [x.get('path') for x in (doc.get('patches') or []) if isinstance(x, dict)]
                         refs += [x for x in (doc.get('patchesStrategicMerge') or []) if isinstance(x, str)]
+                        refs += [x.get('path') for x in (doc.get('patchesJson6902') or []) if isinstance(x, dict)]
+                        if not follow_flux and doc.get('secretGenerator'):
+                            errors.append(f'{cluster}: secret generator inputs require operator handling in {relative}')
+                        for generator in doc.get('configMapGenerator') or []:
+                            for ref in list(generator.get('files') or []) + list(generator.get('envs') or []):
+                                if not isinstance(ref, str) or '://' in ref:
+                                    errors.append(f'{cluster}: unresolved generator input in {relative}')
+                                    continue
+                                file_path = resolved.parent / ref.split('=', 1)[-1]
+                                opaque.add(file_path.resolve())
+                                pending.append(file_path)
                         for ref in refs:
                             if isinstance(ref, str) and not ('://' in ref or ref.startswith('git@')):
                                 pending.append(resolved.parent / ref)

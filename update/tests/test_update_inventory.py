@@ -27,6 +27,32 @@ class InventoryTest(unittest.TestCase):
         self.assertFalse(errors)
         self.assertTrue(any(c.kind == "rust" and c.source == "therment/Cargo.toml" for c in components))
         self.assertTrue(any(c.kind == "image" and "home-assistant" in c.name for c in components))
+        toolchain = next(c for c in components if c.kind == "rust-toolchain" and c.source == "therment/rust-toolchain.toml")
+        self.assertEqual(toolchain.metadata['espup_version'], '0.19.0')
+        self.assertEqual(toolchain.metadata['xtensa_rust_version'], '1.97.0.0')
+        self.assertEqual(toolchain.metadata['esp_idf_version'], 'v5.4.4')
+        self.assertEqual(toolchain.metadata['ldproxy_version'], '0.3.5')
+        self.assertEqual(toolchain.metadata['espflash_version'], '4.7.0')
+
+    def test_espressif_installer_and_compiler_pins_are_inventoried_separately(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'Cargo.toml').write_text(
+                '[package]\nname="firmware"\nversion="0.1.0"\n'
+                '[package.metadata.calcifer.esp-toolchain]\n'
+                'espup-version="0.19.0"\nxtensa-rust-version="1.97.0.0"\n'
+                'esp-idf-version="v5.4.4"\ntarget="xtensa-esp32-espidf"\n'
+                'ldproxy-version="0.3.5"\nespflash-version="4.7.0"\n')
+            (root / 'rust-toolchain.toml').write_text('[toolchain]\nchannel="esp"\n')
+            items, errors = discover(root)
+            self.assertEqual(errors, [])
+            toolchain = next(item for item in items if item.kind == 'rust-toolchain')
+            self.assertEqual(toolchain.declared, 'esp')
+            self.assertEqual(toolchain.metadata['espup_version'], '0.19.0')
+            self.assertEqual(toolchain.metadata['xtensa_rust_version'], '1.97.0.0')
+            self.assertEqual(toolchain.metadata['esp_idf_version'], 'v5.4.4')
+            self.assertEqual(toolchain.metadata['ldproxy_version'], '0.3.5')
+            self.assertEqual(toolchain.metadata['espflash_version'], '4.7.0')
 
 
 class PythonFilesTest(unittest.TestCase):
@@ -59,6 +85,30 @@ class UvWorkspaceTest(unittest.TestCase):
 
 
 class DirectDependenciesTest(unittest.TestCase):
+    def test_direct_rust_edge_disambiguates_lock_versions_without_listing_transitives(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'Cargo.toml').write_text('[package]\nname="app"\nversion="0.1.0"\n[dependencies]\ntoml="1.2.1"\n')
+            lock = ('[[package]]\nname="app"\nversion="0.1.0"\ndependencies=["toml 1.2.1+spec-1.1.0"]\n'
+                    '[[package]]\nname="toml"\nversion="0.8.23"\nsource="registry+https://github.com/rust-lang/crates.io-index"\n'
+                    '[[package]]\nname="toml"\nversion="1.2.1+spec-1.1.0"\nsource="registry+https://github.com/rust-lang/crates.io-index"\n')
+            (root / 'Cargo.lock').write_text(lock)
+            items, errors = discover(root)
+            self.assertEqual(errors, [])
+            crates = [item for item in items if item.kind == 'rust-dependency']
+            self.assertEqual(len(crates), 1)
+            self.assertEqual(crates[0].metadata['locked_version'], '1.2.1+spec-1.1.0')
+            self.assertFalse(any(item.kind == 'rust-locked' for item in items))
+            # Multiple direct aliases of the same crate cannot be attributed
+            # from this edge alone; do not arbitrarily select either version.
+            (root / 'Cargo.lock').write_text(lock.replace('dependencies=["toml 1.2.1+spec-1.1.0"]',
+                                                         'dependencies=["toml 0.8.23", "toml 1.2.1+spec-1.1.0"]'))
+            items, errors = discover(root)
+            self.assertEqual(errors, [])
+            crate = next(item for item in items if item.kind == 'rust-dependency')
+            self.assertNotIn('locked_version', crate.metadata)
+            self.assertIn('Multiple locked', crate.metadata['resolution_error'])
+
     def test_lockfiles_and_indirect_go_are_not_reported(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '25'
+          java-version: '25.0.5+8'
       - name: Test and package the JVM application
         run: mvn -B -ntp -f rage-quit/pom.xml verify -s authorization-server/.mvn/settings.xml
       - name: Test the framework-free Italian interface

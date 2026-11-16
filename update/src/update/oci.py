@@ -7,6 +7,7 @@ import re
 from .tools import run_readonly
 from . import registry
 from .versions import stable_version
+from .policies import allows, no_candidate
 
 _VALID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]*$")
 
@@ -74,12 +75,11 @@ def check_image(item, cache, runner=run_readonly):
     parsed = []
     for candidate in tags:
         parts = _tag_parts(candidate)
-        if parts and ((parsed_current and parts[0] == parsed_current[0]) or
+        if parts and allows(item, parts[1], parsed_current[1] if parsed_current else None) and ((parsed_current and parts[0] == parsed_current[0]) or
                       (not tag and parts[0][1] == '' and parts[0][2] == 3 and parts[0][0] in ('', 'v'))):
             parsed.append((parts[1], candidate))
     if not parsed:
-        item.status = 'unknown'
-        item.detail = 'No comparable stable image tags'
+        no_candidate(item)
         return
     version, candidate = max(parsed)
     item.candidate = candidate

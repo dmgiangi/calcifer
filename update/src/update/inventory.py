@@ -49,6 +49,48 @@ def _clusters(path: Path) -> list[str]:
     return []
 
 
+def _esp_toolchain_metadata(cargo_path: Path) -> dict[str, str]:
+    """Read explicit Espressif installer/compiler pins without guessing them."""
+    try:
+        cargo = tomllib.loads(cargo_path.read_text(encoding="utf-8"))
+        package = cargo.get("package", {})
+        metadata = package.get("metadata", {}) if isinstance(package, dict) else {}
+        calcifer = metadata.get("calcifer", {}) if isinstance(metadata, dict) else {}
+        pins = calcifer.get("esp-toolchain", {}) if isinstance(calcifer, dict) else {}
+    except (OSError, UnicodeError, ValueError, TypeError, AttributeError):
+        return {}
+    if not isinstance(pins, dict):
+        return {}
+    names = {
+        "espup-version": "espup_version",
+        "xtensa-rust-version": "xtensa_rust_version",
+        "esp-idf-version": "esp_idf_version",
+        "ldproxy-version": "ldproxy_version",
+        "espflash-version": "espflash_version",
+        "target": "target",
+    }
+    return {key: pins[source] for source, key in names.items()
+            if isinstance(pins.get(source), str) and pins[source].strip()}
+
+
+def _direct_rust_versions(root, item, lockfile):
+    """Disambiguate lock versions using the declaring package's direct edges."""
+    try:
+        manifest = tomllib.loads((root / item.source).read_text(encoding='utf-8'))
+        name = manifest.get('package', {}).get('name')
+        packages = tomllib.loads((root / lockfile).read_text(encoding='utf-8')).get('package', [])
+        parents = [package for package in packages if package.get('name') == name and not package.get('source')]
+        if not name or len(parents) != 1:
+            return set()
+        references = [reference.split() for reference in parents[0].get('dependencies', [])
+                      if isinstance(reference, str) and reference.split() and reference.split()[0] == item.name]
+        if not references or any(len(reference) < 2 for reference in references):
+            return set()
+        return {reference[1] for reference in references}
+    except (OSError, ValueError, TypeError, AttributeError):
+        return set()
+
+
 def discover(root: Path = ROOT) -> tuple[list[Component], list[str]]:
     components: list[Component] = []
     errors: list[str] = []
@@ -127,10 +169,31 @@ def discover(root: Path = ROOT) -> tuple[list[Component], list[str]]:
                         add(metadata.get("name", "unknown"), "k3s-component", path)
                     images(doc, path)
             elif parts[:2] == (".github", "workflows") and path.suffix in (".yaml", ".yml"):
-                for line in path.read_text(encoding="utf-8").splitlines():
+                workflow_text = path.read_text(encoding="utf-8")
+                for line in workflow_text.splitlines():
                     match = ACTION.match(line)
                     if match:
                         add(match.group(1), "action", path, match.group(1))
+                workflow = yaml.safe_load(workflow_text)
+                jobs = workflow.get('jobs', {}) if isinstance(workflow, dict) else {}
+                for job_name, job in jobs.items():
+                    if not isinstance(job, dict):
+                        continue
+                    for index, step in enumerate(job.get('steps') or []):
+                        if not isinstance(step, dict):
+                            continue
+                        action = str(step.get('uses', '')).split('@', 1)[0]
+                        if action not in ('actions/setup-java', 'graalvm/setup-graalvm'):
+                            continue
+                        settings = step.get('with') or {}
+                        distribution = settings.get('distribution')
+                        if distribution not in ('temurin', 'graalvm-community'):
+                            distribution = 'unresolved'
+                        version = str(settings.get('java-version', ''))
+                        if not re.fullmatch(r'(?:jdk-)?[0-9]{1,2}(?:\.[0-9]+){0,3}(?:\+[0-9]+(?:\.[0-9]+)*)?', version):
+                            version = None
+                        add(f'build-jdk:{job_name}:{index}', 'java-toolchain', path, version,
+                            {'distribution': distribution, 'toolchain_role': 'build-jdk'})
             elif path.name.startswith("Dockerfile"):
                 for line in path.read_text(encoding="utf-8").splitlines():
                     match = FROM.match(line)
@@ -145,7 +208,9 @@ def discover(root: Path = ROOT) -> tuple[list[Component], list[str]]:
                              ("registry+https://github.com/rust-lang/crates.io-index", "sparse+https://index.crates.io/") else "other"})
             elif path.name == "rust-toolchain.toml":
                 toolchain = tomllib.loads(path.read_text(encoding="utf-8"))
-                add("rust-toolchain", "rust-toolchain", path, toolchain.get("toolchain", {}).get("channel"))
+                add("rust-toolchain", "rust-toolchain", path,
+                    toolchain.get("toolchain", {}).get("channel"),
+                    _esp_toolchain_metadata(path.with_name("Cargo.toml")))
             elif path.name in ("uv.lock", "poetry.lock"):
                 lock = tomllib.loads(path.read_text(encoding="utf-8"))
                 for package in lock.get("package", []):
@@ -229,7 +294,7 @@ def discover(root: Path = ROOT) -> tuple[list[Component], list[str]]:
                         for property_name in ("java.version", "maven.compiler.release", "maven.compiler.source", "maven.compiler.target"):
                             value = properties.findtext(f"{prefix}{property_name}", default="", namespaces=ns)
                             if value:
-                                add(property_name, "java-toolchain", path, value)
+                                add(property_name, "java-toolchain", path, value, {'toolchain_role': 'project-target'})
                     parent = pom.find(f"{prefix}parent", ns)
                     if parent is not None:
                         group = parent.findtext(f"{prefix}groupId", default="", namespaces=ns)
@@ -316,6 +381,15 @@ def discover(root: Path = ROOT) -> tuple[list[Component], list[str]]:
             nearest = max(len((root / entry.source).parent.parts) for entry in matches)
             matches = [entry for entry in matches if len((root / entry.source).parent.parts) == nearest]
             versions = {entry.declared if item.kind == "rust-dependency" else (entry.declared or "").split("==", 1)[-1] for entry in matches}
+            if item.kind == 'rust-dependency' and len(versions) > 1:
+                lockfiles = {entry.source for entry in matches}
+                if len(lockfiles) == 1:
+                    direct = _direct_rust_versions(root, item, next(iter(lockfiles)))
+                    if len(direct) == 1:
+                        matches = [entry for entry in matches if entry.declared in direct]
+                        versions = {entry.declared for entry in matches}
+                if len(versions) != 1:
+                    item.metadata['resolution_error'] = 'Multiple locked crate versions; direct dependency mapping is unresolved'
             if len(versions) == 1 and next(iter(versions)):
                 item.metadata["locked_version"] = next(iter(versions))
                 item.metadata["lockfile"] = matches[0].source

@@ -7,6 +7,10 @@ to preserve client addresses, and the hawkBit middleware accepts only
 the Internet; router and firewall forwarding/SNAT rules have not been
 independently inspected. The data volume is not encrypted.
 
+The current image provenance and Eclipse migration assessment are recorded in
+[hawkBit migration assessment](hawkbit-migration-assessment.md). No candidate
+image has been migrated against a copy of the persistent data.
+
 cert-manager renews the `hawkbit-tls` secret. Traefik reads certificate updates
 from Kubernetes; monitor certificate expiry and verify the served certificate:
 
@@ -49,6 +53,10 @@ python3 scripts/hawkbit-local-backup.py
 The operation briefly stops hawkBit and resumes Flux. If the process or machine
 is forcibly interrupted, verify `deployment/hawkbit` has one desired replica
 and `home-apps` is not suspended, then restore them if necessary.
+
+For a rehearsal or other backup that must preserve every existing archive, run
+`python3 scripts/hawkbit-local-backup.py --no-retention`. The new archive is
+still checksum-verified, but no older matching archives are removed.
 
 For a consistent backup, suspend the `home-apps` Flux Kustomization, scale the
 hawkBit Deployment to zero, and wait until its pod has terminated. Mount the

@@ -2,6 +2,7 @@
 from pathlib import PurePosixPath
 
 from .image_prepare import _GROUPS
+from .policies import record_provenance
 
 CHECKED_KINDS = {
     'image': 'oci', 'docker-base': 'oci', 'helm-chart': 'helm', 'action': 'github-releases',
@@ -9,13 +10,14 @@ CHECKED_KINDS = {
     'maven-plugin': 'maven-central', 'maven-managed': 'maven-central',
     'python-dependency': 'pypi', 'python-locked': 'pypi', 'go-dependency': 'go-proxy', 'go-locked': 'go-proxy',
     'rust-dependency': 'crates-io', 'rust-locked': 'crates-io',
-    'k3s-component': 'k3s-bundled', 'rust-toolchain': 'rust-toolchain', 'java-toolchain': 'temurin', 'go-toolchain': 'go-releases',
+    'k3s-component': 'k3s-bundled', 'rust-toolchain': 'rust-toolchain', 'java-toolchain': 'java-distribution', 'go-toolchain': 'go-releases',
 }
 INVENTORY_KINDS = {'helm-repository', 'maven', 'python', 'rust', 'go', 'python-local-project'}
 
 
 def annotate(components):
     for item in components:
+        record_provenance(item, components)
         parts = PurePosixPath(item.source).parts
         if parts[:2] == ('clusters', 'apps') and len(parts) > 2:
             owner = parts[2]

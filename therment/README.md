@@ -18,10 +18,10 @@ sudo apt-get install build-essential git curl pkg-config libudev-dev clang libcl
 Install the Espressif ESP32 toolchain, `ldproxy` and `espflash`:
 
 ```sh
-cargo install espup --locked
-espup install --targets esp32
-cargo install ldproxy --locked
-cargo install espflash --locked
+cargo install espup --version 0.19.0 --locked
+espup install --targets esp32 --toolchain-version 1.97.0.0
+cargo install ldproxy --version 0.3.5 --locked
+cargo install espflash --version 4.7.0 --locked
 ```
 
 Load the environment created by `espup` before building:
@@ -31,10 +31,14 @@ source "$HOME/export-esp.sh"
 ```
 
 Use the chosen alternative path if the export file was installed elsewhere.
-`rust-toolchain.toml` selects the `esp` toolchain; `.cargo/config.toml` selects
-`xtensa-esp32-espidf` and ESP-IDF v5.4.4. The first build downloads ESP-IDF and
-its tools, requiring network access and disk space. `.embuild/` and `target/`
-are generated, Git-ignored local data. `Cargo.lock` pins Rust dependencies.
+`rust-toolchain.toml` selects the local `esp` alias; `Cargo.toml` records the
+installer (`espup` 0.19.0) and Xtensa Rust toolchain (1.97.0.0) separately.
+The same metadata pins `ldproxy` 0.3.5 and `espflash` 4.7.0. `.cargo/config.toml`
+selects `xtensa-esp32-espidf` and ESP-IDF v5.4.4. The locked firmware
+dependencies build against this combination; re-run the build-only OTA check
+after changing any of these pins. The first build downloads ESP-IDF and its
+tools, requiring network access and disk space. `.embuild/` and `target/` are
+generated, Git-ignored local data. `Cargo.lock` pins Rust dependencies.
 
 ## Device configuration
 

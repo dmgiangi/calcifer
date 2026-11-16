@@ -5,6 +5,17 @@ from update.model import Component
 
 
 class ChecksTest(unittest.TestCase):
+    def test_parent_candidate_is_verified_before_bundled_checks(self):
+        host = Component('k3s', 'k3s', 'host', clusters=['home'])
+        bundled = Component('traefik', 'k3s-component', 'file', clusters=['home'])
+        def platform(item, cache):
+            item.candidate = 'v1.32.0+k3s1'
+        def bundle(item, hosts, cache):
+            self.assertEqual(hosts[0].candidate, 'v1.32.0+k3s1')
+        with patch('update.checks.check_platform', side_effect=platform), patch('update.checks.check_bundled', side_effect=bundle) as check:
+            check_all([bundled, host])
+        check.assert_called_once()
+
     def test_duplicate_entries_are_checked_once(self):
         entries = [Component('a', 'action', str(i), declared='owner/action@v1.0.0') for i in range(2)]
         def fake(item, cache, **kwargs):

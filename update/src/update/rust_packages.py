@@ -7,6 +7,7 @@ from urllib.request import Request, urlopen
 from .errors import describe_source_error
 from .model import Component
 from .versions import stable_version
+from .policies import allows, no_candidate
 
 _CRATE = re.compile(r"^[A-Za-z0-9_-]+$")
 
@@ -60,6 +61,10 @@ def check_rust(component: Component, cache: dict, fetch=latest_crate) -> None:
             component.detail = "Crate has no comparable stable release"
             return
         component.candidate = value
+        current = stable_version(component.metadata.get('locked_version') or component.declared or '')
+        if not allows(component, latest, current):
+            no_candidate(component)
+            return
         if component.kind == "rust-locked":
             if component.metadata.get("source_kind") != "registry":
                 component.status = "unknown"
@@ -80,7 +85,7 @@ def check_rust(component: Component, cache: dict, fetch=latest_crate) -> None:
             return
         # Cargo declarations are ranges by default; never equate a range to a pin.
         component.status = "unknown"
-        component.detail = "Source: crates.io; compare against Cargo.lock and Cargo compatibility before updating"
+        component.detail = component.metadata.get('resolution_error') or "Source: crates.io; compare against Cargo.lock and Cargo compatibility before updating"
     except (URLError, OSError, ValueError, TypeError, KeyError) as exc:
         component.status = "unavailable"
         component.detail = "Crates.io lookup failed: " + describe_source_error(exc)

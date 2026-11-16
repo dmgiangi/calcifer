@@ -1,5 +1,6 @@
 .venv
 .idea
+*.iml
 authorization-server/target
 
 # Generated Python bytecode and local Therment host-test artifacts

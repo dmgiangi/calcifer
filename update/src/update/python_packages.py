@@ -7,6 +7,7 @@ from packaging.requirements import InvalidRequirement, Requirement
 from packaging.version import InvalidVersion, Version
 
 from .model import Component
+from .policies import allows, no_candidate
 
 
 def releases(name: str) -> list[str]:
@@ -32,33 +33,31 @@ def check_python(component: Component, cache: dict, fetch=releases) -> None:
         component.detail = "Dependency uses a non-PyPI source; public lookup skipped"
         return
     try:
+        locked = component.metadata.get("locked_version")
+        pins = [locked] if locked else [s.version for s in requirement.specifier if s.operator in ("==", "===") and "*" not in s.version]
+        try:
+            current = Version(pins[0]) if len(pins) == 1 else None
+        except InvalidVersion:
+            current = None
         if name not in cache:
             cache[name] = fetch(name)
         versions = []
         for release in cache[name]:
             try:
                 parsed = Version(release)
-                if not parsed.is_prerelease and not parsed.is_devrelease:
+                if not parsed.is_prerelease and not parsed.is_devrelease and allows(component, parsed, current):
                     versions.append(parsed)
             except InvalidVersion:
                 continue
         if not versions:
-            component.status = "unknown"
-            component.detail = "No stable published release found"
+            no_candidate(component)
             return
         latest = max(versions)
         component.candidate = str(latest)
-        locked = component.metadata.get("locked_version")
-        pins = [locked] if locked else [s.version for s in requirement.specifier if s.operator in ("==", "===") and "*" not in s.version]
-        if len(pins) == 1:
-            try:
-                current = Version(pins[0])
-            except InvalidVersion:
-                current = None
-            if current is not None:
-                component.status = "update-available" if latest > current else "current" if latest == current else "ahead"
-                component.detail = "Source: PyPI; locked version needs review before updating" if locked else "Source: PyPI; pin needs review before updating"
-                return
+        if current is not None:
+            component.status = "update-available" if latest > current else "current" if latest == current else "ahead"
+            component.detail = "Source: PyPI; locked version needs review before updating" if locked else "Source: PyPI; pin needs review before updating"
+            return
         component.status = "unknown"
         component.detail = "Requirement is a range; installed version is unknown"
     except (URLError, TimeoutError, OSError, ValueError, KeyError, TypeError):

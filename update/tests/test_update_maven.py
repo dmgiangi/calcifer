@@ -20,6 +20,15 @@ class MavenTest(unittest.TestCase):
         self.assertEqual(item.status, 'unavailable')
         self.assertNotIn('secret', item.detail)
 
+    def test_spring_bom_managed_dependency_points_to_parent(self):
+        item = Component('org.springframework.boot:spring-boot-starter-webmvc', 'maven-dependency',
+                         'pom.xml', metadata={'effective_version': '4.1.1',
+                                              'managed_by': 'org.springframework.boot:spring-boot-dependencies',
+                                              'update_owner': 'org.springframework.boot:spring-boot-starter-parent'})
+        check_maven(item, {}, lambda *_: self.fail('BOM-managed child must not be checked independently'))
+        self.assertEqual(item.status, 'parent-managed')
+        self.assertIn('spring-boot-starter-parent', item.detail)
+
 
 class MavenNumericVersionTest(unittest.TestCase):
     def test_four_component_versions_are_compared_without_misclassifying_qualifiers(self):

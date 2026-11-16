@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .model import Component, Report
 from .inventory import ROOT, discover
-from .live import collect
+from .live import collect, apply_observations
 from .platform import components as platform_components
 from .scope import cluster_scopes
 from .prepare import prepare_chart
@@ -20,9 +20,10 @@ from .dependency_prepare import prepare_dependency
 from .checks import check_all
 from .catalog import annotate
 from .helm import render_chart_images
-from .maven_effective import effective_versions
+from .maven_effective import effective_model
 from .go_effective import selected_modules
 from .progress import ProgressDisplay
+from .output import render_report
 
 
 def parser() -> argparse.ArgumentParser:
@@ -82,6 +83,14 @@ def run(args: argparse.Namespace, progress=None) -> Report:
         if args.cluster != "all":
             # Include unresolved scope: excluding it would falsely imply coverage.
             components = [item for item in components if not item.clusters or args.cluster in item.clusters]
+        if not scope_errors:
+            from .effective import effective_images
+            if progress:
+                progress('Rendering locale degli overlay Kustomize')
+            rendered_images, render_errors = effective_images(ROOT, components, scopes)
+            annotate(rendered_images)
+            components.extend(rendered_images)
+            errors.extend(render_errors)
         if args.live:
             if progress:
                 progress("Lettura dello stato dei cluster selezionati")
@@ -96,21 +105,7 @@ def run(args: argparse.Namespace, progress=None) -> Report:
                     observations = collect(cluster, getattr(args, f"context_{cluster}"), args.kubeconfig,
                                            desired_revision=desired)
                     components.extend(observations)
-                    nodes = [o for o in observations if o.kind == "nodes"]
-                    charts = [o for o in observations if o.kind == "k3s-helmcharts"]
-                    if len(nodes) == 1 and nodes[0].metadata.get("platform"):
-                        for image_item in components:
-                            if image_item.kind in ("image", "docker-base", "helm-chart") and image_item.clusters == [cluster]:
-                                image_item.metadata["platform"] = nodes[0].metadata["platform"]
-                    for platform_item in components:
-                        if platform_item.kind == "k3s-component" and cluster in platform_item.clusters:
-                            match = next((o for o in charts if o.name == platform_item.name), None)
-                            if match:
-                                platform_item.observed = match.observed
-                                platform_item.detail = "Bundled component version observed from K3s HelmChart; review the K3s release"
-
-                        if platform_item.kind == "k3s" and platform_item.clusters == [cluster] and len(nodes) == 1:
-                            platform_item.observed = nodes[0].observed
+                    apply_observations(components, cluster, observations)
         charts = [item for item in components if item.kind == "helm-chart"]
         if args.command == "check" and not args.offline:
             root = ROOT
@@ -118,12 +113,15 @@ def run(args: argparse.Namespace, progress=None) -> Report:
                            and (not item.declared or "${" in item.declared)]
             pom_paths = sorted({item.source for item in maven_items})
             resolved = _parallel_phase("Risoluzione Maven", pom_paths,
-                                       lambda path: effective_versions(root, path), 4, progress)
+                                       lambda path: effective_model(root, path), 4, progress)
             effective = dict(zip(pom_paths, resolved))
             for item in maven_items:
-                versions, resolution_error = effective[item.source]
+                versions, sources, resolution_error = effective[item.source]
                 if item.name in versions:
                     item.metadata["effective_version"] = versions[item.name]
+                    if not item.declared and sources.get(item.name) == "org.springframework.boot:spring-boot-dependencies":
+                        item.metadata["managed_by"] = sources[item.name]
+                        item.metadata["update_owner"] = "org.springframework.boot:spring-boot-starter-parent"
                 elif resolution_error:
                     item.metadata["resolution_error"] = resolution_error
             go_items = [item for item in components if item.kind == "go-dependency"]
@@ -244,23 +242,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         print(json.dumps(report.to_dict(), indent=2))
     else:
-        for component in report.components:
-            fields = [component.kind, component.name, component.status, component.source,
-                      f"clusters={','.join(component.clusters) or 'unresolved'}"]
-            for label in ("declared", "observed", "candidate", "detail"):
-                value = getattr(component, label)
-                if value:
-                    fields.append(f"{label}={value}")
-            if component.metadata.get("locked_version"):
-                fields.append(f"locked={component.metadata['locked_version']}")
-            print("\t".join(fields))
-        if report.diff:
-            print(report.diff, end="")
-            print(f"Affected clusters: {', '.join(report.affected_clusters) or 'repository-wide'}")
-            print(f"Preview fingerprint: {report.fingerprint}")
-            print("Local changes written." if report.written else "Preview only; no changes written.")
-        for error in report.errors:
-            print(f"Error: {error}", file=sys.stderr)
+        render_report(report)
     return 1 if report.errors else 0
 
 

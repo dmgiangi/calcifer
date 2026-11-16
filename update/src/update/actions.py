@@ -9,6 +9,7 @@ from .errors import describe_source_error
 from .cache import cached
 from .model import Component
 from .versions import stable_version
+from .policies import allows, no_candidate
 
 _ACTION = re.compile(r"^([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)(?:/[^@\s]+)?@([^@\s]+)$")
 
@@ -72,6 +73,10 @@ def check_action(component: Component, cache: dict, fetch=latest_release, resolv
         component.detail = "Latest release tag is not a stable three-part version"
         return
     component.candidate = tag
+    baseline = current or (stable_version(f'{major_match[1]}.0.0') if major_match else None)
+    if not allows(component, candidate, baseline):
+        no_candidate(component)
+        return
     if major_match:
         if candidate.major > int(major_match.group(1)):
             component.status = "update-available"

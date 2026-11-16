@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Create a consistent hawkBit backup on the Home backup PVC."""
 
+import argparse
 from datetime import datetime
 import json
 import re
@@ -44,6 +45,11 @@ def expired_backups(names):
     return [name for _, name in backups if name not in keep]
 
 
+def retention_candidates(names, disabled=False):
+    """Return old archives to remove, unless retention is explicitly disabled."""
+    return [] if disabled else expired_backups(names)
+
+
 def helper_pod():
     return {
         'apiVersion': 'v1', 'kind': 'Pod', 'metadata': {'name': HELPER},
@@ -64,7 +70,13 @@ def helper_pod():
     }
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description='Create a consistent hawkBit backup')
+    parser.add_argument(
+        '--no-retention', action='store_true',
+        help='keep all existing archives; do not remove older backups',
+    )
+    args = parser.parse_args(argv)
     state = json.loads(run(['kubectl', '--context', 'calcifer-home', '-n', 'flux-system', 'get', 'kustomization', 'home-apps', '-o', 'json']).stdout)
     if state.get('spec', {}).get('suspend', False):
         raise SystemExit('home-apps is already suspended; refusing to change its state')
@@ -101,10 +113,13 @@ echo "Backup archive verified and stored: $(basename "$final")"
 '''
         print(k('exec', HELPER, '--', 'sh', '-ec', command).stdout.decode().strip(), flush=True)
         names = k('exec', HELPER, '--', 'ls', '-1', '/backup').stdout.decode().splitlines()
-        expired = expired_backups(names)
+        expired = retention_candidates(names, disabled=args.no_retention)
         for name in expired:
             k('exec', HELPER, '--', 'rm', '-f', '--', '/backup/' + name, '/backup/' + name + '.sha256')
-        print(f'Applied retention; removed {len(expired)} older archives.', flush=True)
+        if args.no_retention:
+            print('Retention disabled; existing archives were preserved.', flush=True)
+        else:
+            print(f'Applied retention; removed {len(expired)} older archives.', flush=True)
     finally:
         try:
             if suspended:

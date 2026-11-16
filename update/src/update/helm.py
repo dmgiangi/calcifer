@@ -8,6 +8,7 @@ import yaml
 from .versions import stable_version
 from .errors import describe_source_error
 from .cache import cached
+from .policies import allows, no_candidate
 from . import registry
 import json
 
@@ -52,11 +53,10 @@ def check_chart(item, repositories, cache, fetch=fetch_index):
             entries = cached(cache, url, lambda: fetch(url)).get(item.name, [])
         stable = [(stable_version(str(entry.get("version", ""))), str(entry.get("version", "")))
                   for entry in entries if isinstance(entry, dict)]
-        stable = [(version, text) for version, text in stable if version is not None]
         current = stable_version(item.declared or "")
+        stable = [(version, text) for version, text in stable if allows(item, version, current)]
         if not stable or current is None:
-            item.status = "unknown"
-            item.detail = "Cannot compare the chart release using stable three-part versions"
+            no_candidate(item)
             return
         version, tag = max(stable)
         item.candidate = tag

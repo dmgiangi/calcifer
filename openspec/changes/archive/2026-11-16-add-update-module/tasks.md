@@ -36,20 +36,22 @@
 
 ## 5. Source, version and effective-state hardening
 
-- [ ] 5.1 Define per-component authoritative sources, stable/compatibility policies and candidate provenance; extend version parsing to handle SemVer build metadata without confusing it with prerelease ordering, with regression tests for Rust package versions.
-- [ ] 5.2 Resolve effective Kustomize images per cluster so overridden base placeholders are excluded from deployed inventory; test divergent overlays and rendered image references.
-- [ ] 5.3 Extend live K3s observations to retain every node's version and report mixed versions; map bundled Traefik only from authoritative metadata for the exact K3s release and keep it non-independent.
-- [ ] 5.4 Make Java toolchain checks distribution-aware (GraalVM Community versus Temurin) and pin exact versions in build workflows; pin Hatchling for isolated builds and validate reproducibility.
-- [ ] 5.5 Pin the Espressif Rust installer/toolchain inputs separately, verify ESP-IDF compatibility, and run firmware build validation without flashing or publishing.
-- [ ] 5.6 Select maintained official base-image lines and verified digests for Distroless and its runtime-library build stage; validate architecture, native-library loading, certificates and non-root startup, while documenting digest monitoring.
+- [x] 5.1 Define per-component authoritative sources, stable/compatibility policies and candidate provenance; extend version parsing to handle SemVer build metadata without confusing it with prerelease ordering, with regression tests for Rust package versions.
+- [x] 5.2 Resolve effective Kustomize images per cluster so overridden base placeholders are excluded from deployed inventory; test divergent overlays and rendered image references.
+- [x] 5.3 Extend live K3s observations to retain every node's version and report mixed versions; map bundled Traefik only from authoritative metadata for the exact K3s release and keep it non-independent.
+- [x] 5.4 Make Java toolchain checks distribution-aware (GraalVM Community versus Temurin) and pin exact versions in build workflows; pin Hatchling for isolated builds and validate reproducibility.
+- [x] 5.5 Pin the Espressif Rust installer/toolchain inputs separately, verify ESP-IDF compatibility, and run firmware build validation without flashing or publishing.
+- [x] 5.6 Select maintained official base-image lines and verified digests for Distroless and its runtime-library build stage; validate architecture, native-library loading, certificates and non-root startup, while documenting digest monitoring.
 
 ## 6. Hawkbit migration assessment
 
-- [ ] 6.1 Establish current image provenance, configuration, authentication, API/client expectations and persistent-data behavior; identify an authoritative Eclipse Hawkbit image/release candidate without assuming it is drop-in compatible.
-- [ ] 6.2 Rehearse any candidate migration using an isolated copy of persistent data; verify devices/clients, targets, artifacts, downloads, storage and recovery behavior, and document database/schema compatibility.
-- [ ] 6.3 Prepare a separate operator-reviewed cutover proposal only if the rehearsal passes; do not change production image, persistent data or database as part of inventory/check execution.
+- [x] 6.1 Establish current image provenance, configuration, authentication, API/client expectations and persistent-data behavior; identify an authoritative Eclipse Hawkbit image/release candidate without assuming it is drop-in compatible.
 
 ## 7. Verification and reporting
 
-- [ ] 7.1 Add regression tests for source provenance, compatibility-policy filtering, missing version mappings, effective overlays, mixed K3s nodes and bundled Traefik mapping.
-- [ ] 7.2 Update operator documentation and report the before/after status counts with reasons; verify remaining unknown/unavailable results are genuine gaps or source failures and no live deployment or host upgrade was performed.
+- [x] 7.1 Add regression tests for source provenance, compatibility-policy filtering, missing version mappings, effective overlays, mixed K3s nodes and bundled Traefik mapping.
+- [x] 7.2 Update operator documentation and report the before/after status counts with reasons; verify remaining unknown/unavailable results are genuine gaps or source failures and no live deployment or host upgrade was performed.
+
+## Implementation checkpoint
+
+Tasks 5.1–5.6, 6.1 and 7.1–7.2 are implemented. The remaining Hawkbit rehearsal and cutover items were removed from this change at the operator's request; this does not mark migration compatibility or cutover as verified. The assessment documents the partial isolated rehearsal and outstanding OTA download, HTTPS URL, publisher and feedback checks. Exact pins include GraalVM Community `jdk-25.0.2`, Temurin `25.0.5+8`, Hatchling `1.33.0`, and Therment's `espup` 0.19.0, Xtensa Rust 1.97.0.0, ESP-IDF v5.4.4, `ldproxy` 0.3.5 and `espflash` 4.7.0. The build-only OTA firmware check passed with the declared Espressif inputs. Authorization-server's Debian 13/Distroless Debian 13 amd64 image built from pinned digests and passed runtime architecture, zlib loading, CA certificate, non-root and liveness checks. The update-module suite passed (132 tests), Therment host tests passed (10 Python and 27 Rust), and earlier Hatchling, Java native-image, authorization-server and Rage Quit tests pass. Java build recommendations remain restricted to LTS major lines. Spring Boot BOM-managed Maven dependencies are attributed to the parent, while independently sourced BOM versions remain checkable. A fresh Hawkbit backup and two isolated PVC copies were created on calcifer-home; production image and database were not changed, and the live service was resumed after backup. Operator documentation records the post-pin report: 191 components, 58 configured, 34 current, 90 update-available, 9 explained unknowns and no coverage/source errors. The update-module suite includes direct Cargo.lock edge resolution when multiple crate versions exist.
