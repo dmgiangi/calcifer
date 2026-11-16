@@ -67,7 +67,7 @@ spec:
             - name: HAWKBIT_ARTIFACT_URL_PROTOCOLS_DOWNLOAD_HTTP_PROTOCOL
               value: https
             - name: HAWKBIT_ARTIFACT_URL_PROTOCOLS_DOWNLOAD_HTTP_PORT
-              value: "8443"
+              value: "443"
             - name: JAVA_TOOL_OPTIONS
               value: "-Djava.io.tmpdir=/tmp"
           startupProbe:
