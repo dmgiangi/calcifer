@@ -15,3 +15,46 @@ curl --silent --show-error --output /dev/null --write-out 'HTTP %{http_code}; TL
 ```
 
 An unauthenticated request should return HTTP 401 and TLS verification 0.
+
+The registered controller ID is `therment-01`. Its dedicated target token is
+stored in the SOPS-encrypted `therment-01-ota-credentials.sops.yaml` alongside
+the server manifests, but is not deployed as a Kubernetes Secret. A trusted
+build or provisioning process with the project's age identity can decrypt the
+`stringData.target-token` field directly into its own memory or a protected
+pipe. Never print the token or pass it as a command-line argument. The device
+firmware has not yet been provisioned with this token.
+
+## Backup and restore
+
+The retained PVC protects against automatic volume deletion, not data loss.
+Backups contain the database, target tokens and firmware binaries: keep them on
+a trusted storage location, restrict access to the operator, and do not commit
+or upload them to an untrusted service. The PVC and backups are not encrypted at
+rest. No scheduled backup is currently configured. Establish a schedule and a
+retention policy on the chosen trusted storage before relying on this service.
+
+For a consistent backup, suspend the `home-apps` Flux Kustomization, scale the
+hawkBit Deployment to zero, and wait until its pod has terminated. Mount the
+`hawkbit-data` PVC at `/data` in a temporary helper pod running as UID/GID 1001
+with fsGroup 1001. Stream `tar cf - -C /data .` into a file created with mode
+0600 on trusted storage; the hawkBit image has `tar` but does not include
+`gzip`. Delete the helper pod, scale the Deployment back to one, resume Flux,
+and verify the rollout and authenticated device access. Always resume Flux and
+restore the Deployment even if the backup fails; do not archive a live H2
+database or expose the archive in terminal output.
+
+To rehearse restoration, create a new empty PVC, mount it in a helper pod with
+the same UID, GID and fsGroup, and stream the archive to
+`tar xf - --strip-components=1 -C /data`. The strip option avoids trying to
+change ownership or permissions of the mounted volume root. Start an isolated
+hawkBit instance against the new PVC, with no public Service or ingress, and
+verify the restored target and artifact contents before removing the test PVC.
+For production recovery, stop the application first and restore to a separate
+empty PVC; do not overwrite the only existing volume. Retain the original PVC
+until the restored service has been verified.
+
+On 2026-11-16 an isolated restore from a stopped production PVC successfully
+started hawkBit and authenticated `therment-01` with its existing token. The
+temporary archive was kept in RAM and removed along with the test PVC. No real
+firmware artifact existed at the time, so recovery of an uploaded artifact has
+not yet been verified in this environment.
