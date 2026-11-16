@@ -2,4 +2,13 @@
 name = "calcifer"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = ["calcifer-update"]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+calcifer-update = { workspace = true }
+
+[tool.uv.workspace]
+members = ["update"]

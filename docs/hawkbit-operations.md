@@ -3,9 +3,9 @@
 The Home-only endpoint is `https://ota.calcifer.tech`. LAN DNS resolves this
 name to `192.168.0.102`. Traefik's Service uses `externalTrafficPolicy: Local`
 to preserve client addresses, and the hawkBit middleware accepts only
-`192.168.0.0/24`. Verify router and firewall rules separately, including that
-no external forwarding or SNAT allows other networks to appear as LAN clients.
-The data volume is not encrypted.
+`192.168.0.0/24`. The operator reports that the endpoint is not reachable from
+the Internet; router and firewall forwarding/SNAT rules have not been
+independently inspected. The data volume is not encrypted.
 
 cert-manager renews the `hawkbit-tls` secret. Traefik reads certificate updates
 from Kubernetes; monitor certificate expiry and verify the served certificate:
@@ -21,8 +21,10 @@ stored in the SOPS-encrypted `therment-01-ota-credentials.sops.yaml` alongside
 the server manifests, but is not deployed as a Kubernetes Secret. A trusted
 build or provisioning process with the project's age identity can decrypt the
 `stringData.target-token` field directly into its own memory or a protected
-pipe. Never print the token or pass it as a command-line argument. The device
-firmware has not yet been provisioned with this token.
+pipe. Never print the token or pass it as a command-line argument. The token has
+been provisioned in the OTA-enabled firmware; successful physical updates in
+actions 11 and 12 confirmed that the device could authenticate and download a
+release. Keep the firmware and generated build files protected as credentials.
 
 ## Backup and restore
 
@@ -33,9 +35,10 @@ or upload them to an untrusted service. The PVC and backups are not encrypted at
 rest. Backups are stored in the retained `hawkbit-backups` PVC on the Home
 node. It shares the underlying disk with the active PVC, so it does not protect
 against node or disk loss; the PVC size is not a guaranteed filesystem quota.
-No scheduled backup or automatic retention is currently configured. A starting
-policy is seven daily and four weekly backups; monitor filesystem space and
-apply the chosen retention manually until automation is available.
+No scheduled backup is currently configured. Each successful manual backup
+retains the newest archive for seven days and four ISO weeks that have backups;
+older matching archives are deleted after the new archive and checksum have
+been verified. Monitor filesystem space and run backups on an agreed schedule.
 
 To create a backup from a trusted workstation with `kubectl` and `flux` access:
 

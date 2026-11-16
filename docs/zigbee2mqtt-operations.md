@@ -97,8 +97,10 @@ password file only at pod start. Never log the decrypted data.
 
 Initial device ID: `therment-01`. Other IDs must be stable, unique, and contain
 no `/`, `+`, or `#`. Payloads are UTF-8; temperatures are degrees Celsius.
-The [Therment firmware](../therment/README.md) is maintained in this repository;
-integration still requires end-to-end validation with the device and Home Assistant.
+The [Therment firmware](../therment/README.md) is maintained in this repository.
+The climate entity appeared in Home Assistant during migration; full physical
+control and sensor behavior still need acceptance. The OTA Update entity and its
+MQTT state schema are documented in [OTA operations](../therment/OTA.md).
 
 | Exact topic | Therment | Home Assistant | Payload and retain |
 | --- | --- | --- | --- |
@@ -161,14 +163,15 @@ before orderly disconnect when possible. Regulation remains autonomous without
 MQTT: preserve hysteresis, relay interlock, sensor-failure shutdown and minimum
 compressor delay including after restart.
 
-### Candidate Home Assistant discovery payload
+### Home Assistant discovery payload
 
-The firmware publishes the following discovery mapping retained; validate it
-end-to-end with the installed integration and device:
+The current firmware publishes this discovery mapping retained. The climate
+entity was created by the installed Home Assistant integration; its physical
+control behavior still requires acceptance:
 
 ```json
 {
-  "name": "Therment",
+  "name": "Cella fermentazione",
   "unique_id": "therment-01-climate",
   "device": {"identifiers": ["therment-01"], "name": "Therment"},
   "current_temperature_topic": "therment/therment-01/temperature",
@@ -198,7 +201,8 @@ actual relay state. The state topic confirms both setpoint and mode, so an
 unacknowledged command does not change the displayed value. An invalid-sensor
 `None` payload resets current temperature rather than preserving the previous
 reading. Home Assistant's `auto`/`off` controls send the corresponding mode
-commands; test the interface with the actual firmware before relying on it.
+commands. The entity's physical control and sensor-failure behavior remain to be
+verified with safe loads.
 
 Mosquitto ACLs are **not enabled**: authenticated users currently have broad
 topic access, including Therment. Enabling an ACL changes defaults for every
@@ -222,5 +226,6 @@ and transition to cooling. From a
 different subnet, WireGuard, and an Internet client, test that TCP 1883 cannot
 reach the MQTT broker, and inspect router port forwards and SNAT rules. A TCP
 handshake alone is insufficient to verify the HAProxy source rejection: attempt
-an MQTT exchange and confirm it is rejected. Do not send production commands
-or publish retained discovery until the firmware contract is agreed.
+an MQTT exchange and confirm it is rejected. The firmware publishes discovery
+and sends non-retained control commands. Before testing production control,
+make connected loads safe; do not manually publish retained control commands.

@@ -1,0 +1,16 @@
+[project]
+name = "calcifer-update"
+version = "0.1.0"
+description = "Inspect and prepare Calcifer cluster and dependency updates"
+requires-python = ">=3.12"
+dependencies = ["PyYAML>=6.0,<7", "packaging>=24,<27"]
+
+[project.scripts]
+calcifer-update = "update.__main__:main"
+
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/update"]
