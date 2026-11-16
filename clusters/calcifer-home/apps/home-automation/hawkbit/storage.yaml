@@ -20,3 +20,16 @@ spec:
   resources:
     requests:
       storage: 4Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hawkbit-backups
+  namespace: home-automation
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: hawkbit-local-retain
+  resources:
+    requests:
+      storage: 8Gi
