@@ -11,12 +11,10 @@ spec:
     - Ingress
   ingress:
     - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              app.kubernetes.io/name: traefik
+        - ipBlock:
+            cidr: 192.168.0.102/32
+        - ipBlock:
+            cidr: 10.42.0.1/32
       ports:
         - protocol: TCP
           port: 8080
