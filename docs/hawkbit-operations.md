@@ -30,10 +30,22 @@ The retained PVC protects against automatic volume deletion, not data loss.
 Backups contain the database, target tokens and firmware binaries: keep them on
 a trusted storage location, restrict access to the operator, and do not commit
 or upload them to an untrusted service. The PVC and backups are not encrypted at
-rest. No scheduled backup is currently configured. On the chosen trusted
-storage, a starting retention policy is seven daily and four weekly backups;
-verify available space and recovery needs before applying it. Establish the
-schedule and retention before relying on this service.
+rest. Backups are stored in the retained `hawkbit-backups` PVC on the Home
+node. It shares the underlying disk with the active PVC, so it does not protect
+against node or disk loss; the PVC size is not a guaranteed filesystem quota.
+No scheduled backup or automatic retention is currently configured. A starting
+policy is seven daily and four weekly backups; monitor filesystem space and
+apply the chosen retention manually until automation is available.
+
+To create a backup from a trusted workstation with `kubectl` and `flux` access:
+
+```sh
+python3 scripts/hawkbit-local-backup.py
+```
+
+The operation briefly stops hawkBit and resumes Flux. If the process or machine
+is forcibly interrupted, verify `deployment/hawkbit` has one desired replica
+and `home-apps` is not suspended, then restore them if necessary.
 
 For a consistent backup, suspend the `home-apps` Flux Kustomization, scale the
 hawkBit Deployment to zero, and wait until its pod has terminated. Mount the
