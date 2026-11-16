@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hawkbit
+  namespace: home-automation
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hawkbit
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hawkbit
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: prepare-storage
+          image: openremote/hawkbit-update-server@sha256:0a8114d12b2b7bfa33def41bfac280abc20c5675f4f871f5501b2cdcf531525d
+          command: ["/bin/sh", "-ec", "mkdir -p /data/database /data/artifacts"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      containers:
+        - name: hawkbit
+          image: openremote/hawkbit-update-server@sha256:0a8114d12b2b7bfa33def41bfac280abc20c5675f4f871f5501b2cdcf531525d
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:h2:file:/data/database/hawkbit;MODE=LEGACY;DB_CLOSE_ON_EXIT=FALSE"
+            - name: HAWKBIT_DMF_RABBITMQ_ENABLED
+              value: "false"
+            - name: HAWKBIT_SECURITY_USER_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hawkbit-credentials
+                  key: admin-password-hash
+            - name: HAWKBIT_SECURITY_USER_OTAUPLOADER_TENANT
+              value: DEFAULT
+            - name: HAWKBIT_SECURITY_USER_OTAUPLOADER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hawkbit-credentials
+                  key: upload-password-hash
+            - name: HAWKBIT_SECURITY_USER_OTAUPLOADER_PERMISSIONS
+              value: CREATE_SOFTWARE_MODULE,READ_SOFTWARE_MODULE,UPDATE_SOFTWARE_MODULE,CREATE_DISTRIBUTION_SET,READ_DISTRIBUTION_SET,UPDATE_DISTRIBUTION_SET,READ_TARGET,UPDATE_TARGET,READ_SOFTWARE_MODULE_ARTIFACT
+            - name: HAWKBIT_SERVER_DDI_SECURITY_AUTHENTICATION_TARGETTOKEN_ENABLED
+              value: "true"
+            - name: SERVER_FORWARD_HEADERS_STRATEGY
+              value: native
+            - name: HAWKBIT_ARTIFACT_URL_PROTOCOLS_DOWNLOAD_HTTP_PROTOCOL
+              value: https
+            - name: HAWKBIT_ARTIFACT_URL_PROTOCOLS_DOWNLOAD_HTTP_PORT
+              value: "443"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Djava.io.tmpdir=/tmp"
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            tcpSocket:
+              port: http
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 768Mi
+            limits:
+              memory: 1536Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data/database
+              subPath: database
+            - name: data
+              mountPath: /opt/hawkbit/artifactrepo
+              subPath: artifacts
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: hawkbit-data
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 32Mi

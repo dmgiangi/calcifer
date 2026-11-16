@@ -7,4 +7,5 @@ resources:
   - deployment.yaml
   - service.yaml
   - therment-credentials.sops.yaml
+  - ota-publisher-credentials.sops.yaml
   - lan-proxy.yaml

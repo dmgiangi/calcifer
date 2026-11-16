@@ -37,6 +37,7 @@ spec:
               mosquitto_passwd -b -c /generated/passwordfile "$ZIGBEE2MQTT_USERNAME" "$ZIGBEE2MQTT_PASSWORD"
               mosquitto_passwd -b /generated/passwordfile "$HOME_ASSISTANT_USERNAME" "$HOME_ASSISTANT_PASSWORD"
               mosquitto_passwd -b /generated/passwordfile "$THERMENT_USERNAME" "$THERMENT_PASSWORD"
+              mosquitto_passwd -b /generated/passwordfile "$OTA_PUBLISHER_USERNAME" "$OTA_PUBLISHER_PASSWORD"
               chmod 0640 /generated/passwordfile
           env:
             - name: ZIGBEE2MQTT_USERNAME
@@ -68,6 +69,16 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: therment-mqtt-credentials
+                  key: password
+            - name: OTA_PUBLISHER_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: ota-publisher-credentials
+                  key: username
+            - name: OTA_PUBLISHER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ota-publisher-credentials
                   key: password
           securityContext:
             capabilities:

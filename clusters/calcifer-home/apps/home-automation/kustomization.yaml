@@ -4,5 +4,6 @@ resources:
   - namespace.yaml
   - home-assistant
   - mqtt
+  - hawkbit
   - zigbee2mqtt
   - voice-assistant

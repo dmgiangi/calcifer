@@ -1,0 +1,22 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: hawkbit-local-retain
+  annotations:
+    defaultVolumeType: local
+provisioner: rancher.io/local-path
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hawkbit-data
+  namespace: home-automation
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: hawkbit-local-retain
+  resources:
+    requests:
+      storage: 4Gi
