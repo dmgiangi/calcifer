@@ -1,3 +1,4 @@
+mod network_diagnostics;
 mod probe_mqtt;
 
 use crate::{Command, Snapshot, mqtt_credentials, wifi_credentials};
@@ -9,8 +10,9 @@ use esp_idf_svc::mqtt::client::{
 };
 use esp_idf_svc::nvs::EspDefaultNvsPartition;
 use esp_idf_svc::sys;
-use esp_idf_svc::wifi::{ClientConfiguration, Configuration, EspWifi};
+use esp_idf_svc::wifi::{ClientConfiguration, Configuration, EspWifi, WifiEvent};
 use log::{info, warn};
+use network_diagnostics::{MqttError, NetworkDiagnostics, STATE_TOPIC as NETWORK_DIAGNOSTICS};
 use probe_mqtt::{
     CONTROL_PROBE_DISCOVERY, CONTROL_PROBE_SET, CONTROL_PROBE_STATE, PROBES_STATE,
     PROBES_STATUS_STATE,
@@ -43,6 +45,8 @@ const OTA_CHECK_DISCOVERY: &str = r#"{"name":"Check for updates","unique_id":"th
 enum Event {
     Connected,
     Disconnected,
+    WifiDisconnected(u16, i8),
+    MqttError(MqttError),
     Received(String, Vec<u8>),
 }
 
@@ -80,6 +84,36 @@ unsafe extern "C" fn control_probe_event(
     }
 }
 
+unsafe extern "C" fn mqtt_error_event(
+    argument: *mut std::ffi::c_void,
+    _base: sys::esp_event_base_t,
+    _id: i32,
+    data: *mut std::ffi::c_void,
+) {
+    if argument.is_null() || data.is_null() {
+        return;
+    }
+    // SAFETY: ESP-IDF supplies a valid event for the duration of this callback.
+    let event = unsafe { &*data.cast::<sys::esp_mqtt_event_t>() };
+    let error = if event.error_handle.is_null() {
+        MqttError::from_raw(0, 0, 0, 0, 0, 0)
+    } else {
+        // SAFETY: The error handle is owned by the event and is read only here.
+        let error = unsafe { &*event.error_handle };
+        MqttError::from_raw(
+            error.error_type,
+            error.esp_tls_last_esp_err,
+            error.esp_tls_stack_err,
+            error.esp_tls_cert_verify_flags,
+            error.esp_transport_sock_errno,
+            error.connect_return_code,
+        )
+    };
+    // SAFETY: The boxed sender remains alive until after MQTT client destruction.
+    let sender = unsafe { &*argument.cast::<mpsc::Sender<Event>>() };
+    let _ = sender.send(Event::MqttError(error));
+}
+
 pub fn run(
     modem: Modem,
     sys: EspSystemEventLoop,
@@ -89,6 +123,18 @@ pub fn run(
     #[cfg(feature = "ota")] ota_trigger: mpsc::SyncSender<()>,
     #[cfg(feature = "ota")] ota_status: Arc<Mutex<crate::ota_runtime::Status>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let started = Instant::now();
+    let mut network_diagnostics = NetworkDiagnostics::new(unsafe { sys::esp_reset_reason() });
+    let (events_tx, events_rx) = mpsc::channel();
+    let wifi_events_tx = events_tx.clone();
+    let _wifi_subscription = sys.clone().subscribe::<WifiEvent<'_>, _>(move |event| {
+        if let WifiEvent::StaDisconnected(disconnect) = event {
+            let _ = wifi_events_tx.send(Event::WifiDisconnected(
+                disconnect.reason(),
+                disconnect.rssi(),
+            ));
+        }
+    })?;
     let mut wifi = EspWifi::new(modem, sys, Some(nvs))?;
     wifi.set_configuration(&Configuration::Client(ClientConfiguration {
         ssid: wifi_credentials::WIFI_SSID.try_into().unwrap(),
@@ -99,12 +145,23 @@ pub fn run(
         warn!("Wi-Fi start failed: {error}; retrying");
         std::thread::sleep(Duration::from_secs(5));
     }
+    let mut last_wifi_attempt = Instant::now() - Duration::from_secs(5);
+    while !wifi.is_up().unwrap_or(false) {
+        if !wifi.is_connected().unwrap_or(false)
+            && last_wifi_attempt.elapsed() >= Duration::from_secs(5)
+        {
+            last_wifi_attempt = Instant::now();
+            if let Err(error) = wifi.connect() {
+                warn!("Wi-Fi connection attempt: {error}");
+            }
+        }
+        std::thread::sleep(Duration::from_secs(1));
+    }
     let url = format!(
         "mqtt://{}:{}",
         mqtt_credentials::MQTT_HOST,
         mqtt_credentials::MQTT_PORT
     );
-    let (events_tx, events_rx) = mpsc::channel();
     let config = MqttClientConfiguration {
         client_id: Some("therment-01"),
         reconnect_timeout: Some(Duration::from_secs(5)),
@@ -120,7 +177,20 @@ pub fn run(
     };
     // Declared before the client so its stable callback context is dropped last.
     let control_events = Box::new(events_tx.clone());
+    let mqtt_error_events = Box::new(events_tx.clone());
     let mut client = loop {
+        if !wifi.is_up().unwrap_or(false) {
+            if !wifi.is_connected().unwrap_or(false)
+                && last_wifi_attempt.elapsed() >= Duration::from_secs(5)
+            {
+                last_wifi_attempt = Instant::now();
+                if let Err(error) = wifi.connect() {
+                    warn!("Wi-Fi connection attempt: {error}");
+                }
+            }
+            std::thread::sleep(Duration::from_secs(1));
+            continue;
+        }
         let events_tx = events_tx.clone();
         match EspMqttClient::new_cb(&url, &config, move |event| {
             let message = match event.payload() {
@@ -159,14 +229,27 @@ pub fn run(
                 .cast(),
         )
     })?;
+    // SAFETY: The boxed context remains alive until after client destruction.
+    sys::esp!(unsafe {
+        sys::esp_mqtt_client_register_event(
+            RawHandle::handle(&client),
+            sys::esp_mqtt_event_id_t_MQTT_EVENT_ERROR,
+            Some(mqtt_error_event),
+            (&*mqtt_error_events as *const mpsc::Sender<Event>)
+                .cast_mut()
+                .cast(),
+        )
+    })?;
     let mut connected = false;
     let mut subscribed = false;
     let mut probe_state_reset = false;
     let mut known_probes = BTreeSet::new();
     let mut discovered_probes = BTreeSet::new();
     let mut last_selector_discovery = None;
-    let mut last_wifi_attempt = Instant::now() - Duration::from_secs(5);
+    let mut mqtt_started = true;
     let mut last = None;
+    let mut network_diagnostics_dirty = true;
+    let mut last_network_diagnostics = Instant::now() - Duration::from_secs(30);
     #[cfg(feature = "ota")]
     let mut last_ota = None;
     loop {
@@ -178,11 +261,42 @@ pub fn run(
                 warn!("Wi-Fi connection attempt: {error}");
             }
         }
+        if wifi.is_up().unwrap_or(false) {
+            if !mqtt_started {
+                if let Err(error) =
+                    sys::esp!(unsafe { sys::esp_mqtt_client_start(RawHandle::handle(&client)) })
+                {
+                    warn!("MQTT start failed while Wi-Fi is up: {error}; retrying");
+                } else {
+                    mqtt_started = true;
+                    info!("MQTT started after Wi-Fi became available");
+                }
+            }
+        } else if mqtt_started {
+            connected = false;
+            subscribed = false;
+            probe_state_reset = false;
+            last = None;
+            #[cfg(feature = "ota")]
+            {
+                last_ota = None;
+            }
+            if let Err(error) =
+                sys::esp!(unsafe { sys::esp_mqtt_client_stop(RawHandle::handle(&client)) })
+            {
+                warn!("MQTT stop failed while Wi-Fi is down: {error}; retrying");
+            } else {
+                mqtt_started = false;
+                info!("MQTT stopped because Wi-Fi is unavailable");
+            }
+        }
         while let Ok(event) = events_rx.try_recv() {
             match event {
-                Event::Connected => {
+                Event::Connected if mqtt_started && wifi.is_up().unwrap_or(false) => {
                     info!("MQTT connected");
                     connected = true;
+                    network_diagnostics.record_mqtt_connected();
+                    network_diagnostics_dirty = true;
                     subscribed = false;
                     probe_state_reset = false;
                     discovered_probes.clear();
@@ -193,15 +307,30 @@ pub fn run(
                         last_ota = None;
                     }
                 }
-                Event::Disconnected => {
+                Event::Disconnected if mqtt_started => {
                     info!("MQTT disconnected; automatic reconnect enabled");
                     connected = false;
+                    network_diagnostics.record_mqtt_disconnected();
+                    network_diagnostics_dirty = true;
                     subscribed = false;
                     last = None;
                     #[cfg(feature = "ota")]
                     {
                         last_ota = None;
                     }
+                }
+                Event::Connected | Event::Disconnected => {}
+                Event::WifiDisconnected(reason, rssi) => {
+                    network_diagnostics.record_wifi_disconnect(
+                        reason,
+                        rssi,
+                        started.elapsed().as_secs(),
+                    );
+                    network_diagnostics_dirty = true;
+                }
+                Event::MqttError(error) => {
+                    network_diagnostics.record_mqtt_error(error, started.elapsed().as_secs());
+                    network_diagnostics_dirty = true;
                 }
                 Event::Received(topic, data) => {
                     let value = String::from_utf8_lossy(&data).into_owned();
@@ -222,12 +351,14 @@ pub fn run(
                 }
             }
         }
-        if connected && !probe_state_reset {
+        let mqtt_available = mqtt_started && wifi.is_up().unwrap_or(false);
+        if mqtt_available && connected && !probe_state_reset {
             // Clear retained readings from previous runs before going online.
             let current = snapshot.lock().unwrap().clone();
             probe_state_reset = publish(&mut client, AVAIL, "offline")
                 && publish(&mut client, PROBES_STATE, "{}")
                 && publish(&mut client, PROBES_STATUS_STATE, "{}")
+                && publish(&mut client, NETWORK_DIAGNOSTICS, "{}")
                 && publish(
                     &mut client,
                     probe_mqtt::PROBES_DIAGNOSTICS,
@@ -239,7 +370,7 @@ pub fn run(
                     .to_string(),
                 );
         }
-        if connected && probe_state_reset && !subscribed {
+        if mqtt_available && connected && probe_state_reset && !subscribed {
             let setpoint_ok = client.subscribe(SETPOINT, QoS::AtLeastOnce).is_ok();
             let mode_ok = client.subscribe(MODE, QoS::AtLeastOnce).is_ok();
             let lower_ok = client.subscribe(LOWER, QoS::AtLeastOnce).is_ok();
@@ -290,6 +421,9 @@ pub fn run(
                     probe_mqtt::BUS_DIAGNOSTICS_DISCOVERY,
                     &probe_mqtt::bus_diagnostics_discovery().to_string(),
                 )
+                && network_diagnostics::discovery_configs()
+                    .into_iter()
+                    .all(|(topic, config)| publish(&mut client, topic, &config.to_string()))
             {
                 subscribed = true;
                 last = None;
@@ -297,7 +431,7 @@ pub fn run(
                 warn!("MQTT setup failed; retrying");
             }
         }
-        if connected && subscribed {
+        if mqtt_available && connected && subscribed {
             #[cfg(feature = "ota")]
             {
                 let current_ota = ota_status.lock().unwrap().clone();
@@ -323,6 +457,30 @@ pub fn run(
                     {
                         last_ota = Some(current_ota);
                     }
+                }
+            }
+            if network_diagnostics_dirty
+                || last_network_diagnostics.elapsed() >= Duration::from_secs(30)
+            {
+                let wifi_connected = wifi.is_connected().unwrap_or(false);
+                let wifi_rssi_dbm = if wifi_connected {
+                    wifi.get_ap_info()
+                        .ok()
+                        .map(|access_point| i32::from(access_point.signal_strength))
+                } else {
+                    None
+                };
+                let diagnostics = network_diagnostics
+                    .state(
+                        crate::FIRMWARE_VERSION,
+                        started.elapsed().as_secs(),
+                        wifi_connected,
+                        wifi_rssi_dbm,
+                    )
+                    .to_string();
+                if publish(&mut client, NETWORK_DIAGNOSTICS, &diagnostics) {
+                    network_diagnostics_dirty = false;
+                    last_network_diagnostics = Instant::now();
                 }
             }
             let current = snapshot.lock().unwrap().clone();

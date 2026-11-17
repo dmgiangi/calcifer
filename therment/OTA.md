@@ -348,3 +348,17 @@ Later on 2026-11-16, action `20` installed `probe-interval-15s-1`. The image was
 a separate read-only status query both confirmed action `finished` and the
 matching installed version. This release changes the probe sampling interval
 from 5 to 15 seconds; host tests and formatting checks passed before deployment.
+
+On 2026-11-17, after the operator confirmed the connected loads were safe and
+authorized the controller restart, action `22` installed
+`network-diagnostics-1`. The 1,335,376-byte image fits the 1,966,080-byte OTA
+slot; hawkBit confirmed the action finished successfully with the matching
+installed version. A read-only MQTT check after reboot confirmed retained
+diagnostics from the new firmware at uptime 99 seconds, availability `online`,
+Wi-Fi connected at -64 dBm with zero disconnects, and MQTT connected. The
+boot-scoped MQTT counters at that sample showed one disconnect and one error;
+these are recorded as evidence, not attributed to a cause. All four retained
+network diagnostic discovery configs were valid, and Home Assistant had all
+four corresponding entities registered and enabled. Both probe readings were
+present (20.5 °C and 20.0 °C), both probes reported `ok`, and the selected
+control probe also reported `ok`.

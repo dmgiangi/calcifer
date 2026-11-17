@@ -9,3 +9,6 @@ mod probes;
 
 #[path = "../../../src/bin/network/probe_mqtt.rs"]
 mod probe_mqtt;
+
+#[path = "../../../src/bin/network/network_diagnostics.rs"]
+mod network_diagnostics;
