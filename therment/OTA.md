@@ -145,6 +145,18 @@ OTA uses HTTPS and its own target token, but a Wi-Fi credential mismatch also
 prevents OTA recovery. Do not assume rollback restores connectivity after the
 server-side credential has changed.
 
+For an MQTT-only rotation, generate the replacement privately, update the
+SOPS Secret and ignored local MQTT configuration together, and build a uniquely
+versioned release. Keep the running broker on its old password until hawkBit
+confirms the new firmware is installed over HTTPS. Reconcile the encrypted
+Secret through GitOps, verify the live Secret matches, then restart Mosquitto
+to regenerate its password file and close existing sessions. Check that the
+new password authenticates, the previous password is rejected, and Home
+Assistant, Zigbee2MQTT and the OTA publisher still authenticate. MQTT refusal
+errors before the broker switches are expected and remain in boot counters.
+An older rollback image still has the revoked password; HTTPS OTA recovery
+remains available while its Wi-Fi and target credentials are unchanged.
+
 For a build check without publishing or changing the device:
 
 ```sh
@@ -362,3 +374,23 @@ network diagnostic discovery configs were valid, and Home Assistant had all
 four corresponding entities registered and enabled. Both probe readings were
 present (20.5 °C and 20.0 °C), both probes reported `ok`, and the selected
 control probe also reported `ok`.
+
+On 2026-11-17, after the operator requested MQTT credential rotation and
+confirmed safe loads, action `24` installed `mqtt-credential-rotation-1`.
+The 1,337,600-byte image fits the OTA slot; the deployment command and a
+separate status query confirmed `finished`/`success` and the matching installed
+version. Only the Therment MQTT password changed. The encrypted Secret was
+committed, pushed and reconciled on `calcifer-home` before restarting Mosquitto.
+Authentication checks accepted the replacement and rejected the previous
+password; Home Assistant, Zigbee2MQTT and the OTA publisher also authenticated.
+
+A two-minute live MQTT observation after the broker restart showed availability
+remaining `online`, Wi-Fi disconnects at zero, one successful MQTT connection,
+and no increase in the eight MQTT refusal errors recorded before the password
+switch (last at uptime 59 seconds). Network uptime reached 193 seconds; probe
+diagnostics reached 13 cycles with zero failed cycles. Control remained
+`off`/`idle` with the saved probe selected. This verifies the rotation, not the
+cause of earlier session takeovers or long-term connection stability. MQTT
+remains unencrypted and broker ACLs remain disabled. All 39 Rust host tests and
+8 Python OTA tests passed; full Python discovery still fails on the pre-existing
+missing `scripts/hawkbit-local-backup.py`.
