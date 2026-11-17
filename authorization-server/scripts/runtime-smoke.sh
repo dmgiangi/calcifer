@@ -39,11 +39,14 @@ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$scratch/jwt-
 chmod 0444 "$scratch/jwt-private-key.pem"
 
 docker run --platform linux/amd64 --detach --rm --name "$container_name" \
+    --read-only --cap-drop ALL --security-opt no-new-privileges \
+    --tmpfs /tmp:rw,noexec,nosuid,size=64m \
     --publish 127.0.0.1::8080 \
     --mount "type=bind,src=$scratch/jwt-private-key.pem,dst=/tmp/jwt-private-key.pem,readonly" \
     --env AUTH_ISSUER=https://smoke.example.invalid \
     --env AUTH_SIGNING_KEY_LOCATION=file:/tmp/jwt-private-key.pem \
     --env AUTH_STATE_ENABLED=false \
+    --env MANAGEMENT_ENDPOINT_HEALTH_GROUP_READINESS_INCLUDE=readinessState \
     --env AUTH_LOCAL_LOGIN_ENABLED=false \
     --env GOOGLE_CLIENT_ID=runtime-smoke \
     --env GOOGLE_CLIENT_SECRET=runtime-smoke-secret \
@@ -57,6 +60,11 @@ started=true
 container_user=$(docker inspect --format '{{.Config.User}}' "$container_name")
 [[ "$container_user" == nonroot:nonroot ]] || {
     printf 'Container did not retain the non-root user\n' >&2
+    exit 1
+}
+container_identity=$(docker exec "$container_name" /bin/sh -c 'printf "%s:%s" "$(id -u)" "$(id -g)"')
+[[ "$container_identity" == 10001:10001 ]] || {
+    printf 'Expected runtime UID:GID 10001:10001, got %s\n' "$container_identity" >&2
     exit 1
 }
 host_port=$(docker port "$container_name" 8080/tcp | sed -n '1s/.*://p')
@@ -84,8 +92,9 @@ done
 
 docker cp "$container_name:/etc/ssl/certs/ca-certificates.crt" "$scratch/ca-certificates.crt" >/dev/null
 grep -aq 'BEGIN CERTIFICATE' "$scratch/ca-certificates.crt" || {
-    printf 'Distroless CA certificate bundle is missing or empty\n' >&2
+    printf 'Runtime CA certificate bundle is missing or empty\n' >&2
     exit 1
 }
 
-printf 'Runtime smoke passed: platform=%s user=%s liveness=UP ca-bundle=present\n' "$platform" "$container_user"
+printf 'Runtime smoke passed: platform=%s user=%s uid:gid=%s liveness=UP ca-bundle=present rootfs=read-only\n' \
+    "$platform" "$container_user" "$container_identity"
