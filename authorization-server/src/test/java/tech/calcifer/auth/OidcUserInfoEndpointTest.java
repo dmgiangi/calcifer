@@ -66,19 +66,19 @@ class OidcUserInfoEndpointTest {
     void realEndpointReturnsCurrentCatalogGroupsAndLegacyRoles() throws Exception {
         save(
             Set.of("openid", "email", "profile"),
-            "user:pugliens",
+            "user:alice",
             true,
             false,
             false,
-            IdentityTestAuthentications.google("pugliens@gmail.com")
+            IdentityTestAuthentications.google("alice@example.test")
         );
         mvc
             .perform(get("/userinfo").header("Authorization", "Bearer test-access"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.sub").value("user:pugliens"))
-            .andExpect(jsonPath("$.groups[0]").value("rage-quit"))
-            .andExpect(jsonPath("$.roles[0]").value("rage-quit"))
-            .andExpect(jsonPath("$.email").value("pugliens@gmail.com"))
+            .andExpect(jsonPath("$.sub").value("user:alice"))
+            .andExpect(jsonPath("$.groups[0]").value("participants"))
+            .andExpect(jsonPath("$.roles[0]").value("participants"))
+            .andExpect(jsonPath("$.email").value("alice@example.test"))
             .andExpect(jsonPath("$.name").value("Test participant"))
             .andExpect(jsonPath("$.unrequested").doesNotExist());
     }
@@ -87,17 +87,17 @@ class OidcUserInfoEndpointTest {
     void standardClaimsRemainRestrictedToAuthorizedScopes() throws Exception {
         save(
             Set.of("openid"),
-            "user:pugliens",
+            "user:alice",
             true,
             false,
             false,
-            IdentityTestAuthentications.google("pugliens@gmail.com")
+            IdentityTestAuthentications.google("alice@example.test")
         );
         mvc
             .perform(get("/userinfo").header("Authorization", "Bearer test-access"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.groups[0]").value("rage-quit"))
-            .andExpect(jsonPath("$.roles[0]").value("rage-quit"))
+            .andExpect(jsonPath("$.groups[0]").value("participants"))
+            .andExpect(jsonPath("$.roles[0]").value("participants"))
             .andExpect(jsonPath("$.email").doesNotExist())
             .andExpect(jsonPath("$.email_verified").doesNotExist())
             .andExpect(jsonPath("$.name").doesNotExist());
@@ -111,7 +111,7 @@ class OidcUserInfoEndpointTest {
             true,
             false,
             false,
-            IdentityTestAuthentications.password("dem.gianluigi@gmail.com")
+            IdentityTestAuthentications.password("admin@example.test")
         );
         mvc
             .perform(get("/userinfo").header("Authorization", "Bearer test-access"))
@@ -119,13 +119,13 @@ class OidcUserInfoEndpointTest {
             .andExpect(jsonPath("$.sub").value("user:admin"))
             .andExpect(jsonPath("$.groups[0]").value("admin"))
             .andExpect(jsonPath("$.roles[0]").value("admin"))
-            .andExpect(jsonPath("$.email").value("dem.gianluigi@gmail.com"));
+            .andExpect(jsonPath("$.email").value("admin@example.test"));
     }
 
     @Test
     void rejectsUnknownAndUnstoredTokens() throws Exception {
         mvc.perform(get("/userinfo").header("Authorization", "Bearer unknown")).andExpect(status().isUnauthorized());
-        context.getBean(TokenDecoder.class).tokens.put("unstored", jwt("unstored", "user:pugliens"));
+        context.getBean(TokenDecoder.class).tokens.put("unstored", jwt("unstored", "user:alice"));
         mvc.perform(get("/userinfo").header("Authorization", "Bearer unstored")).andExpect(status().isUnauthorized());
     }
 
@@ -133,22 +133,22 @@ class OidcUserInfoEndpointTest {
     void rejectsExpiredAndInvalidatedTokens() throws Exception {
         save(
             Set.of("openid"),
-            "user:pugliens",
+            "user:alice",
             true,
             true,
             false,
-            IdentityTestAuthentications.google("pugliens@gmail.com")
+            IdentityTestAuthentications.google("alice@example.test")
         );
         mvc
             .perform(get("/userinfo").header("Authorization", "Bearer test-access"))
             .andExpect(status().isUnauthorized());
         save(
             Set.of("openid"),
-            "user:pugliens",
+            "user:alice",
             true,
             false,
             true,
-            IdentityTestAuthentications.google("pugliens@gmail.com")
+            IdentityTestAuthentications.google("alice@example.test")
         );
         mvc
             .perform(get("/userinfo").header("Authorization", "Bearer test-access"))
@@ -159,11 +159,11 @@ class OidcUserInfoEndpointTest {
     void rejectsMissingOpenidScope() throws Exception {
         save(
             Set.of("email"),
-            "user:pugliens",
+            "user:alice",
             true,
             false,
             false,
-            IdentityTestAuthentications.google("pugliens@gmail.com")
+            IdentityTestAuthentications.google("alice@example.test")
         );
         mvc
             .perform(get("/userinfo").header("Authorization", "Bearer test-access"))
@@ -176,11 +176,11 @@ class OidcUserInfoEndpointTest {
         // Use a fresh store so the token cannot match the preceding insufficient-scope authorization.
         save(
             Set.of("openid"),
-            "user:pugliens",
+            "user:alice",
             false,
             false,
             false,
-            IdentityTestAuthentications.google("pugliens@gmail.com")
+            IdentityTestAuthentications.google("alice@example.test")
         );
         mvc
             .perform(get("/userinfo").header("Authorization", "Bearer test-access"))
@@ -192,11 +192,11 @@ class OidcUserInfoEndpointTest {
     void rejectsIneligibleAuthenticationMethodAndMismatchedSubject() throws Exception {
         save(
             Set.of("openid"),
-            "user:pugliens",
+            "user:alice",
             true,
             false,
             false,
-            IdentityTestAuthentications.password("pugliens@gmail.com")
+            IdentityTestAuthentications.password("alice@example.test")
         );
         mvc
             .perform(get("/userinfo").header("Authorization", "Bearer test-access"))
@@ -207,7 +207,7 @@ class OidcUserInfoEndpointTest {
             true,
             false,
             false,
-            IdentityTestAuthentications.google("pugliens@gmail.com")
+            IdentityTestAuthentications.google("alice@example.test")
         );
         mvc
             .perform(get("/userinfo").header("Authorization", "Bearer test-access"))
@@ -231,7 +231,7 @@ class OidcUserInfoEndpointTest {
         );
         var client = java.util.Objects.requireNonNull(context
             .getBean(RegisteredClientRepository.class)
-            .findByClientId(subject.equals("user:admin") ? "grafana" : "rage-quit"));
+            .findByClientId(subject.equals("user:admin") ? "grafana" : "restricted-client"));
         var builder = OAuth2Authorization
             .withRegisteredClient(client)
             .principalName(principal.getName())
@@ -245,7 +245,7 @@ class OidcUserInfoEndpointTest {
                 "sub",
                 subject,
                 "email",
-                "pugliens@gmail.com",
+                "alice@example.test",
                 "email_verified",
                 true,
                 "name",
@@ -310,14 +310,14 @@ class OidcUserInfoEndpointTest {
 
         @Bean
         AuthorizationServerSettings authorizationServerSettings() {
-            return AuthorizationServerSettings.builder().issuer("https://auth.calcifer.tech").build();
+            return AuthorizationServerSettings.builder().issuer("https://auth.example.test").build();
         }
 
         @Bean
         RegisteredClientRepository clients() {
             return new InMemoryRegisteredClientRepository(java.util.List.of(
                 registeredClient("grafana"),
-                registeredClient("rage-quit")
+                registeredClient("restricted-client")
             ));
         }
 

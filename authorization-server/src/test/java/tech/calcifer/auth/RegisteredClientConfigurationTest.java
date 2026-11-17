@@ -151,13 +151,24 @@ class RegisteredClientConfigurationTest {
     @Test
     void rejectsUnresolvedSecretsAndInvalidDefinitions() {
         var unresolved = new IdentityProperties.ClientDefinition(
-            "homepage",
-            "${HOMEPAGE_OIDC_CLIENT_SECRET}",
-            Set.of("https://calcifer.tech/callback"),
+            "synthetic",
+            "${SYNTHETIC_CLIENT_SECRET}",
+            Set.of("https://synthetic.example.test/callback"),
             Set.of("openid"),
             Set.of("authorization_code"),
             Set.of("client_secret_basic"),
-            "homepage",
+            "synthetic",
+            true,
+            null
+        );
+        var blankSecret = new IdentityProperties.ClientDefinition(
+            "blank-secret",
+            " ",
+            Set.of("https://synthetic.example.test/callback"),
+            Set.of("openid"),
+            Set.of("authorization_code"),
+            Set.of("client_secret_basic"),
+            "blank-secret",
             true,
             null
         );
@@ -173,7 +184,10 @@ class RegisteredClientConfigurationTest {
             null
         );
 
-        assertThatThrownBy(() -> repository(withClients(Map.of("homepage", unresolved))))
+        assertThatThrownBy(() -> repository(withClients(Map.of("synthetic", unresolved))))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("must be resolved");
+        assertThatThrownBy(() -> repository(withClients(Map.of("blank-secret", blankSecret))))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("must be resolved");
         assertThatThrownBy(() -> repository(withClients(Map.of("broken", missingRedirect))))

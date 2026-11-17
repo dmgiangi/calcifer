@@ -17,18 +17,18 @@ import org.springframework.security.oauth2.jwt.JwtException;
 class ForwardAuthControllerTest {
 
     private static final IdentityProperties PROPERTIES = new IdentityProperties(
-        "https://auth.calcifer.tech",
-        "dem.gianluigi@gmail.com",
+        "https://auth.example.test",
+        "admin@example.test",
         "user:admin",
         "file:key",
         new IdentityProperties.Client(
             "grafana",
             "secret",
-            "https://grafana.calcifer.tech/login/generic_oauth",
+            "https://grafana.example.test/login/generic_oauth",
             "grafana"
         ),
-        new IdentityProperties.Client("grafana-api", "secret", "https://grafana.calcifer.tech", "grafana"),
-        new IdentityProperties.LocalLogin(false, "dem.gianluigi@gmail.com", "")
+        new IdentityProperties.Client("grafana-api", "secret", "https://grafana.example.test", "grafana"),
+        new IdentityProperties.LocalLogin(false, "admin@example.test", "")
     );
 
     @Test
@@ -47,7 +47,7 @@ class ForwardAuthControllerTest {
             Map.of("alg", "RS256"),
             Map.of(
                 "iss",
-                "https://auth.calcifer.tech",
+                "https://auth.example.test",
                 "aud",
                 List.of("grafana"),
                 "scope",
@@ -72,7 +72,7 @@ class ForwardAuthControllerTest {
             Map.of("alg", "RS256"),
             Map.of(
                 "iss",
-                "https://auth.calcifer.tech",
+                "https://auth.example.test",
                 "aud",
                 List.of("grafana"),
                 "scope",
@@ -96,7 +96,7 @@ class ForwardAuthControllerTest {
             Map.of("alg", "RS256"),
             Map.of(
                 "iss",
-                "https://auth.calcifer.tech",
+                "https://auth.example.test",
                 "aud",
                 List.of("grafana"),
                 "scope",
@@ -126,7 +126,7 @@ class ForwardAuthControllerTest {
             Map.of("alg", "RS256"),
             Map.of(
                 "iss",
-                "https://other.example",
+                "https://other.example.test",
                 "aud",
                 List.of("grafana"),
                 "scope",
@@ -150,7 +150,7 @@ class ForwardAuthControllerTest {
             Map.of("alg", "RS256"),
             Map.of(
                 "iss",
-                "https://auth.calcifer.tech",
+                "https://auth.example.test",
                 "aud",
                 List.of("other"),
                 "scope",
@@ -172,7 +172,7 @@ class ForwardAuthControllerTest {
             Instant.now(),
             Instant.now().plusSeconds(60),
             Map.of("alg", "RS256"),
-            Map.of("iss", "https://auth.calcifer.tech", "aud", List.of("grafana"), "sub", "grafana-api")
+            Map.of("iss", "https://auth.example.test", "aud", List.of("grafana"), "sub", "grafana-api")
         );
         when(decoder.decode("token")).thenReturn(jwt);
         var response = new ForwardAuthController(decoder, PROPERTIES).authenticate("Bearer token");
@@ -189,7 +189,7 @@ class ForwardAuthControllerTest {
             Map.of("alg", "RS256"),
             Map.of(
                 "iss",
-                "https://auth.calcifer.tech",
+                "https://auth.example.test",
                 "aud",
                 List.of("grafana"),
                 "scope",

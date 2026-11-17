@@ -16,12 +16,6 @@ _GROUPS = {
                   'clusters/calcifer-home/apps/home-automation/home-assistant/backup-cronjob.yaml'],
         'tagged': True,
     },
-    'rage-quit': {
-        'image': 'ghcr.io/dmgiangi/calcifer-rage-quit', 'clusters': ['cloud'],
-        'paths': ['clusters/apps/rage-quit/overlays/cloud/image-patch.yaml'],
-        'tagged': False,
-        'placeholders': {'clusters/apps/rage-quit/base/deployment.yaml': 'ghcr.io/dmgiangi/calcifer-rage-quit:operator-must-release'},
-    },
     'authorization-server': {
         'image': 'ghcr.io/dmgiangi/calcifer-authorization-server', 'clusters': ['cloud', 'home'],
         'paths': ['clusters/apps/authorization-server/overlays/cloud/image-patch.yaml',

@@ -23,4 +23,4 @@ The Authorization Server currently admits one human identity through a configure
 
 ## Impact
 
-Changes are expected in `authorization-server/` user configuration, authentication, token/UserInfo claim generation, and tests, plus the shared external identity/client configuration used by both cluster deployments. Existing issuer, client credentials, administrator subject, local-login secret handling, and `roles` consumers must remain compatible. Rage Quit itself is not implemented by this change; its later change will consume the user/group capability.
+Changes are expected in `authorization-server/` user configuration, authentication, token/UserInfo claim generation, and tests, plus the shared external identity/client configuration used by both cluster deployments. Existing issuer, client credentials, administrator subject, local-login secret handling, and `roles` consumers must remain compatible. These identity and client-policy capabilities remain reusable independently of any one application.

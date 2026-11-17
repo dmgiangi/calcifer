@@ -6,7 +6,7 @@
 An interactive OIDC client SHALL be configurable with the groups permitted to authorize it. Authorization SHALL be denied unless the authenticated user's trusted catalog membership includes a permitted group. Existing interactive clients without an explicit group policy SHALL remain restricted to the existing `admin` group. Group policy SHALL NOT change client-credentials authorization.
 
 #### Scenario: Client admits a configured group
-- **WHEN** an interactive client permits `rage-quit` and a verified user is assigned that group
+- **WHEN** an interactive client permits `example-group` and a verified user is assigned that group
 - **THEN** the user SHALL be eligible to authorize that client subject to its other registered OIDC requirements
 
 #### Scenario: User has no permitted group

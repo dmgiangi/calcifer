@@ -9,18 +9,18 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 class LoginPageControllerTest {
 
     private static final IdentityProperties BASE = new IdentityProperties(
-        "https://auth.calcifer.tech",
-        "dem.gianluigi@gmail.com",
+        "https://auth.example.test",
+        "admin@example.test",
         "user:admin",
         "file:key",
         new IdentityProperties.Client(
             "grafana",
             "secret",
-            "https://grafana.calcifer.tech/login/generic_oauth",
+            "https://grafana.example.test/login/generic_oauth",
             "grafana"
         ),
-        new IdentityProperties.Client("grafana-api", "secret", "https://grafana.calcifer.tech", "grafana"),
-        new IdentityProperties.LocalLogin(false, "dem.gianluigi@gmail.com", "")
+        new IdentityProperties.Client("grafana-api", "secret", "https://grafana.example.test", "grafana"),
+        new IdentityProperties.LocalLogin(false, "admin@example.test", "")
     );
 
     @Test
@@ -51,7 +51,7 @@ class LoginPageControllerTest {
             BASE.signingKeyLocation(),
             BASE.grafana(),
             BASE.grafanaApi(),
-            new IdentityProperties.LocalLogin(true, "dem.gianluigi@gmail.com", "{bcrypt}hash")
+            new IdentityProperties.LocalLogin(true, "admin@example.test", "{bcrypt}hash")
         );
         assertThat(new LoginPageController(properties).loginConfig()).containsEntry("passwordEnabled", true);
     }

@@ -124,7 +124,7 @@ class RedisOAuth2AuthorizationStoreTest {
             .withId("registration")
             .clientId("grafana")
             .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-            .redirectUri("https://grafana.calcifer.tech/login/generic_oauth")
+            .redirectUri("https://grafana.example.test/login/generic_oauth")
             .build();
         return OAuth2Authorization
             .withRegisteredClient(client)

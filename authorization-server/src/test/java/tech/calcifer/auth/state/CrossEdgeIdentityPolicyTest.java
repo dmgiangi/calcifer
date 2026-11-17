@@ -14,16 +14,16 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationCode;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
-import tech.calcifer.auth.RageQuitTestSupport;
+import tech.calcifer.auth.InteractiveClientTestSupport;
 
 /** Two synthetic edges share the real versioned Redis byte serialization, not live Redis. */
-class RageQuitRedisPolicyTest {
+class CrossEdgeIdentityPolicyTest {
 
     @AfterEach
     void clearRoute() { RequestStateContext.clear(); }
 
     @ParameterizedTest
-    @ValueSource(strings = {"dem.gianluigi@gmail.com", "pugliens@gmail.com", "frevadiscor@gmail.com", "password"})
+    @ValueSource(strings = {"admin@example.test", "alice@example.test", "bob@example.test", "password"})
     void crossEdgeSessionAndAuthorizationRoundTripPreserveTrustedSourceAndIdentity(String identity) {
         var bytes = new InMemoryRedisByteStore();
         var cloud = AuthorizationStateRoutingTest.manager(bytes,
@@ -34,8 +34,8 @@ class RageQuitRedisPolicyTest {
             new AuthorizationStateRoutingTest.MutableClock());
         var cloudSessions = new RoutingSessionRepository(cloud, bytes, "auth", Duration.ofMinutes(30));
         var homeSessions = new RoutingSessionRepository(home, bytes, "auth", Duration.ofMinutes(30));
-        Authentication authentication = identity.equals("password") ? RageQuitTestSupport.password()
-            : RageQuitTestSupport.google(identity);
+        Authentication authentication = identity.equals("password") ? InteractiveClientTestSupport.password()
+            : InteractiveClientTestSupport.google(identity);
         RequestStateContext.bind(StateRoute.redis(3));
         var session = cloudSessions.createSession();
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
@@ -48,10 +48,10 @@ class RageQuitRedisPolicyTest {
         assertThat(restored.getName()).isEqualTo(authentication.getName());
 
         var clients = new org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository(
-            org.springframework.security.oauth2.server.authorization.client.RegisteredClient.withId("registered-rage")
-                .clientId("rage-quit").authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .redirectUri(RageQuitTestSupport.CALLBACK).build());
-        var authorization = OAuth2Authorization.withRegisteredClient(clients.findByClientId("rage-quit"))
+            org.springframework.security.oauth2.server.authorization.client.RegisteredClient.withId("registered-restricted-client")
+                .clientId("restricted-client").authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri(InteractiveClientTestSupport.CALLBACK).build());
+        var authorization = OAuth2Authorization.withRegisteredClient(clients.findByClientId("restricted-client"))
             .principalName(authentication.getName()).authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
             .attribute(Principal.class.getName(), authentication)
             .token(new OAuth2AuthorizationCode("synthetic-code", Instant.now(), Instant.now().plusSeconds(60))).build();
@@ -60,12 +60,12 @@ class RageQuitRedisPolicyTest {
         var homeAuthorizations = new RedisOAuth2AuthorizationStore(bytes, "auth");
         Authentication restoredCodePrincipal = homeAuthorizations.findById(3, authorization.getId())
             .getAttribute(Principal.class.getName());
-        // Use the public production property contract to check catalog identity and provenance after both round trips.
+        // Check catalog identity and provenance after both round trips.
         for (Authentication principal : java.util.List.of(restored, restoredCodePrincipal)) {
             assertThat(principal.getClass()).isEqualTo(authentication.getClass());
-            String email = identity.equals("password") ? RageQuitTestSupport.ADMIN : identity;
-            assertThat(RageQuitTestSupport.properties().userByEmail(email).canonicalSubject())
-                .isEqualTo(RageQuitTestSupport.SUBJECTS.get(email));
+            String email = identity.equals("password") ? InteractiveClientTestSupport.ADMIN : identity;
+            assertThat(InteractiveClientTestSupport.properties().userByEmail(email).canonicalSubject())
+                .isEqualTo(InteractiveClientTestSupport.SUBJECTS.get(email));
             if (principal instanceof org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken google) {
                 assertThat(google.getAuthorizedClientRegistrationId()).isEqualTo("google");
                 var user = (org.springframework.security.oauth2.core.oidc.user.OidcUser) google.getPrincipal();
@@ -73,7 +73,7 @@ class RageQuitRedisPolicyTest {
                 assertThat(user.getEmailVerified()).isTrue();
             }
         }
-        tech.calcifer.auth.RageQuitRestoredPolicyAssertions.verify(restored, identity.equals("password"));
-        tech.calcifer.auth.RageQuitRestoredPolicyAssertions.verify(restoredCodePrincipal, identity.equals("password"));
+        tech.calcifer.auth.RestoredIdentityPolicyAssertions.verify(restored, identity.equals("password"));
+        tech.calcifer.auth.RestoredIdentityPolicyAssertions.verify(restoredCodePrincipal, identity.equals("password"));
     }
 }

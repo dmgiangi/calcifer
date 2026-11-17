@@ -13,7 +13,7 @@ See `proposal.md` for motivation and the spec deltas for required behavior. Toda
 
 **Non-Goals:**
 - Public registration, a database-backed user directory, or a web UI for editing users/groups.
-- Changing Google credentials, the issuer, OAuth grants, application-specific databases, or Rage Quit application behavior in this change.
+- Changing Google credentials, the issuer, OAuth grants, application-specific databases, or application behavior in this change.
 
 ## Decisions
 

@@ -61,7 +61,7 @@ import tech.calcifer.auth.state.AuthorizationStateProperties;
 import tools.jackson.databind.json.JsonMapper;
 
 /** Uses the production providers, JWT generator and HTTP filters with synthetic identities only. */
-class RageQuitOidcFlowTest {
+class InteractiveClientOidcFlowTest {
 
     private static final String VERIFIER = "a".repeat(43);
     private AnnotationConfigWebApplicationContext context;
@@ -82,21 +82,21 @@ class RageQuitOidcFlowTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"dem.gianluigi@gmail.com", "pugliens@gmail.com", "frevadiscor@gmail.com"})
+    @ValueSource(strings = {"admin@example.test", "alice@example.test", "bob@example.test"})
     void authorizesExchangesAndReturnsRealUserInfoForEveryParticipant(String email) throws Exception {
         var principal = google(email);
         String code = code(principal);
-        var response = exchange(code, VERIFIER, RageQuitTestSupport.CALLBACK, "rage-quit", "test-rage-secret");
+        var response = exchange(code, VERIFIER, InteractiveClientTestSupport.CALLBACK, "restricted-client", "test-client-secret");
         assertThat(response.getResponse().getStatus()).isEqualTo(200);
         var tokens = JsonMapper.builder().build().readTree(response.getResponse().getContentAsString());
         for (String token : Set.of("access_token", "id_token")) {
             var jwt = context.getBean(JwtDecoder.class).decode(tokens.get(token).asText());
-            assertThat(jwt.getSubject()).isEqualTo(RageQuitTestSupport.SUBJECTS.get(email));
-            assertThat(jwt.getAudience()).containsExactly("rage-quit");
+            assertThat(jwt.getSubject()).isEqualTo(InteractiveClientTestSupport.SUBJECTS.get(email));
+            assertThat(jwt.getAudience()).containsExactly("restricted-client");
             assertThat(jwt.getClaimAsString("email")).isEqualTo(email);
             assertThat(jwt.getClaimAsBoolean("email_verified")).isTrue();
             assertThat(jwt.getClaimAsStringList("roles"))
-                .containsExactly(email.equals(RageQuitTestSupport.ADMIN) ? "admin" : "rage-quit-user");
+                .containsExactly(email.equals(InteractiveClientTestSupport.ADMIN) ? "admin" : "participant");
             if (token.equals("id_token")) {
                 var factor = principal.getAuthorities().stream().filter(FactorGrantedAuthority.class::isInstance)
                     .map(FactorGrantedAuthority.class::cast).findFirst().orElseThrow();
@@ -110,31 +110,31 @@ class RageQuitOidcFlowTest {
         var userInfo = mvc.perform(get("/userinfo").header("Authorization", "Bearer " + tokens.get("access_token").asText()))
             .andExpect(status().isOk()).andReturn();
         var claims = JsonMapper.builder().build().readTree(userInfo.getResponse().getContentAsString());
-        assertThat(claims.get("sub").asText()).isEqualTo(RageQuitTestSupport.SUBJECTS.get(email));
+        assertThat(claims.get("sub").asText()).isEqualTo(InteractiveClientTestSupport.SUBJECTS.get(email));
         assertThat(claims.get("email").asText()).isEqualTo(email);
         assertThat(claims.get("email_verified").asBoolean()).isTrue();
         assertThat(claims.get("roles").get(0).asText())
-            .isEqualTo(email.equals(RageQuitTestSupport.ADMIN) ? "admin" : "rage-quit-user");
-        assertThat(exchange(code, VERIFIER, RageQuitTestSupport.CALLBACK, "rage-quit", "test-rage-secret")
+            .isEqualTo(email.equals(InteractiveClientTestSupport.ADMIN) ? "admin" : "participant");
+        assertThat(exchange(code, VERIFIER, InteractiveClientTestSupport.CALLBACK, "restricted-client", "test-client-secret")
             .getResponse().getStatus()).isBetween(400, 499);
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"pugliens@gmail.com", "frevadiscor@gmail.com"})
+    @ValueSource(strings = {"alice@example.test", "bob@example.test"})
     void reusedSessionsAreDeniedBeforeCodesForOtherClients(String email) throws Exception {
         var clients = context.getBean(RegisteredClientRepository.class);
-        for (String id : Set.of("grafana", "homepage", "home-assistant", "zigbee2mqtt", "grafana-api", "unknown")) {
+        for (String id : Set.of("grafana", "admin-console", "admin-reports", "admin-settings", "grafana-api", "unknown")) {
             var client = clients.findByClientId(id);
             String callback = client != null && !client.getRedirectUris().isEmpty()
-                ? client.getRedirectUris().iterator().next() : RageQuitTestSupport.CALLBACK;
-            assertNoCode(authorize(RageQuitTestSupport.google(email), id, callback, "openid", challenge()));
+                ? client.getRedirectUris().iterator().next() : InteractiveClientTestSupport.CALLBACK;
+            assertNoCode(authorize(InteractiveClientTestSupport.google(email), id, callback, "openid", challenge()));
         }
     }
 
     @Test
     void anonymousUserSeesCentralLoginAndKeepsTheEntireAuthorizationRequest() throws Exception {
         var result = mvc.perform(get("/oauth2/authorize").queryParam("response_type", "code")
-            .queryParam("client_id", "rage-quit").queryParam("redirect_uri", RageQuitTestSupport.CALLBACK)
+            .queryParam("client_id", "restricted-client").queryParam("redirect_uri", InteractiveClientTestSupport.CALLBACK)
             .queryParam("scope", "openid profile email").queryParam("state", "test-state")
             .queryParam("nonce", "test-nonce").queryParam("code_challenge", challenge())
             .queryParam("code_challenge_method", "S256")).andExpect(status().isFound()).andReturn();
@@ -145,9 +145,9 @@ class RageQuitOidcFlowTest {
         var response = new MockHttpServletResponse();
         var cache = context.getBean(RequestCache.class);
         String original = cache.getRequest(callback, response).getRedirectUrl();
-        assertThat(original).contains("client_id=rage-quit", "state=test-state", "nonce=test-nonce",
+        assertThat(original).contains("client_id=restricted-client", "state=test-state", "nonce=test-nonce",
             "code_challenge=", "code_challenge_method=S256", "redirect_uri=");
-        var principal = google(RageQuitTestSupport.ADMIN);
+        var principal = google(InteractiveClientTestSupport.ADMIN);
         new AuthorizationServerConfiguration().oauth2LoginSuccessHandler(cache)
             .onAuthenticationSuccess(callback, response, principal);
         assertThat(response.getRedirectedUrl()).isEqualTo(original);
@@ -160,7 +160,7 @@ class RageQuitOidcFlowTest {
     @Test
     void silentAnonymousAuthorizationDoesNotShowLoginOrIssueCode() throws Exception {
         var result = mvc.perform(get("/oauth2/authorize").param("response_type", "code")
-            .param("client_id", "rage-quit").param("redirect_uri", RageQuitTestSupport.CALLBACK)
+            .param("client_id", "restricted-client").param("redirect_uri", InteractiveClientTestSupport.CALLBACK)
             .param("scope", "openid").param("prompt", "none")
             .param("code_challenge", challenge()).param("code_challenge_method", "S256"))
             .andExpect(status().isUnauthorized()).andReturn();
@@ -169,7 +169,7 @@ class RageQuitOidcFlowTest {
 
     @Test
     void passwordSessionStartsGoogleAndPreservesTheEntireSavedRequest() throws Exception {
-        var result = authorize(RageQuitTestSupport.password(), "rage-quit", RageQuitTestSupport.CALLBACK,
+        var result = authorize(InteractiveClientTestSupport.password(), "restricted-client", InteractiveClientTestSupport.CALLBACK,
             "openid profile email", challenge());
         assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/oauth2/authorization/google");
         var session = (MockHttpSession) result.getRequest().getSession(false);
@@ -178,9 +178,9 @@ class RageQuitOidcFlowTest {
         var response = new MockHttpServletResponse();
         var cache = context.getBean(RequestCache.class);
         String original = cache.getRequest(callback, response).getRedirectUrl();
-        assertThat(original).contains("client_id=rage-quit", "state=test-state", "nonce=test-nonce",
+        assertThat(original).contains("client_id=restricted-client", "state=test-state", "nonce=test-nonce",
             "code_challenge=", "code_challenge_method=S256", "redirect_uri=");
-        var principal = google(RageQuitTestSupport.ADMIN);
+        var principal = google(InteractiveClientTestSupport.ADMIN);
         new AuthorizationServerConfiguration().oauth2LoginSuccessHandler(cache)
             .onAuthenticationSuccess(callback, response, principal);
         assertThat(response.getRedirectedUrl()).isEqualTo(original);
@@ -191,7 +191,7 @@ class RageQuitOidcFlowTest {
         String code = query(resumed, "code");
         assertThat(code).isNotBlank();
         assertThat(cache.getRequest(callback, response)).isNull();
-        var exchanged = exchange(code, VERIFIER, RageQuitTestSupport.CALLBACK, "rage-quit", "test-rage-secret");
+        var exchanged = exchange(code, VERIFIER, InteractiveClientTestSupport.CALLBACK, "restricted-client", "test-client-secret");
         assertThat(exchanged.getResponse().getStatus()).isEqualTo(200);
         var tokens = JsonMapper.builder().build().readTree(exchanged.getResponse().getContentAsString());
         var idToken = context.getBean(JwtDecoder.class).decode(tokens.get("id_token").asText());
@@ -201,16 +201,16 @@ class RageQuitOidcFlowTest {
 
     @Test
     void rejectsCallbacksScopesAndMissingOrUnsupportedPkceBeforeCodeIssuance() throws Exception {
-        var principal = RageQuitTestSupport.google(RageQuitTestSupport.ADMIN);
-        for (String callback : Set.of("https://evil.example.test/callback", "https://rage-quit.calcifer.tech/login/oauth2/code/*",
-            RageQuitTestSupport.CALLBACK + "/extra")) {
-            assertNoCode(authorize(principal, "rage-quit", callback, "openid", challenge()));
+        var principal = InteractiveClientTestSupport.google(InteractiveClientTestSupport.ADMIN);
+        for (String callback : Set.of("https://evil.example.test/callback", "https://client.example.test/login/oauth2/code/*",
+            InteractiveClientTestSupport.CALLBACK + "/extra")) {
+            assertNoCode(authorize(principal, "restricted-client", callback, "openid", challenge()));
         }
-        assertNoCode(authorize(principal, "rage-quit", RageQuitTestSupport.CALLBACK, "openid grafana.api", challenge()));
-        assertNoCode(authorize(principal, "rage-quit", RageQuitTestSupport.CALLBACK, "openid offline_access", challenge()));
-        assertNoCode(authorize(principal, "rage-quit", RageQuitTestSupport.CALLBACK, "openid", null));
+        assertNoCode(authorize(principal, "restricted-client", InteractiveClientTestSupport.CALLBACK, "openid grafana.api", challenge()));
+        assertNoCode(authorize(principal, "restricted-client", InteractiveClientTestSupport.CALLBACK, "openid offline_access", challenge()));
+        assertNoCode(authorize(principal, "restricted-client", InteractiveClientTestSupport.CALLBACK, "openid", null));
         assertNoCode(mvc.perform(get("/oauth2/authorize").with(authentication(principal))
-            .param("response_type", "code").param("client_id", "rage-quit").param("redirect_uri", RageQuitTestSupport.CALLBACK)
+            .param("response_type", "code").param("client_id", "restricted-client").param("redirect_uri", InteractiveClientTestSupport.CALLBACK)
             .param("scope", "openid").param("code_challenge", VERIFIER).param("code_challenge_method", "plain"))
             .andReturn());
     }
@@ -218,53 +218,53 @@ class RageQuitOidcFlowTest {
     @Test
     void rejectsIncorrectOrMissingVerifierClientAuthenticationAndCrossClientExchange() throws Exception {
         for (String verifier : Set.of("b".repeat(43), "")) {
-            assertThat(exchange(code(RageQuitTestSupport.ADMIN), verifier, RageQuitTestSupport.CALLBACK,
-                "rage-quit", "test-rage-secret").getResponse().getStatus()).isBetween(400, 499);
+            assertThat(exchange(code(InteractiveClientTestSupport.ADMIN), verifier, InteractiveClientTestSupport.CALLBACK,
+                "restricted-client", "test-client-secret").getResponse().getStatus()).isBetween(400, 499);
         }
-        assertThat(exchange(code(RageQuitTestSupport.ADMIN), VERIFIER, "https://evil.example.test/callback",
-            "rage-quit", "test-rage-secret").getResponse().getStatus()).isBetween(400, 499);
-        assertThat(exchange(code(RageQuitTestSupport.ADMIN), VERIFIER, RageQuitTestSupport.CALLBACK,
-            "rage-quit", "wrong-test-secret").getResponse().getStatus()).isBetween(400, 499);
-        assertThat(exchange(code(RageQuitTestSupport.ADMIN), VERIFIER, RageQuitTestSupport.CALLBACK,
-            "homepage", "test-other-secret").getResponse().getStatus()).isBetween(400, 499);
+        assertThat(exchange(code(InteractiveClientTestSupport.ADMIN), VERIFIER, "https://evil.example.test/callback",
+            "restricted-client", "test-client-secret").getResponse().getStatus()).isBetween(400, 499);
+        assertThat(exchange(code(InteractiveClientTestSupport.ADMIN), VERIFIER, InteractiveClientTestSupport.CALLBACK,
+            "restricted-client", "wrong-test-secret").getResponse().getStatus()).isBetween(400, 499);
+        assertThat(exchange(code(InteractiveClientTestSupport.ADMIN), VERIFIER, InteractiveClientTestSupport.CALLBACK,
+            "admin-console", "test-other-secret").getResponse().getStatus()).isBetween(400, 499);
         mvc.perform(post("/oauth2/token").param("grant_type", "client_credentials")
-            .with(httpBasic("rage-quit", "test-rage-secret"))).andExpect(status().is4xxClientError());
+            .with(httpBasic("restricted-client", "test-client-secret"))).andExpect(status().is4xxClientError());
         mvc.perform(post("/oauth2/token").param("grant_type", "refresh_token").param("refresh_token", "test-refresh")
-            .with(httpBasic("rage-quit", "test-rage-secret"))).andExpect(status().is4xxClientError());
-        mvc.perform(post("/oauth2/token").param("grant_type", "authorization_code").param("code", code(RageQuitTestSupport.ADMIN))
-            .param("redirect_uri", RageQuitTestSupport.CALLBACK).param("code_verifier", VERIFIER)
-            .param("client_id", "rage-quit").param("client_secret", "test-rage-secret"))
+            .with(httpBasic("restricted-client", "test-client-secret"))).andExpect(status().is4xxClientError());
+        mvc.perform(post("/oauth2/token").param("grant_type", "authorization_code").param("code", code(InteractiveClientTestSupport.ADMIN))
+            .param("redirect_uri", InteractiveClientTestSupport.CALLBACK).param("code_verifier", VERIFIER)
+            .param("client_id", "restricted-client").param("client_secret", "test-client-secret"))
             .andExpect(status().is4xxClientError());
     }
 
     @Test
     void persistedPasswordOrLegacyPrincipalCannotBeExchangedEvenWithValidPkce() throws Exception {
-        for (Authentication principal : java.util.List.of(RageQuitTestSupport.password(),
-            new org.springframework.security.authentication.TestingAuthenticationToken(RageQuitTestSupport.ADMIN,
+        for (Authentication principal : java.util.List.of(InteractiveClientTestSupport.password(),
+            new org.springframework.security.authentication.TestingAuthenticationToken(InteractiveClientTestSupport.ADMIN,
                 "ignored", "ROLE_ADMIN"))) {
-            String code = code(RageQuitTestSupport.ADMIN);
+            String code = code(InteractiveClientTestSupport.ADMIN);
             var service = context.getBean(OAuth2AuthorizationService.class);
             var stored = service.findByToken(code, new org.springframework.security.oauth2.server.authorization.OAuth2TokenType("code"));
             service.save(OAuth2Authorization.from(stored).attribute(Principal.class.getName(), principal).build());
-            assertThat(exchange(code, VERIFIER, RageQuitTestSupport.CALLBACK, "rage-quit", "test-rage-secret")
+            assertThat(exchange(code, VERIFIER, InteractiveClientTestSupport.CALLBACK, "restricted-client", "test-client-secret")
                 .getResponse().getStatus()).isBetween(400, 499);
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"pugliens@gmail.com", "frevadiscor@gmail.com"})
+    @ValueSource(strings = {"alice@example.test", "bob@example.test"})
     void persistedAuthorizationForAnotherClientIsDefensivelyDeniedAtExchange(String email) throws Exception {
-        for (String client : Set.of("grafana", "homepage", "home-assistant", "zigbee2mqtt")) {
+        for (String client : Set.of("grafana", "admin-console", "admin-reports", "admin-settings")) {
             var registration = context.getBean(RegisteredClientRepository.class).findByClientId(client);
             String callback = registration.getRedirectUris().iterator().next();
-            var authorized = authorize(RageQuitTestSupport.password(), client, callback, "openid", challenge());
+            var authorized = authorize(InteractiveClientTestSupport.password(), client, callback, "openid", challenge());
             String code = query(authorized, "code");
             assertThat(code).isNotBlank();
             var service = context.getBean(OAuth2AuthorizationService.class);
             var stored = service.findByToken(code, new org.springframework.security.oauth2.server.authorization.OAuth2TokenType("code"));
             service.save(OAuth2Authorization.from(stored)
-                .attribute(Principal.class.getName(), RageQuitTestSupport.google(email)).build());
-            assertThat(exchange(code, VERIFIER, callback, client, client.equals("grafana") ? "secret" : "test-other-secret")
+                .attribute(Principal.class.getName(), InteractiveClientTestSupport.google(email)).build());
+            assertThat(exchange(code, VERIFIER, callback, client, client.equals("grafana") ? "test-legacy-secret" : "test-other-secret")
                 .getResponse().getStatus()).isBetween(400, 499);
         }
     }
@@ -272,30 +272,30 @@ class RageQuitOidcFlowTest {
     @Test
     void oldSessionReauthenticatesAndSilentPasswordSessionNeverIssuesCode() throws Exception {
         var legacy = new org.springframework.security.authentication.TestingAuthenticationToken(
-            RageQuitTestSupport.ADMIN, "ignored", "ROLE_ADMIN");
-        assertThat(authorize(legacy, "rage-quit", RageQuitTestSupport.CALLBACK, "openid", challenge())
+            InteractiveClientTestSupport.ADMIN, "ignored", "ROLE_ADMIN");
+        assertThat(authorize(legacy, "restricted-client", InteractiveClientTestSupport.CALLBACK, "openid", challenge())
             .getResponse().getRedirectedUrl()).isEqualTo("/oauth2/authorization/google");
-        mvc.perform(get("/oauth2/authorize").with(authentication(RageQuitTestSupport.password()))
-            .param("client_id", "rage-quit").param("response_type", "code").param("scope", "openid")
-            .param("redirect_uri", RageQuitTestSupport.CALLBACK).param("prompt", "none")
+        mvc.perform(get("/oauth2/authorize").with(authentication(InteractiveClientTestSupport.password()))
+            .param("client_id", "restricted-client").param("response_type", "code").param("scope", "openid")
+            .param("redirect_uri", InteractiveClientTestSupport.CALLBACK).param("prompt", "none")
             .param("code_challenge", challenge()).param("code_challenge_method", "S256"))
             .andExpect(status().isUnauthorized());
     }
 
     @Test
     void administratorFallbackAndMachineContractStayUnchanged() throws Exception {
-        var authorized = authorize(RageQuitTestSupport.password(), "grafana",
-            "https://grafana.calcifer.tech/login/generic_oauth", "openid profile email", challenge());
+        var authorized = authorize(InteractiveClientTestSupport.password(), "grafana",
+            "https://grafana.example.test/login/generic_oauth", "openid profile email", challenge());
         assertThat(query(authorized, "code")).isNotBlank();
         var exchanged = exchange(query(authorized, "code"), VERIFIER,
-            "https://grafana.calcifer.tech/login/generic_oauth", "grafana", "secret");
+            "https://grafana.example.test/login/generic_oauth", "grafana", "test-legacy-secret");
         assertThat(exchanged.getResponse().getStatus()).isEqualTo(200);
         var interactiveTokens = JsonMapper.builder().build().readTree(exchanged.getResponse().getContentAsString());
         var idToken = context.getBean(JwtDecoder.class).decode(interactiveTokens.get("id_token").asText());
         assertThat(idToken.getSubject()).isEqualTo("user:admin");
         assertThat(idToken.getClaimAsStringList("roles")).containsExactly("admin");
         assertThat(idToken.getClaimAsInstant("auth_time")).isNotNull();
-        var result = mvc.perform(post("/oauth2/token").with(httpBasic("grafana-api", "secret"))
+        var result = mvc.perform(post("/oauth2/token").with(httpBasic("grafana-api", "test-legacy-secret"))
             .param("grant_type", "client_credentials").param("scope", "grafana.api"))
             .andExpect(status().isOk()).andReturn();
         var tokens = JsonMapper.builder().build().readTree(result.getResponse().getContentAsString());
@@ -311,14 +311,14 @@ class RageQuitOidcFlowTest {
     }
 
     private OAuth2AuthenticationToken google(String email) {
-        var source = (OidcUser) RageQuitTestSupport.google(email).getPrincipal();
+        var source = (OidcUser) InteractiveClientTestSupport.google(email).getPrincipal();
         var principal = new GoogleAdminOidcUserService(request -> source, context.getBean(IdentityProperties.class))
             .loadUser(null);
         return new OAuth2AuthenticationToken(principal, principal.getAuthorities(), "google");
     }
 
     private String code(Authentication principal) throws Exception {
-        var result = authorize(principal, "rage-quit", RageQuitTestSupport.CALLBACK,
+        var result = authorize(principal, "restricted-client", InteractiveClientTestSupport.CALLBACK,
             "openid profile email", challenge());
         assertThat(result.getResponse().getStatus()).isEqualTo(302);
         assertThat(query(result, "state")).isEqualTo("test-state");
@@ -366,10 +366,10 @@ class RageQuitOidcFlowTest {
     @EnableWebSecurity
     @EnableWebMvc
     static class TestConfiguration {
-        @Bean IdentityProperties properties() { return RageQuitTestSupport.properties(); }
+        @Bean IdentityProperties properties() { return InteractiveClientTestSupport.properties(); }
         @Bean OAuth2AuthorizationService authorizations() { return new InMemoryOAuth2AuthorizationService(); }
         @Bean AuthorizationServerSettings settings() {
-            return AuthorizationServerSettings.builder().issuer("https://auth.calcifer.tech").build();
+            return AuthorizationServerSettings.builder().issuer("https://auth.example.test").build();
         }
         @Bean JWKSource<SecurityContext> keys() throws Exception {
             RSAKey key = new RSAKeyGenerator(2048).keyID("synthetic-test-key").generate();

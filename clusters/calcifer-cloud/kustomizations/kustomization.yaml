@@ -9,4 +9,3 @@ resources:
   - cloud-apps.yaml
   - authorization-server.yaml
   - observability-grafana.yaml
-  - rage-quit.yaml

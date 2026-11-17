@@ -115,7 +115,6 @@ public record IdentityProperties(
         for (ClientDefinition client : clients.values()) {
             if (client == null || !groups.containsAll(client.allowedGroups())
                 || !subjects.containsAll(client.allowedSubjects())
-                || ("rage-quit".equals(client.id()) && isPlaceholderSecret(client.secret()))
                 || (client.requiredAuthenticationMethod() != null
                     && !Set.of("google", "password").contains(client.requiredAuthenticationMethod()))
                 || ((!client.allowedGroups().isEmpty() || !client.allowedSubjects().isEmpty()
@@ -206,18 +205,6 @@ public record IdentityProperties(
             .map(ClientDefinition::effectiveAudience)
             .findFirst()
             .orElse(clientId);
-    }
-
-    private static boolean isPlaceholderSecret(String secret) {
-        if (secret == null || secret.isBlank()) {
-            return true;
-        }
-        String normalized = secret.strip().toLowerCase(java.util.Locale.ROOT)
-            .replace('-', '_').replace(' ', '_');
-        return normalized.equals("replace") || normalized.startsWith("replace_")
-            || normalized.equals("changeme") || normalized.startsWith("change_me")
-            || normalized.equals("placeholder") || normalized.startsWith("placeholder_")
-            || normalized.equals("example") || normalized.startsWith("example_");
     }
 
     public record Client(

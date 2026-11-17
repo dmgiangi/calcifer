@@ -1,6 +1,0 @@
-/target/
-*.sqlite
-*.sqlite-*
-*.db
-*.db-*
-*.log

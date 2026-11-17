@@ -22,18 +22,18 @@ import org.springframework.security.oauth2.server.authorization.token.JwtEncodin
 class AuthorizationClaimsCustomizerTest {
 
     private static final IdentityProperties PROPERTIES = new IdentityProperties(
-        "https://auth.calcifer.tech",
-        "dem.gianluigi@gmail.com",
+        "https://auth.example.test",
+        "admin@example.test",
         "user:admin",
         "file:key",
         new IdentityProperties.Client(
             "grafana",
             "secret",
-            "https://grafana.calcifer.tech/login/generic_oauth",
+            "https://grafana.example.test/login/generic_oauth",
             "grafana"
         ),
-        new IdentityProperties.Client("grafana-api", "secret", "https://grafana.calcifer.tech", "grafana"),
-        new IdentityProperties.LocalLogin(true, "dem.gianluigi@gmail.com", "{bcrypt}hash")
+        new IdentityProperties.Client("grafana-api", "secret", "https://grafana.example.test", "grafana"),
+        new IdentityProperties.LocalLogin(true, "admin@example.test", "{bcrypt}hash")
     );
 
     @Test
@@ -42,14 +42,14 @@ class AuthorizationClaimsCustomizerTest {
             AuthorizationGrantType.AUTHORIZATION_CODE,
             new OAuth2TokenType("access_token"),
             "grafana",
-            "dem.gianluigi@gmail.com"
+            "admin@example.test"
         );
 
         new AuthorizationServerConfiguration().jwtClaimsCustomizer(PROPERTIES).customize(context);
 
         JwtClaimsSet claims = context.getClaims().build();
         assertThat(claims.getSubject()).isEqualTo("user:admin");
-        assertThat(claims.getClaimAsString("email")).isEqualTo("dem.gianluigi@gmail.com");
+        assertThat(claims.getClaimAsString("email")).isEqualTo("admin@example.test");
         assertThat(claims.getClaimAsStringList("roles")).containsExactly("admin");
         assertThat(claims.getClaimAsStringList("groups")).containsExactly("admin");
         assertThat(claims.getAudience()).containsExactly("grafana");
@@ -58,16 +58,16 @@ class AuthorizationClaimsCustomizerTest {
     @Test
     void mapsGoogleOnlyUserToTheirConfiguredSubjectAndGroups() {
         IdentityProperties.User administrator = new IdentityProperties.User(
-            "dem.gianluigi@gmail.com", "user:admin", Set.of("admin"), Set.of("google", "password")
+            "admin@example.test", "user:admin", Set.of("admin"), Set.of("google", "password")
         );
         IdentityProperties.User participant = new IdentityProperties.User(
-            "pugliens@gmail.com", "user:pugliens", Set.of("rage-quit"), Set.of("google")
+            "alice@example.test", "user:alice", Set.of("participants"), Set.of("google")
         );
         IdentityProperties properties = new IdentityProperties(
             PROPERTIES.issuer(),
             PROPERTIES.signingKeyLocation(),
-            Set.of("admin", "rage-quit"),
-            Map.of("administrator", administrator, "pugliens", participant),
+            Set.of("admin", "participants"),
+            Map.of("administrator", administrator, "alice", participant),
             PROPERTIES.grafana(),
             PROPERTIES.grafanaApi(),
             PROPERTIES.localLogin(),
@@ -76,17 +76,17 @@ class AuthorizationClaimsCustomizerTest {
         var context = context(
             AuthorizationGrantType.AUTHORIZATION_CODE,
             OAuth2TokenType.ACCESS_TOKEN,
-            "rage-quit",
-            IdentityTestAuthentications.google("pugliens@gmail.com")
+            "restricted-client",
+            IdentityTestAuthentications.google("alice@example.test")
         );
 
         new AuthorizationServerConfiguration().jwtClaimsCustomizer(properties).customize(context);
 
         JwtClaimsSet claims = context.getClaims().build();
-        assertThat(claims.getSubject()).isEqualTo("user:pugliens");
-        assertThat(claims.getClaimAsStringList("groups")).containsExactly("rage-quit");
-        assertThat(claims.getClaimAsStringList("roles")).containsExactly("rage-quit");
-        assertThat(claims.getClaimAsString("email")).isEqualTo("pugliens@gmail.com");
+        assertThat(claims.getSubject()).isEqualTo("user:alice");
+        assertThat(claims.getClaimAsStringList("groups")).containsExactly("participants");
+        assertThat(claims.getClaimAsStringList("roles")).containsExactly("participants");
+        assertThat(claims.getClaimAsString("email")).isEqualTo("alice@example.test");
     }
 
     @Test
@@ -109,14 +109,14 @@ class AuthorizationClaimsCustomizerTest {
 
     @Test
     void usesAudienceDeclaredForNewClient() {
-        var homepage = new IdentityProperties.ClientDefinition(
-            "homepage",
+        var portal = new IdentityProperties.ClientDefinition(
+            "portal",
             "secret",
-            Set.of("https://calcifer.tech/api/auth/callback/homepage-oidc"),
+            Set.of("https://portal.example.test/callback"),
             Set.of("openid", "email", "profile"),
             Set.of("authorization_code"),
             Set.of("client_secret_basic"),
-            "homepage",
+            "portal",
             true,
             null
         );
@@ -128,18 +128,18 @@ class AuthorizationClaimsCustomizerTest {
             PROPERTIES.grafana(),
             PROPERTIES.grafanaApi(),
             PROPERTIES.localLogin(),
-            Map.of("homepage", homepage)
+            Map.of("portal", portal)
         );
         var context = context(
             AuthorizationGrantType.AUTHORIZATION_CODE,
             new OAuth2TokenType("access_token"),
-            "homepage",
-            "dem.gianluigi@gmail.com"
+            "portal",
+            "admin@example.test"
         );
 
         new AuthorizationServerConfiguration().jwtClaimsCustomizer(properties).customize(context);
 
-        assertThat(context.getClaims().build().getAudience()).containsExactly("homepage");
+        assertThat(context.getClaims().build().getAudience()).containsExactly("portal");
     }
 
     @Test
@@ -150,7 +150,7 @@ class AuthorizationClaimsCustomizerTest {
         var properties = new IdentityProperties(PROPERTIES.issuer(), PROPERTIES.signingKeyLocation(), PROPERTIES.groups(),
             PROPERTIES.users(), PROPERTIES.grafana(), PROPERTIES.grafanaApi(), PROPERTIES.localLogin(), Map.of("dashboard", client));
         var context = context(AuthorizationGrantType.AUTHORIZATION_CODE, new OAuth2TokenType("id_token"),
-            "dashboard-ui", "dem.gianluigi@gmail.com");
+            "dashboard-ui", "admin@example.test");
         context.getClaims().audience(java.util.List.of("dashboard-ui"));
 
         new AuthorizationServerConfiguration().jwtClaimsCustomizer(properties).customize(context);
@@ -158,7 +158,7 @@ class AuthorizationClaimsCustomizerTest {
         assertThat(context.getClaims().build().getAudience()).containsExactly("dashboard-ui");
         assertThat(context.getClaims().build().getClaimAsBoolean("email_verified")).isTrue();
         var accessContext = context(AuthorizationGrantType.AUTHORIZATION_CODE, OAuth2TokenType.ACCESS_TOKEN,
-            "dashboard-ui", "dem.gianluigi@gmail.com");
+            "dashboard-ui", "admin@example.test");
         new AuthorizationServerConfiguration().jwtClaimsCustomizer(properties).customize(accessContext);
         assertThat(accessContext.getClaims().build().getAudience()).containsExactly("metrics-api");
     }
@@ -166,7 +166,7 @@ class AuthorizationClaimsCustomizerTest {
     @Test
     void refusesInteractiveTokensForUnknownAuthenticationMethod() {
         var context = context(AuthorizationGrantType.AUTHORIZATION_CODE, OAuth2TokenType.ACCESS_TOKEN, "grafana",
-            new TestingAuthenticationToken("dem.gianluigi@gmail.com", "ignored", "ROLE_ADMIN"));
+            new TestingAuthenticationToken("admin@example.test", "ignored", "ROLE_ADMIN"));
 
         assertThatThrownBy(() -> new AuthorizationServerConfiguration().jwtClaimsCustomizer(PROPERTIES).customize(context))
             .isInstanceOf(OAuth2AuthenticationException.class);
@@ -193,7 +193,7 @@ class AuthorizationClaimsCustomizerTest {
             .clientId(clientId)
             .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
             .authorizationGrantType(grantType)
-            .redirectUri("https://grafana.calcifer.tech/login/generic_oauth")
+            .redirectUri("https://grafana.example.test/login/generic_oauth")
             .build();
         return JwtEncodingContext
             .with(JwsHeader.with(SignatureAlgorithm.RS256), JwtClaimsSet.builder())

@@ -30,7 +30,7 @@ def prepare_dependency(root, kind, project, dependency, target, *, expected=None
         raise ValueError('Invalid project or target version')
     prefix = Path() if project == '.' else Path(project)
     if kind == 'maven':
-        if project not in ('authorization-server', 'rage-quit') or not _MAVEN.fullmatch(dependency):
+        if project != 'authorization-server' or not _MAVEN.fullmatch(dependency):
             raise ValueError('Maven project or coordinate has no update policy')
         paths = [prefix / 'pom.xml']
     elif kind == 'python':

@@ -25,7 +25,7 @@ import org.springframework.security.oauth2.server.authorization.authentication.O
 
 class RestoredSessionPolicyTest {
 
-    private static final String ADMIN = "dem.gianluigi@gmail.com";
+    private static final String ADMIN = "admin@example.test";
 
     @ParameterizedTest
     @ValueSource(strings = {"google", "password"})
@@ -49,10 +49,10 @@ class RestoredSessionPolicyTest {
         assertThat(policy.allows("grafana", restored)).isFalse();
 
         var request = new OAuth2AuthorizationCodeRequestAuthenticationToken(
-            "https://auth.calcifer.tech/oauth2/authorize",
+            "https://auth.example.test/oauth2/authorize",
             "grafana",
             restored,
-            "https://grafana.calcifer.tech/login/generic_oauth",
+            "https://grafana.example.test/login/generic_oauth",
             "state",
             Set.of("openid"),
             Map.of()
@@ -90,25 +90,25 @@ class RestoredSessionPolicyTest {
         assertThat(properties.userFor(IdentityTestAuthentications.google(ADMIN, false, "google"))).isNull();
         assertThat(properties.userFor(new TestingAuthenticationToken(ADMIN, "ignored", "ROLE_ADMIN"))).isNull();
         assertThat(properties.userFor(new TestingAuthenticationToken(ADMIN, "ignored"))).isNull();
-        assertThat(properties.userFor(IdentityTestAuthentications.password("pugliens@gmail.com"))).isNull();
+        assertThat(properties.userFor(IdentityTestAuthentications.password("alice@example.test"))).isNull();
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"dem.gianluigi@gmail.com", "pugliens@gmail.com", "frevadiscor@gmail.com"})
-    void restoredRageQuitGoogleSessionsRetainTheirSubjectRoleAndRestrictions(String email) throws Exception {
-        RageQuitRestoredPolicyAssertions.verify(restored(RageQuitTestSupport.google(email)), false);
+    @ValueSource(strings = {"admin@example.test", "alice@example.test", "bob@example.test"})
+    void restoredGoogleSessionsRetainTheirSubjectRoleAndClientRestrictions(String email) throws Exception {
+        RestoredIdentityPolicyAssertions.verify(restored(InteractiveClientTestSupport.google(email)), false);
     }
 
     @Test
     void restoredPasswordAndPreCatalogSessionsMustReauthenticateForGoogleOnlyClient() throws Exception {
-        var policy = new InteractiveClientGroupPolicy(RageQuitTestSupport.properties());
-        Authentication password = restored(RageQuitTestSupport.password());
-        assertThat(policy.requiresGoogleAuthentication("rage-quit", password)).isTrue();
-        assertThat(policy.allows("rage-quit", password)).isFalse();
+        var policy = new InteractiveClientGroupPolicy(InteractiveClientTestSupport.properties());
+        Authentication password = restored(InteractiveClientTestSupport.password());
+        assertThat(policy.requiresGoogleAuthentication("restricted-client", password)).isTrue();
+        assertThat(policy.allows("restricted-client", password)).isFalse();
         assertThat(policy.allows("grafana", password)).isTrue();
         var legacy = new TestingAuthenticationToken(ADMIN, "ignored", "ROLE_ADMIN");
-        assertThat(policy.requiresGoogleAuthentication("rage-quit", legacy)).isTrue();
-        assertThat(policy.allows("rage-quit", legacy)).isFalse();
+        assertThat(policy.requiresGoogleAuthentication("restricted-client", legacy)).isTrue();
+        assertThat(policy.allows("restricted-client", legacy)).isFalse();
         assertThat(policy.allows("grafana", legacy)).isFalse();
     }
 

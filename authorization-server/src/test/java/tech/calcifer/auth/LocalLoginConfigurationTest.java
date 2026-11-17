@@ -20,13 +20,13 @@ class LocalLoginConfigurationTest {
     private static final IdentityProperties.Client GRAFANA = new IdentityProperties.Client(
         "grafana",
         "secret",
-        "https://grafana.calcifer.tech/login/generic_oauth",
+        "https://grafana.example.test/login/generic_oauth",
         "grafana"
     );
     private static final IdentityProperties.Client API = new IdentityProperties.Client(
         "grafana-api",
         "secret",
-        "https://grafana.calcifer.tech",
+        "https://grafana.example.test",
         "grafana"
     );
 
@@ -42,7 +42,7 @@ class LocalLoginConfigurationTest {
     void acceptsBcryptHashWithoutExposingPlaintext() {
         String hash = new BCryptPasswordEncoder().encode("test-password");
         var service = new AuthorizationServerConfiguration().localAdministrator(properties(hash));
-        assertThat(service.loadUserByUsername("dem.gianluigi@gmail.com").getPassword()).isEqualTo("{bcrypt}" + hash);
+        assertThat(service.loadUserByUsername("admin@example.test").getPassword()).isEqualTo("{bcrypt}" + hash);
     }
 
     @ParameterizedTest
@@ -53,7 +53,7 @@ class LocalLoginConfigurationTest {
         var provider = configuration.localPasswordAuthenticationProvider(properties(hash), configuration.passwordEncoder());
 
         assertThat(provider.authenticate(new UsernamePasswordAuthenticationToken(
-            "dem.gianluigi@gmail.com", "test-password"
+            "admin@example.test", "test-password"
         )).isAuthenticated()).isTrue();
     }
 
@@ -65,10 +65,10 @@ class LocalLoginConfigurationTest {
         var provider = configuration.localPasswordAuthenticationProvider(properties(hash), configuration.passwordEncoder());
 
         assertThat(provider.authenticate(new UsernamePasswordAuthenticationToken(
-            "dem.gianluigi@gmail.com", "test-password"
+            "admin@example.test", "test-password"
         )).isAuthenticated()).isTrue();
         assertThatThrownBy(() -> provider.authenticate(new UsernamePasswordAuthenticationToken(
-            "dem.gianluigi@gmail.com", "wrong-password"
+            "admin@example.test", "wrong-password"
         ))).isInstanceOf(BadCredentialsException.class);
     }
 
@@ -106,11 +106,11 @@ class LocalLoginConfigurationTest {
     @Test
     void disabledLocalLoginDoesNotRequireAHash() {
         IdentityProperties properties = new IdentityProperties(
-            "https://auth.calcifer.tech", "dem.gianluigi@gmail.com", "user:admin", "file:key", GRAFANA, API,
-            new IdentityProperties.LocalLogin(false, "dem.gianluigi@gmail.com", "")
+            "https://auth.example.test", "admin@example.test", "user:admin", "file:key", GRAFANA, API,
+            new IdentityProperties.LocalLogin(false, "admin@example.test", "")
         );
         var service = new AuthorizationServerConfiguration().localAdministrator(properties);
-        assertThatThrownBy(() -> service.loadUserByUsername("dem.gianluigi@gmail.com"))
+        assertThatThrownBy(() -> service.loadUserByUsername("admin@example.test"))
             .isInstanceOf(org.springframework.security.core.userdetails.UsernameNotFoundException.class);
     }
 
@@ -123,7 +123,7 @@ class LocalLoginConfigurationTest {
             "correct-password"))));
         provider.setPasswordEncoder(new AuthorizationServerConfiguration().passwordEncoder());
         assertThatThrownBy(() -> provider.authenticate(new UsernamePasswordAuthenticationToken(
-            "dem.gianluigi@gmail.com",
+            "admin@example.test",
             "wrong-password"
         ))).isInstanceOf(BadCredentialsException.class);
     }
@@ -138,12 +138,12 @@ class LocalLoginConfigurationTest {
         );
 
         var authentication = provider.authenticate(new UsernamePasswordAuthenticationToken(
-            "dem.gianluigi@gmail.com",
+            "admin@example.test",
             "correct-password"
         ));
 
         assertThat(authentication.isAuthenticated()).isTrue();
-        assertThat(authentication.getName()).isEqualTo("dem.gianluigi@gmail.com");
+        assertThat(authentication.getName()).isEqualTo("admin@example.test");
         assertThat(authentication.getAuthorities()).extracting(Object::toString).contains("ROLE_ADMIN");
     }
 
@@ -151,40 +151,40 @@ class LocalLoginConfigurationTest {
     void rejectsPasswordForGoogleOnlyCatalogUserWhenLocalLoginIsEnabledForAdmin() {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         IdentityProperties properties = new IdentityProperties(
-            "https://auth.calcifer.tech",
+            "https://auth.example.test",
             "file:key",
-            Set.of("admin", "rage-quit"),
+            Set.of("admin", "participants"),
             Map.of(
                 "administrator", new IdentityProperties.User(
-                    "dem.gianluigi@gmail.com", "user:admin", Set.of("admin"), Set.of("google", "password")
+                    "admin@example.test", "user:admin", Set.of("admin"), Set.of("google", "password")
                 ),
-                "pugliens", new IdentityProperties.User(
-                    "pugliens@gmail.com", "user:pugliens", Set.of("rage-quit"), Set.of("google")
+                "alice", new IdentityProperties.User(
+                    "alice@example.test", "user:alice", Set.of("participants"), Set.of("google")
                 )
             ),
             GRAFANA,
             API,
-            new IdentityProperties.LocalLogin(true, "dem.gianluigi@gmail.com", encoder.encode("correct-password")),
+            new IdentityProperties.LocalLogin(true, "admin@example.test", encoder.encode("correct-password")),
             Map.of()
         );
         var configuration = new AuthorizationServerConfiguration();
         var provider = configuration.localPasswordAuthenticationProvider(properties, configuration.passwordEncoder());
 
         assertThatThrownBy(() -> provider.authenticate(new UsernamePasswordAuthenticationToken(
-            "pugliens@gmail.com",
+            "alice@example.test",
             "correct-password"
         ))).isInstanceOf(BadCredentialsException.class);
     }
 
     private static IdentityProperties properties(String hash) {
         return new IdentityProperties(
-            "https://auth.calcifer.tech",
-            "dem.gianluigi@gmail.com",
+            "https://auth.example.test",
+            "admin@example.test",
             "user:admin",
             "file:key",
             GRAFANA,
             API,
-            new IdentityProperties.LocalLogin(true, "dem.gianluigi@gmail.com", hash)
+            new IdentityProperties.LocalLogin(true, "admin@example.test", hash)
         );
     }
 }

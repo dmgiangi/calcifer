@@ -18,7 +18,7 @@ class AuthorizationStateLocalityTest {
             .withId("client-registration")
             .clientId("grafana")
             .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-            .redirectUri("https://grafana.calcifer.tech/login/generic_oauth")
+            .redirectUri("https://grafana.example.test/login/generic_oauth")
             .build();
         OAuth2Authorization authorization = OAuth2Authorization
             .withRegisteredClient(client)
