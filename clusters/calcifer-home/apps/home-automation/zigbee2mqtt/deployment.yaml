@@ -33,7 +33,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: initialize-configuration
-          image: ghcr.io/koenkk/zigbee2mqtt:2.14.1
+          image: ghcr.io/koenkk/zigbee2mqtt:2.14.3@sha256:fb4a6b0f6868ad1cd6a9996479802b2420e599c3463b62bbff8c8cd9a908f43a
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -60,7 +60,7 @@ spec:
               readOnly: true
       containers:
         - name: zigbee2mqtt
-          image: ghcr.io/koenkk/zigbee2mqtt:2.14.1
+          image: ghcr.io/koenkk/zigbee2mqtt:2.14.3@sha256:fb4a6b0f6868ad1cd6a9996479802b2420e599c3463b62bbff8c8cd9a908f43a
           imagePullPolicy: IfNotPresent
           ports:
             - name: frontend
@@ -104,7 +104,7 @@ spec:
             - name: coordinator
               mountPath: /dev/ttyUSB0
         - name: oauth2-proxy
-          image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.4
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.6@sha256:c3415e8660af553f5e18f5d90db050614c02493c0ac6260ac59442f6d9b12048
           imagePullPolicy: IfNotPresent
           ports:
             - name: oauth2-proxy

@@ -58,7 +58,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: proxy
-          image: haproxy:3.2-alpine
+          image: haproxy:3.4-alpine@sha256:b9fe316f718d5015c5cfebd8ca019591f3e44656f61d93cb8b59a1028961e530
           args: ["-W", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
           ports:
             - name: mqtt-lan

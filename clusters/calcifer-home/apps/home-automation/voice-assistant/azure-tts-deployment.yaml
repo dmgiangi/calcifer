@@ -30,7 +30,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: wyoming-azure-tts
-          image: ghcr.io/hugobloem/wyoming-microsoft-tts-noha:1.4.5@sha256:6d5e5350898b1f5228e8d3d5ace9b3624d2d38f95844d89e13638451f840a5ee
+          image: ghcr.io/hugobloem/wyoming-microsoft-tts-noha:1.4.6@sha256:62b99bdca8f434537a8f68f43ce027fb4447a0bb6b907f2ba06d09361d74f37f
           imagePullPolicy: IfNotPresent
           workingDir: /tmp
           command:

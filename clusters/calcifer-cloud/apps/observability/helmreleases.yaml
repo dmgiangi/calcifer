@@ -22,7 +22,7 @@ spec:
   chart:
     spec:
       chart: grafana-operator
-      version: 5.25.0
+      version: 5.26.0
       sourceRef:
         kind: HelmRepository
         name: grafana-operator
@@ -65,7 +65,7 @@ spec:
   chart:
     spec:
       chart: kube-state-metrics
-      version: 8.2.0
+      version: 9.0.1
       sourceRef:
         kind: HelmRepository
         name: prometheus-community
@@ -105,7 +105,7 @@ spec:
   chart:
     spec:
       chart: prometheus-node-exporter
-      version: 4.56.3
+      version: 5.1.0
       sourceRef:
         kind: HelmRepository
         name: prometheus-community
@@ -147,7 +147,7 @@ spec:
   chart:
     spec:
       chart: victoria-traces-single
-      version: 0.1.11
+      version: 0.1.13
       sourceRef:
         kind: HelmRepository
         name: victoria-metrics
@@ -198,7 +198,7 @@ spec:
   chart:
     spec:
       chart: victoria-metrics-single
-      version: 0.46.0
+      version: 0.51.0
       sourceRef:
         kind: HelmRepository
         name: victoria-metrics
@@ -248,7 +248,7 @@ spec:
   chart:
     spec:
       chart: victoria-logs-single
-      version: 0.13.9
+      version: 0.13.13
       sourceRef:
         kind: HelmRepository
         name: victoria-metrics
@@ -299,12 +299,17 @@ spec:
   chart:
     spec:
       chart: alloy
-      version: 1.12.1
+      version: 1.16.0
       sourceRef:
         kind: HelmRepository
         name: grafana
         namespace: monitoring
   values:
+    configReloader:
+      image:
+        registry: quay.io
+        repository: prometheus-operator/prometheus-config-reloader
+        tag: v0.95.2@sha256:cc74ddedad4ab1c49446971f6d51302ad4303d8660a2018af925c7f62c114304
     crds:
       create: true
     controller:
@@ -608,16 +613,19 @@ spec:
   chart:
     spec:
       chart: velero
-      version: 12.2.0
+      version: 12.2.5
       sourceRef:
         kind: HelmRepository
         name: vmware-tanzu
         namespace: monitoring
   values:
+    image:
+      repository: docker.io/velero/velero
+      tag: v1.18.4@sha256:c89fb5b6d1fd6afd368e0f483e6f5555fd62851a1eada8ac5c72482e674ca17b
     upgradeCRDs: false
     initContainers:
       - name: velero-plugin-for-microsoft-azure
-        image: velero/velero-plugin-for-microsoft-azure:v1.14.0
+        image: velero/velero-plugin-for-microsoft-azure:v1.14.4@sha256:a23aa46eae095bd960bedca3e94131ef237f4f0aaa4c2ae1492d9e03a8e2cdb2
         imagePullPolicy: IfNotPresent
         volumeMounts:
           - mountPath: /target

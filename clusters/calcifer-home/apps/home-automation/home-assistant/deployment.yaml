@@ -25,7 +25,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: configure-http
-          image: ghcr.io/home-assistant/home-assistant:2026.9.2@sha256:a1bc133af84ee6505fe2c266d9805b7c75b780dfdc188edfee3b11e8f3cd8efe
+          image: ghcr.io/home-assistant/home-assistant:2026.11.2@sha256:493a07e8f6530fc640223f4a0a5248f20a61ca2f718bb1d31efbf08a2c5ea28f
           imagePullPolicy: IfNotPresent
           command:
             - python3
@@ -74,7 +74,7 @@ spec:
             - name: config
               mountPath: /config
         - name: install-oidc-component
-          image: ghcr.io/home-assistant/home-assistant:2026.9.2@sha256:a1bc133af84ee6505fe2c266d9805b7c75b780dfdc188edfee3b11e8f3cd8efe
+          image: ghcr.io/home-assistant/home-assistant:2026.11.2@sha256:493a07e8f6530fc640223f4a0a5248f20a61ca2f718bb1d31efbf08a2c5ea28f
           imagePullPolicy: IfNotPresent
           command:
             - python3
@@ -105,7 +105,7 @@ spec:
             - name: temporary
               mountPath: /tmp
         - name: install-hacs
-          image: ghcr.io/home-assistant/home-assistant:2026.9.2@sha256:a1bc133af84ee6505fe2c266d9805b7c75b780dfdc188edfee3b11e8f3cd8efe
+          image: ghcr.io/home-assistant/home-assistant:2026.11.2@sha256:493a07e8f6530fc640223f4a0a5248f20a61ca2f718bb1d31efbf08a2c5ea28f
           imagePullPolicy: IfNotPresent
           command:
             - python3
@@ -162,7 +162,7 @@ spec:
               mountPath: /tmp
       containers:
         - name: home-assistant
-          image: ghcr.io/home-assistant/home-assistant:2026.9.2@sha256:a1bc133af84ee6505fe2c266d9805b7c75b780dfdc188edfee3b11e8f3cd8efe
+          image: ghcr.io/home-assistant/home-assistant:2026.11.2@sha256:493a07e8f6530fc640223f4a0a5248f20a61ca2f718bb1d31efbf08a2c5ea28f
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

@@ -16,7 +16,7 @@ spec:
   chart:
     spec:
       chart: kube-state-metrics
-      version: 8.2.0
+      version: 9.0.1
       sourceRef:
         kind: HelmRepository
         name: prometheus-community
@@ -56,7 +56,7 @@ spec:
   chart:
     spec:
       chart: prometheus-node-exporter
-      version: 4.56.3
+      version: 5.1.0
       sourceRef:
         kind: HelmRepository
         name: prometheus-community
@@ -98,12 +98,17 @@ spec:
   chart:
     spec:
       chart: alloy
-      version: 1.12.1
+      version: 1.16.0
       sourceRef:
         kind: HelmRepository
         name: grafana
         namespace: monitoring
   values:
+    configReloader:
+      image:
+        registry: quay.io
+        repository: prometheus-operator/prometheus-config-reloader
+        tag: v0.95.2@sha256:cc74ddedad4ab1c49446971f6d51302ad4303d8660a2018af925c7f62c114304
     crds:
       create: true
     controller:

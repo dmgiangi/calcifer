@@ -104,7 +104,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: envoy
-          image: envoyproxy/envoy:distroless-v1.33.0@sha256:69c16906fa649d83df125050b33109a6699c085be032fcd30f5f68b98cbe7670
+          image: envoyproxy/envoy:distroless-v1.40.2@sha256:09ca6f2140a61ad8df11779a4a30d52b48433d444466328494f9188c9c35eded
           imagePullPolicy: IfNotPresent
           args:
             - -c
