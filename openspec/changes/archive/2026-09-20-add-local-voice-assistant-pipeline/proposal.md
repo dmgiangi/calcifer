@@ -12,12 +12,6 @@ ricevere una risposta vocale senza hardware satellite dedicato.
 
 - Aggiungere una capability `home-voice-assistant` per la pipeline vocale
   end-to-end in italiano.
-- Aggiungere sotto `dev/linux-voice-assistant/` un Docker Compose locale per
-  Linux Voice Assistant (LVA), con immagine versionata, accesso a PipeWire
-  tramite il socket PulseAudio, wake word locale e volumi persistenti per dati e
-  configurazione.
-- Fornire `.env.example` versionato e ignorare il `.env` locale, senza inserire
-  credenziali, cookie o indirizzi personali nel repository.
 - Distribuire su `calcifer-home` adapter Wyoming interni per Azure Speech
   STT/TTS come unico backend vocale, con credenziali SOPS e Service interni.
 - Instradare le connessioni Azure Speech tramite un proxy CONNECT dedicato su
@@ -46,8 +40,6 @@ deployment HTTP di Home Assistant.
 
 ## Impact
 
-- Nuovi artefatti locali sotto `dev/linux-voice-assistant/`:
-  `docker-compose.yml` e `.env.example`.
 - Nuovi manifest Kustomize/Flux sotto
   `clusters/calcifer-home/apps/voice-assistant/`, inclusi namespace,
   Deployment, Service, ConfigMap e inclusione nella Kustomization delle

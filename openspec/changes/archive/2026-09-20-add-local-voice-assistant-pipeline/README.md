@@ -8,7 +8,7 @@ Speech STT/TTS su `calcifer-home` e egress ristretto via `calcifer-cloud`.
 - Home Assistant entity: `switch.luce_cucina`; service: `switch.turn_on`.
 - Successful spoken confirmation: `Fatto`.
 - PC LAN address for manual ESPHome onboarding: `192.168.0.100`.
-- Local wake word: `Calcifer`, loaded from the custom microWakeWord model.
+- Local wake word: `Calcifer`.
 - `calcifer-home`: 4 CPU, approximately 7.6 GiB RAM, `local-path` storage.
 - LVA: `ghcr.io/ohf-voice/linux-voice-assistant:1.1.15`.
 - Azure STT: `ghcr.io/hugobloem/wyoming-microsoft-stt-noha:1.3.10`,
@@ -43,21 +43,8 @@ The documented test utterance is **“Accendi la luce cucina”**. It targets
 must speak exactly `Fatto`. Test the unavailable-switch path separately and
 confirm that it does not speak the success confirmation.
 
-## Local troubleshooting
-
-- Run `docker compose --env-file .env.example config` before starting LVA.
-- Use `docker compose --env-file .env.example run --rm -e LIST_DEVICES=1
-  linux-voice-assistant` to enumerate host audio names, then update `.env`.
-- The XDG runtime bind mount is intentionally read/write because LVA creates
-  the PulseAudio cookie there when PipeWire does not provide one. It is outside
-  the repository and is never committed.
-- Check `docker compose --env-file .env.example ps` and the LVA logs for API
-  port `6053` and the configured wake word.
-
 ## Rollback
 
-- Stop the local satellite with
-  `docker compose --env-file .env down`; named volumes may be retained.
 - Disable or remove only `clusters/calcifer-home/apps/voice-assistant` from the
   Home application Kustomization and reconcile Flux.
 - Remove the dedicated Cloud Speech proxy only after the Home adapters have

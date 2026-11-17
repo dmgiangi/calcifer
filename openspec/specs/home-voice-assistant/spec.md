@@ -135,31 +135,10 @@ one explicitly selected Home Assistant switch entity and returns the exact
 - **THEN** Home Assistant SHALL not play the success confirmation `Fatto` and
   SHALL expose the failure to the user
 
-### Requirement: Local development setup is reproducible and secret-safe
-
-The repository SHALL contain a Docker Compose setup under
-`dev/linux-voice-assistant/` that can run the Linux satellite on a Linux host
-with PipeWire's PulseAudio-compatible socket. The repository SHALL include a
-version-controlled `.env.example`, SHALL ignore the corresponding real `.env`,
-and MUST NOT require credentials or host-specific secrets to be committed.
-
-#### Scenario: Developer prepares the satellite configuration
-
-- **WHEN** a developer copies `.env.example` to `.env` and supplies the local
-  UID/GID and audio runtime paths
-- **THEN** the Compose project SHALL start the satellite with persistent
-  wake-word/configuration volumes and access to the host audio server
-
-#### Scenario: Repository safety check
-
-- **WHEN** the repository is checked for tracked files
-- **THEN** the local `.env`, audio cookies, and generated model/configuration
-  data SHALL not be tracked
-
 ### Requirement: Voice pipeline and restricted Cloud egress are validated
 
 The implementation SHALL document a repeatable validation and rollback
-  procedure covering the local Compose satellite, the Home cluster speech
+  procedure covering the local satellite, the Home cluster speech
   services, Home Assistant onboarding, one real switch command, and the
   restricted Cloud egress. The change MUST NOT expose a public voice endpoint or
   a general-purpose forward proxy on `calcifer-cloud`.
@@ -175,5 +154,5 @@ The implementation SHALL document a repeatable validation and rollback
 
 - **WHEN** the voice application is removed or disabled
 - **THEN** Home Assistant's existing HTTP workload and persistent configuration
-  SHALL remain available, and the local satellite SHALL stop without affecting
-  either cluster's unrelated workloads
+  SHALL remain available, and voice-specific integrations SHALL be removable
+  without affecting either cluster's unrelated workloads

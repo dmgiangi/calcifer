@@ -101,21 +101,6 @@ Azure Speech public access remains enabled with `defaultAction: Deny` and one
 public IP rule for static Cloud address `136.144.222.128`. The named resource
 endpoint ensures the resource firewall applies to the speech requests.
 
-### Local Linux Voice Assistant Compose
-
-Use the upstream LVA Compose structure at the selected release, adapted only
-for repository-local development. Run the main service with host networking so
-the ESPHome-compatible API is reachable from Home Assistant and so local
-audio-server behavior matches the host. Run it as the host user's UID/GID,
-pass the XDG runtime directory, PulseAudio server socket, and PulseAudio
-cookie path through `.env`, and persist LVA configuration, wake-word data, and
-custom sounds in named volumes.
-
-The Compose file SHALL use a versioned LVA image rather than `latest`. The
-`.env.example` SHALL default to the verified Pop!_OS values but keep them
-overridable for another developer. The real `.env` is ignored, and no audio
-cookie is copied into the repository.
-
 ### Home Assistant onboarding
 
 Add the Wyoming integration through Home Assistant's supported configuration
@@ -150,8 +135,7 @@ without exposing audio cookies or other secrets.
 
 Rollback removes or suspends the Home voice application and disconnects the
 Wyoming/ESPHome integrations if necessary. It leaves the Home Assistant PVC and
-existing HTTP edge intact. Locally, `docker compose down` stops LVA while
-named volumes may be retained for a later retry.
+existing HTTP edge intact.
 
 ## Risks / Trade-offs
 

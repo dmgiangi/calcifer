@@ -27,47 +27,29 @@
   endpoint is denied, proxied Wyoming TTS/STT succeeds, and Azure permits only
   the static Cloud public address
 
-## 3. Add the local Linux satellite Compose project
+## 3. Configure Home Assistant and the exact response
 
-- [x] 3.1 Add `dev/linux-voice-assistant/docker-compose.yml` based on the
-  selected upstream LVA release, with versioned image, host networking, UID/GID
-  mapping, persistent volumes, audio runtime mount, and health check; verify
-  `docker compose config` succeeds with the example environment
-- [x] 3.2 Add `dev/linux-voice-assistant/.env.example` with parametrized UID/GID,
-  XDG runtime directory, PulseAudio server/cookie paths, API port, audio device
-  defaults, and local wake-word model; verify it contains no cookie contents or
-  personal credentials
-- [x] 3.3 Ignore the real `dev/linux-voice-assistant/.env` and generated local
-  audio/model/configuration data; verify `git check-ignore` reports the real
-  environment file as ignored and no secret-bearing file is tracked
-- [x] 3.4 Start the Compose project on the Pop!_OS host and verify LVA can list
-  the microphone and speaker through PipeWire's PulseAudio compatibility socket,
-  exposes the ESPHome-compatible API on port `6053`, and detects the configured
-  wake word locally
-
-## 4. Configure Home Assistant and the exact response
-
-- [x] 4.1 Add the Azure Wyoming integration endpoints to Home Assistant and
+- [x] 3.1 Add the Azure Wyoming integration endpoints to Home Assistant and
   verify Italian STT and TTS are selectable in an Assist pipeline
-- [x] 4.2 Add the LVA device through the ESPHome integration using the PC LAN
+- [x] 3.2 Add the LVA device through the ESPHome integration using the PC LAN
   address and port `6053`; verify Home Assistant can open the satellite session
   without relying on multicast discovery
-- [x] 4.3 Create the Italian Assist pipeline and bind it to the LVA device;
+- [x] 3.3 Create the Italian Assist pipeline and bind it to the LVA device;
   verify an utterance is transcribed and answered through Azure
-- [x] 4.4 Add the documented custom Italian test sentence/intent for the
+- [x] 3.4 Add the documented custom Italian test sentence/intent for the
   selected switch entity, with success speech exactly `Fatto`; verify success
   and unavailable-switch paths do not confuse the response
 
-## 5. Validate, document, and provide rollback
+## 4. Validate, document, and provide rollback
 
-- [x] 5.1 Run the full acceptance test from wake word through Italian switch
+- [x] 4.1 Run the full acceptance test from wake word through Italian switch
   command, state change, selected TTS synthesis, and PC speaker playback; record the
   observable result and warm-path latency without recording secrets
-- [x] 5.2 Validate both Kustomize outputs, Compose configuration, pod/proxy logs,
+- [x] 4.2 Validate both Kustomize outputs, pod/proxy logs,
   internal Service reachability, direct-path denial, proxied STT/TTS, and
   repository secret checks
-- [x] 5.3 Document prerequisites, startup order, Home Assistant onboarding,
+- [x] 4.3 Document prerequisites, startup order, Home Assistant onboarding,
   restricted Cloud egress, firewall checks, troubleshooting, and rollback
-- [x] 5.4 Exercise rollback by disabling the voice application and stopping the
-  local Compose project; verify Home Assistant HTTP access, its PVC, and
-  unrelated Home cluster workloads remain available
+- [x] 4.4 Exercise rollback by disabling the voice application; verify that
+  Home Assistant HTTP access, its PVC, and unrelated Home cluster workloads
+  remain available
