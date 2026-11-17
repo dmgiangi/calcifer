@@ -77,6 +77,7 @@ the chamber; entity names can then be customized in Home Assistant.
 | `therment/therment-01/control_probe/state` | Retained, actually accepted association; `None` means unassigned |
 | `therment/therment-01/probes/state` | Retained JSON map of ROM IDs to last valid temperature, or null when unavailable |
 | `therment/therment-01/probes/status` | Retained JSON map of ROM IDs to `ok`, `stale` or `fault` |
+| `therment/therment-01/probes/diagnostics` | Retained, boot-scoped bus and per-ROM failure diagnostics |
 | `therment/therment-01/temperature` | Existing climate temperature: selected probe only |
 
 Set climate mode to `off` and wait for action `idle` before changing the
@@ -115,6 +116,52 @@ the existing persisted `auto`/`off` behavior on later boots.
 Build and host tests do not verify wiring, electrical reset levels, physical
 shutdown, NVS durability or compressor timing. Keep loads safe during initial
 installation, identification and physical acceptance; see [OTA.md](OTA.md).
+
+## Probe diagnostics
+
+OneWire timing-sensitive reset/bit sequences disable interrupts briefly; idle
+recovery and the 750 ms conversion wait do not. Read sampling uses nominal
+3 + 9 microsecond delays, leaving margin before the 15 microsecond deadline.
+This reduces software jitter but does not verify electrical signal quality.
+Use externally powered probes, a common ground and an external pull-up
+(typically 4.7 kΩ to 3.3 V). The ESP32 internal pull-up is not a substitute.
+
+MQTT `therment/therment-01/probes/diagnostics` is retained, replaced after every
+sample and republished on reconnect. Schema version `1` includes:
+
+- `firmware_version`, `counter_scope: boot`, `uptime_s` at the last sample,
+  `cycle_duration_ms`, `cycles` and `failed_cycles`.
+- `current_error`: an error in the latest cycle, or null after recovery.
+  `last_error` and `last_error_uptime_s` retain historical evidence.
+- `events`: saturating event counters. These count occurrences, not necessarily
+  failed probes: one bus timeout may affect several probes. `not_detected`
+  counts missing tracked probes with no more specific batch cause.
+- `probes`: per-ROM `successes`, `failures`, `consecutive_failures`, `detected`,
+  `health`, `current_error`, historical `last_error`, `last_error_uptime_s` and
+  `last_success_uptime_s`. A stale retained temperature is not a successful read.
+
+| Error | Meaning / first checks |
+| --- | --- |
+| `not_detected` | Tracked ROM missing from this search; compare bus events |
+| `no_presence` | No presence detected after reset; check power, wiring, pull-up |
+| `search_conflict` | Invalid search bit pair; possible disturbed/disappearing bus |
+| `rom_crc` | Corrupt discovered address; likely communication integrity issue |
+| `unsupported_family` | CRC-valid device is not a DS18B20 |
+| `search_limit` | Eight ROM paths exhausted with branches remaining; incomplete inventory |
+| `conversion_timeout` | Completion poll low after 750 ms; check power and communication |
+| `scratchpad_crc` | Temperature packet CRC mismatch |
+| `invalid_scratchpad` | All-zero or all-one packet, not a valid measurement |
+| `out_of_range` | CRC-valid temperature outside -55 to +125 °C |
+| `gpio` | GPIO operation failed; the whole batch is discarded |
+
+Home Assistant discovers **Probe failed cycles** plus **Probe <ROM> failed
+readings**, under diagnostic entities. Their attributes expose the details
+above. Counters reset on reboot and are not written to NVS. Firmware version
+and uptime help distinguish restarts; HA history can preserve counter trends.
+Only the latest snapshot is retained by MQTT, not a complete error log. No
+retries hide failures, and diagnostics never change the five-failure safety rule.
+Host trace tests verify pulse sequencing, not actual ESP32 waveforms. Persistent
+errors still require wiring/power checks and, if needed, a logic-analyzer trace.
 
 ## USB and OTA
 

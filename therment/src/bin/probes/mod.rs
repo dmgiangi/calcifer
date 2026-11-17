@@ -2,6 +2,11 @@
 
 use std::fmt;
 
+pub mod diagnostics;
+pub mod timing;
+
+use diagnostics::{ReadFailure, SampleDiagnostics};
+
 pub const MAX_PROBES: usize = 8;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -229,9 +234,27 @@ pub trait Bus {
 /// A low completion poll after the wait is a conversion timeout: every detected
 /// probe retains None, including devices whose scratchpad still contains 85 C.
 /// A GPIO error rejects the whole batch through Err.
-pub fn sample<B: Bus>(bus: &mut B) -> Result<Vec<Probe>, B::Error> {
-    let mut probes = discover(bus)?;
-    if probes.is_empty() || !bus.reset()? {
+pub fn sample<B: Bus>(
+    bus: &mut B,
+    diagnostics: &mut SampleDiagnostics,
+) -> Result<Vec<Probe>, B::Error> {
+    let result = sample_inner(bus, diagnostics);
+    if result.is_err() {
+        diagnostics.fail_batch(ReadFailure::Gpio);
+    }
+    result
+}
+
+fn sample_inner<B: Bus>(
+    bus: &mut B,
+    diagnostics: &mut SampleDiagnostics,
+) -> Result<Vec<Probe>, B::Error> {
+    let mut probes = discover(bus, diagnostics)?;
+    if probes.is_empty() {
+        return Ok(probes);
+    }
+    if !bus.reset()? {
+        diagnostics.fail_batch(ReadFailure::NoPresence);
         return Ok(probes);
     }
 
@@ -239,11 +262,13 @@ pub fn sample<B: Bus>(bus: &mut B) -> Result<Vec<Probe>, B::Error> {
     write_byte(bus, 0x44)?;
     bus.wait_conversion();
     if !bus.read_bit()? {
+        diagnostics.fail_batch(ReadFailure::ConversionTimeout);
         return Ok(probes);
     }
 
     for probe in &mut probes {
         if !bus.reset()? {
+            diagnostics.fail_batch(ReadFailure::NoPresence);
             break;
         }
         write_byte(bus, 0x55)?; // Match ROM isolates each scratchpad read.
@@ -255,18 +280,25 @@ pub fn sample<B: Bus>(bus: &mut B) -> Result<Vec<Probe>, B::Error> {
         for byte in &mut scratchpad {
             *byte = read_byte(bus)?;
         }
-        probe.temperature = decode_temperature(scratchpad);
+        match decode_temperature(scratchpad) {
+            Ok(temperature) => probe.temperature = Some(temperature),
+            Err(reason) => diagnostics.fail_probe(probe.rom, reason),
+        }
     }
     Ok(probes)
 }
 
-fn discover<B: Bus>(bus: &mut B) -> Result<Vec<Probe>, B::Error> {
+fn discover<B: Bus>(
+    bus: &mut B,
+    diagnostics: &mut SampleDiagnostics,
+) -> Result<Vec<Probe>, B::Error> {
     let mut probes = Vec::with_capacity(MAX_PROBES);
     let mut previous = [0; 8];
     let mut last_discrepancy = 0;
 
-    for _ in 0..MAX_PROBES {
+    for path in 0..MAX_PROBES {
         if !bus.reset()? {
+            diagnostics.record(ReadFailure::NoPresence);
             break;
         }
         write_byte(bus, 0xf0)?; // Search ROM.
@@ -277,6 +309,7 @@ fn discover<B: Bus>(bus: &mut B) -> Result<Vec<Probe>, B::Error> {
             let complement = bus.read_bit()?;
             if bit && complement {
                 // All participants disappeared, or the search was corrupted.
+                diagnostics.record(ReadFailure::SearchConflict);
                 return Ok(probes);
             }
             let index = (number - 1) / 8;
@@ -299,7 +332,11 @@ fn discover<B: Bus>(bus: &mut B) -> Result<Vec<Probe>, B::Error> {
             }
             bus.write_bit(direction)?;
         }
-        if let Some(rom) = Rom::from_storage(u64::from_le_bytes(address)) {
+        if crc8(&address[..7]) != address[7] {
+            diagnostics.record(ReadFailure::RomCrc);
+        } else if address[0] != 0x28 {
+            diagnostics.record(ReadFailure::UnsupportedFamily);
+        } else if let Some(rom) = Rom::from_storage(u64::from_le_bytes(address)) {
             if !probes.iter().any(|probe: &Probe| probe.rom == rom) {
                 probes.push(Probe {
                     rom,
@@ -311,6 +348,9 @@ fn discover<B: Bus>(bus: &mut B) -> Result<Vec<Probe>, B::Error> {
         last_discrepancy = last_zero;
         if last_discrepancy == 0 {
             break;
+        }
+        if path + 1 == MAX_PROBES {
+            diagnostics.record(ReadFailure::SearchLimit);
         }
     }
     Ok(probes)
@@ -349,18 +389,19 @@ fn crc8(bytes: &[u8]) -> u8 {
     crc
 }
 
-fn decode_temperature(scratchpad: [u8; 9]) -> Option<f32> {
-    if scratchpad.iter().all(|&byte| byte == 0)
-        || scratchpad.iter().all(|&byte| byte == 0xff)
-        || crc8(&scratchpad[..8]) != scratchpad[8]
-    {
-        return None;
+fn decode_temperature(scratchpad: [u8; 9]) -> Result<f32, ReadFailure> {
+    if scratchpad.iter().all(|&byte| byte == 0) || scratchpad.iter().all(|&byte| byte == 0xff) {
+        return Err(ReadFailure::InvalidScratchpad);
+    }
+    if crc8(&scratchpad[..8]) != scratchpad[8] {
+        return Err(ReadFailure::ScratchpadCrc);
     }
     let raw = i16::from_le_bytes([scratchpad[0], scratchpad[1]]);
     let temperature = f32::from(raw) / 16.0;
     (-55.0..=125.0)
         .contains(&temperature)
         .then_some(temperature)
+        .ok_or(ReadFailure::OutOfRange)
 }
 
 /// Clearing or changing the selection requires disabled control and safe outputs.
@@ -387,6 +428,10 @@ pub fn selection_request(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn sample<B: Bus>(bus: &mut B) -> Result<Vec<Probe>, B::Error> {
+        super::sample(bus, &mut SampleDiagnostics::default())
+    }
 
     #[derive(Clone)]
     struct Device {
@@ -738,7 +783,8 @@ mod tests {
         devices[6].scratchpad = Device::new(0x28, 6, 125.0).scratchpad;
         let roms: Vec<_> = devices.iter().map(Device::rom).collect();
         let mut bus = FakeBus::new(devices);
-        let probes = sample(&mut bus).unwrap();
+        let mut diagnostics = SampleDiagnostics::default();
+        let probes = super::sample(&mut bus, &mut diagnostics).unwrap();
         assert_eq!(probes.len(), 8);
         let expected = [
             None,
@@ -755,6 +801,79 @@ mod tests {
             assert_eq!(probe.temperature, expected);
         }
         assert_eq!(bus.reads.len(), 8);
+        assert_eq!(diagnostics.events[ReadFailure::ScratchpadCrc as usize], 1);
+        assert_eq!(
+            diagnostics.events[ReadFailure::InvalidScratchpad as usize],
+            2
+        );
+        assert_eq!(diagnostics.events[ReadFailure::OutOfRange as usize], 2);
+        assert_eq!(diagnostics.probe_errors.len(), 5);
+        assert_eq!(
+            diagnostics.probe_errors[0],
+            (roms[0], ReadFailure::ScratchpadCrc)
+        );
+
+        let mut monitor = ProbeMonitor::new(None);
+        monitor.update(&probes);
+        let mut totals = diagnostics::Diagnostics::default();
+        totals.update(&diagnostics, monitor.readings(), 1, 800);
+        let failed = totals.probes.iter().find(|p| p.rom == roms[0]).unwrap();
+        assert_eq!(failed.current_error, Some(ReadFailure::ScratchpadCrc));
+        let valid = totals.probes.iter().find(|p| p.rom == roms[7]).unwrap();
+        assert_eq!((valid.successes, valid.failures), (1, 0));
+    }
+
+    #[test]
+    fn diagnostics_identify_search_conversion_and_presence_failures() {
+        let mut bus = FakeBus::new(Vec::new());
+        let mut diagnostics = SampleDiagnostics::default();
+        assert!(
+            super::sample(&mut bus, &mut diagnostics)
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(diagnostics.last_error, Some(ReadFailure::NoPresence));
+
+        for missing_reset in [2, 3] {
+            let mut bus = FakeBus::new(vec![Device::new(0x28, 1, 20.0)]);
+            bus.absent_on_reset = Some(missing_reset);
+            let mut diagnostics = SampleDiagnostics::default();
+            let readings = super::sample(&mut bus, &mut diagnostics).unwrap();
+            assert_eq!(readings[0].temperature, None);
+            assert_eq!(diagnostics.batch_error, Some(ReadFailure::NoPresence));
+        }
+
+        let mut bus = FakeBus::new(vec![Device::new(0x28, 1, 20.0)]);
+        bus.complete = false;
+        let mut diagnostics = SampleDiagnostics::default();
+        super::sample(&mut bus, &mut diagnostics).unwrap();
+        assert_eq!(
+            diagnostics.batch_error,
+            Some(ReadFailure::ConversionTimeout)
+        );
+        assert!(bus.reads.is_empty());
+
+        bus.abort_search_at = Some(11);
+        let mut diagnostics = SampleDiagnostics::default();
+        super::sample(&mut bus, &mut diagnostics).unwrap();
+        assert_eq!(diagnostics.last_error, Some(ReadFailure::SearchConflict));
+
+        let mut bad_crc = Device::new(0x28, 2, 20.0);
+        bad_crc.address[7] ^= 1;
+        let mut bus = FakeBus::new(vec![Device::new(0x10, 1, 20.0), bad_crc]);
+        let mut diagnostics = SampleDiagnostics::default();
+        super::sample(&mut bus, &mut diagnostics).unwrap();
+        assert_eq!(
+            diagnostics.events[ReadFailure::UnsupportedFamily as usize],
+            1
+        );
+        assert_eq!(diagnostics.events[ReadFailure::RomCrc as usize], 1);
+
+        let mut bus = FakeBus::new((0..20).map(|id| Device::new(0x28, id, 20.0)).collect());
+        let mut diagnostics = SampleDiagnostics::default();
+        super::sample(&mut bus, &mut diagnostics).unwrap();
+        assert_eq!(diagnostics.events[ReadFailure::SearchLimit as usize], 1);
+        assert_eq!(bus.searches, MAX_PROBES);
     }
 
     #[test]
@@ -841,7 +960,14 @@ mod tests {
         for operation in 1..=successful.operations {
             let mut bus = FakeBus::new(devices.clone());
             bus.fail_at = Some(operation);
-            assert_eq!(sample(&mut bus), Err("GPIO failure"), "slot {operation}");
+            let mut diagnostics = SampleDiagnostics::default();
+            assert_eq!(
+                super::sample(&mut bus, &mut diagnostics),
+                Err("GPIO failure"),
+                "slot {operation}"
+            );
+            assert_eq!(diagnostics.batch_error, Some(ReadFailure::Gpio));
+            assert_eq!(diagnostics.events[ReadFailure::Gpio as usize], 1);
         }
     }
 

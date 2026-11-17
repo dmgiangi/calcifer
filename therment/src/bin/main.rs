@@ -39,6 +39,11 @@ mod wifi_credentials {
     include!(concat!(env!("OUT_DIR"), "/wifi_credentials.rs"));
 }
 
+#[cfg(feature = "ota")]
+const FIRMWARE_VERSION: &str = ota_credentials::RELEASE_VERSION;
+#[cfg(not(feature = "ota"))]
+const FIRMWARE_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 struct ProbeBus<'a, 'd> {
     pin: &'a mut PinDriver<'d, esp_idf_hal::gpio::InputOutput>,
 }
@@ -47,41 +52,47 @@ impl probes::Bus for ProbeBus<'_, '_> {
     type Error = EspError;
 
     fn reset(&mut self) -> Result<bool, EspError> {
-        self.pin.set_low()?;
-        Ets::delay_us(480);
-        self.pin.set_high()?;
-        Ets::delay_us(70);
-        let presence = self.pin.is_low();
-        Ets::delay_us(410);
-        Ok(presence)
+        probes::timing::reset(self)
     }
 
     fn write_bit(&mut self, bit: bool) -> Result<(), EspError> {
-        self.pin.set_low()?;
-        if bit {
-            Ets::delay_us(6);
-            self.pin.set_high()?;
-            Ets::delay_us(64);
-        } else {
-            Ets::delay_us(60);
-            self.pin.set_high()?;
-            Ets::delay_us(10);
-        }
-        Ok(())
+        probes::timing::write_bit(self, bit)
     }
 
     fn read_bit(&mut self) -> Result<bool, EspError> {
-        self.pin.set_low()?;
-        Ets::delay_us(6);
-        self.pin.set_high()?;
-        Ets::delay_us(9);
-        let bit = self.pin.is_high();
-        Ets::delay_us(55);
-        Ok(bit)
+        probes::timing::read_bit(self)
     }
 
     fn wait_conversion(&mut self) {
         std::thread::sleep(Duration::from_millis(750));
+    }
+}
+
+impl probes::timing::Io for ProbeBus<'_, '_> {
+    type Error = EspError;
+
+    #[inline(always)]
+    fn set_low(&mut self) -> Result<(), EspError> {
+        self.pin.set_low()
+    }
+    #[inline(always)]
+    fn set_high(&mut self) -> Result<(), EspError> {
+        self.pin.set_high()
+    }
+    #[inline(always)]
+    fn is_high(&self) -> bool {
+        self.pin.is_high()
+    }
+    #[inline(always)]
+    fn delay_us(&mut self, us: u32) {
+        Ets::delay_us(us);
+    }
+    #[inline(always)]
+    fn critical<R>(
+        &mut self,
+        operation: impl FnOnce(&mut Self) -> Result<R, EspError>,
+    ) -> Result<R, EspError> {
+        esp_idf_hal::interrupt::free(|| operation(self))
     }
 }
 
@@ -95,6 +106,7 @@ struct Snapshot {
     action: &'static str,
     temperature: Option<f32>,
     probes: Vec<probes::MonitoredProbe>,
+    diagnostics: probes::diagnostics::Diagnostics,
     control_probe: Option<probes::Rom>,
     revision: u64,
 }
@@ -117,6 +129,7 @@ const COMPRESSOR_DELAY: Duration = Duration::from_secs(300);
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     esp_idf_hal::sys::link_patches();
     EspLogger::initialize_default();
+    let started = Instant::now();
 
     #[cfg(feature = "ota")]
     EspError::convert(unsafe { esp_idf_hal::sys::esp_task_wdt_add(std::ptr::null_mut()) })?;
@@ -171,6 +184,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         action: "idle",
         temperature: None,
         probes: Vec::new(),
+        diagnostics: probes::diagnostics::Diagnostics::default(),
         control_probe,
         revision: 0,
     }));
@@ -218,6 +232,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut temperature = None;
     let mut probe_readings = Vec::new();
     let mut probe_monitor = probes::ProbeMonitor::new(control_probe);
+    let mut diagnostics = probes::diagnostics::Diagnostics::default();
     let mut revision = 0u64;
     #[cfg(feature = "ota")]
     let mut ota_waiting: Option<mpsc::Sender<()>> = None;
@@ -368,7 +383,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             revision = revision.wrapping_add(1);
         }
         if last_read.elapsed() >= PROBE_SAMPLE_INTERVAL {
-            probe_readings = match probes::sample(&mut ProbeBus { pin: &mut sensor }) {
+            let sample_started = Instant::now();
+            let mut cycle = probes::diagnostics::SampleDiagnostics::default();
+            probe_readings = match probes::sample(&mut ProbeBus { pin: &mut sensor }, &mut cycle) {
                 Ok(readings) => readings,
                 Err(error) => {
                     warn!("OneWire error: {error}");
@@ -376,6 +393,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             };
             probe_monitor.update(&probe_readings);
+            diagnostics.update(
+                &cycle,
+                probe_monitor.readings(),
+                started.elapsed().as_secs(),
+                sample_started
+                    .elapsed()
+                    .as_millis()
+                    .min(u128::from(u64::MAX)) as u64,
+            );
+            if let Some(reason) = diagnostics.current_error {
+                warn!(
+                    "Probe sample {}: {} (failed cycles {})",
+                    diagnostics.cycles,
+                    reason.as_str(),
+                    diagnostics.failed_cycles
+                );
+            }
             temperature = probe_monitor.temperature(control_probe);
             if control_probe.is_some() && temperature.is_none() {
                 warn!("Control probe has no usable reading; outputs inhibited");
@@ -428,6 +462,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             },
             temperature,
             probes: probe_monitor.readings().to_vec(),
+            diagnostics: diagnostics.clone(),
             control_probe,
             revision,
         };

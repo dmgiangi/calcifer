@@ -1,10 +1,13 @@
 # Therment OTA operations
 
 Status: the core OTA path has been exercised with normal releases and a
-controlled boot-failure rollback. On 2026-11-16, action `20` installed
-`probe-interval-15s-1`; hawkBit confirmed the matching installed version. The
-release samples probes every 15 seconds. A Home Assistant screenshot received
-that day shows both probes with valid readings and `286d0743980f00bb` selected.
+controlled boot-failure rollback. On 2026-11-17, action `21` installed
+`probe-timing-diagnostics-1`; hawkBit and live MQTT confirmed the matching
+version. Initial diagnostics reported 13 successful readings per probe and no
+errors through 191 seconds uptime. The release keeps the 15-second sampling
+wait and adds protected OneWire timing and boot-scoped diagnostics. A Home
+Assistant screenshot received on 2026-11-16 shows both probes with valid
+readings and `286d0743980f00bb` selected.
 The operator subsequently confirmed physical acceptance of selection persistence
 across restart, selected-probe-loss shutdown and compressor delay. The test ROM
 was chosen arbitrarily, so its physical location remains unidentified. Settings
@@ -158,6 +161,35 @@ python3 -m unittest discover -s therment/tests -p 'test_*.py'
 cargo +stable test --manifest-path therment/tests/ota-policy/Cargo.toml \
   --target x86_64-unknown-linux-gnu --locked
 ```
+
+## Released probe timing/diagnostic firmware
+
+On 2026-11-17, `probe-timing-diagnostics-1` was prepared with interrupt-protected
+OneWire timing and retained MQTT/Home Assistant diagnostics (see README.md).
+The build-only OTA check succeeded: 1,322,144 bytes in a 1,966,080-byte slot.
+All 35 Rust host tests and 8 Python OTA operator tests passed; source formatting,
+diff whitespace and the OpenSpec change validated. The separate backup test
+cannot import the pre-existing missing `scripts/hawkbit-local-backup.py`.
+
+After the operator confirmed safe loads and explicitly authorized OTA, the
+release was uploaded and installed as action `21`. Both the deployment command
+and a separate read-only query reported `finished`/`success` with installed
+version `probe-timing-diagnostics-1`; MQTT reported the same running version.
+
+Read-only MQTT observation verified ten consecutive distinct live diagnostic
+updates (cycles 4–13), in addition to startup observations. At uptime 191 seconds,
+the counters reported 13 successes and zero failures for each probe, zero failed
+cycles and zero categorized events; both probes remained `ok`. Temperatures
+were 20.5–21.0 °C for `286d0743980f00bb` and 20.0–20.5 °C for
+`28f3e7459204023f`. The selected control ROM remained `286d0743980f00bb`, and
+availability returned to `online` after the expected OTA restart.
+
+The retained diagnostic snapshot and all three retained Home Assistant
+diagnostic discovery configurations were received with the expected state
+topic. This verifies MQTT publication, not Home Assistant UI acceptance or
+long-term reliability. The short initial observation does not rule out later
+intermittent errors or electrical faults; diagnostics remain enabled to
+identify their causes.
 
 ## USB migration and recovery
 

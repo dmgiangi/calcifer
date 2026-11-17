@@ -224,9 +224,20 @@ pub fn run(
         }
         if connected && !probe_state_reset {
             // Clear retained readings from previous runs before going online.
+            let current = snapshot.lock().unwrap().clone();
             probe_state_reset = publish(&mut client, AVAIL, "offline")
                 && publish(&mut client, PROBES_STATE, "{}")
-                && publish(&mut client, PROBES_STATUS_STATE, "{}");
+                && publish(&mut client, PROBES_STATUS_STATE, "{}")
+                && publish(
+                    &mut client,
+                    probe_mqtt::PROBES_DIAGNOSTICS,
+                    &probe_mqtt::diagnostics_state(
+                        &current.diagnostics,
+                        &current.probes,
+                        crate::FIRMWARE_VERSION,
+                    )
+                    .to_string(),
+                );
         }
         if connected && probe_state_reset && !subscribed {
             let setpoint_ok = client.subscribe(SETPOINT, QoS::AtLeastOnce).is_ok();
@@ -273,6 +284,11 @@ pub fn run(
                     &mut client,
                     "homeassistant/binary_sensor/therment-01-compressor-wait/config",
                     WAIT_DISCOVERY,
+                )
+                && publish(
+                    &mut client,
+                    probe_mqtt::BUS_DIAGNOSTICS_DISCOVERY,
+                    &probe_mqtt::bus_diagnostics_discovery().to_string(),
                 )
             {
                 subscribed = true;
@@ -323,6 +339,11 @@ pub fn run(
                         &probe_mqtt::probe_status_discovery_topic(rom),
                         &probe_mqtt::probe_status_discovery(rom).to_string(),
                     )
+                    && publish(
+                        &mut client,
+                        &probe_mqtt::probe_diagnostics_discovery_topic(rom),
+                        &probe_mqtt::probe_diagnostics_discovery(rom).to_string(),
+                    )
                 {
                     discovered_probes.insert(rom);
                 }
@@ -368,6 +389,16 @@ pub fn run(
                     PROBES_STATUS_STATE,
                     &probe_mqtt::probe_status_state(&current.probes).to_string(),
                 );
+                let diagnostics_ok = publish(
+                    &mut client,
+                    probe_mqtt::PROBES_DIAGNOSTICS,
+                    &probe_mqtt::diagnostics_state(
+                        &current.diagnostics,
+                        &current.probes,
+                        crate::FIRMWARE_VERSION,
+                    )
+                    .to_string(),
+                );
                 // Only the accepted, persisted selection in Snapshot is reported.
                 let selection_ok = publish(
                     &mut client,
@@ -378,6 +409,7 @@ pub fn run(
                     && state_ok
                     && probes_ok
                     && probe_status_ok
+                    && diagnostics_ok
                     && selection_ok
                     && publish(&mut client, AVAIL, "online")
                 {

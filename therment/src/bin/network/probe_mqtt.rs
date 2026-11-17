@@ -1,5 +1,6 @@
 //! Hardware-independent Home Assistant discovery and current probe state.
 
+use crate::probes::diagnostics::{Diagnostics, ReadFailure};
 use crate::probes::{MonitoredProbe, Rom};
 use serde_json::{Value, json};
 use std::collections::BTreeSet;
@@ -9,7 +10,105 @@ pub const CONTROL_PROBE_STATE: &str = "therment/therment-01/control_probe/state"
 pub const CONTROL_PROBE_DISCOVERY: &str = "homeassistant/select/therment-01-control-probe/config";
 pub const PROBES_STATE: &str = "therment/therment-01/probes/state";
 pub const PROBES_STATUS_STATE: &str = "therment/therment-01/probes/status";
+pub const PROBES_DIAGNOSTICS: &str = "therment/therment-01/probes/diagnostics";
+pub const BUS_DIAGNOSTICS_DISCOVERY: &str =
+    "homeassistant/sensor/therment-01-probe-failed-cycles/config";
 const AVAILABILITY: &str = "therment/therment-01/availability";
+
+pub fn bus_diagnostics_discovery() -> Value {
+    json!({
+        "name": "Probe failed cycles",
+        "unique_id": "therment-01-probe-failed-cycles",
+        "device": {"identifiers": ["therment-01"]},
+        "entity_category": "diagnostic",
+        "state_class": "total_increasing",
+        "state_topic": PROBES_DIAGNOSTICS,
+        "value_template": "{{ value_json.failed_cycles }}",
+        "json_attributes_topic": PROBES_DIAGNOSTICS,
+        "json_attributes_template": "{{ {'firmware_version': value_json.firmware_version, 'uptime_s': value_json.uptime_s, 'cycles': value_json.cycles, 'cycle_duration_ms': value_json.cycle_duration_ms, 'current_error': value_json.current_error, 'last_error': value_json.last_error, 'last_error_uptime_s': value_json.last_error_uptime_s, 'events': value_json.events} | tojson }}",
+        "availability_topic": AVAILABILITY,
+        "icon": "mdi:alert-circle-outline",
+        "qos": 1,
+    })
+}
+
+pub fn probe_diagnostics_discovery_topic(rom: Rom) -> String {
+    format!("homeassistant/sensor/therment-01-probe-{rom}-failures/config")
+}
+
+pub fn probe_diagnostics_discovery(rom: Rom) -> Value {
+    json!({
+        "name": format!("Probe {rom} failed readings"),
+        "unique_id": format!("therment-01-probe-{rom}-failures"),
+        "device": {"identifiers": ["therment-01"]},
+        "entity_category": "diagnostic",
+        "state_class": "total_increasing",
+        "state_topic": PROBES_DIAGNOSTICS,
+        "value_template": format!("{{{{ value_json.probes.get('{rom}', {{}}).get('failures') }}}}"),
+        "json_attributes_topic": PROBES_DIAGNOSTICS,
+        "json_attributes_template": format!("{{{{ value_json.probes.get('{rom}', {{}}) | tojson }}}}"),
+        "availability_mode": "all",
+        "availability": [
+            {"topic": AVAILABILITY},
+            {"topic": PROBES_DIAGNOSTICS,
+             "value_template": format!("{{{{ 'online' if '{rom}' in value_json.probes else 'offline' }}}}")},
+        ],
+        "icon": "mdi:alert-circle-outline",
+        "qos": 1,
+    })
+}
+
+pub fn diagnostics_state(
+    diagnostics: &Diagnostics,
+    readings: &[MonitoredProbe],
+    version: &str,
+) -> Value {
+    let error = |reason: Option<ReadFailure>| reason.map(ReadFailure::as_str);
+    let events: serde_json::Map<_, _> = ReadFailure::ALL
+        .into_iter()
+        .map(|reason| {
+            (
+                reason.as_str().into(),
+                json!(diagnostics.events[reason as usize]),
+            )
+        })
+        .collect();
+    let probes: serde_json::Map<_, _> = diagnostics
+        .probes
+        .iter()
+        .filter_map(|probe| {
+            let reading = readings.iter().find(|r| r.rom == probe.rom)?;
+            Some((
+                probe.rom.to_string(),
+                json!({
+                    "successes": probe.successes,
+                    "failures": probe.failures,
+                    "consecutive_failures": reading.consecutive_failures,
+                    "detected": reading.detected,
+                    "health": reading.health.as_str(),
+                    "current_error": error(probe.current_error),
+                    "last_error": error(probe.last_error),
+                    "last_error_uptime_s": probe.last_error_uptime_s,
+                    "last_success_uptime_s": probe.last_success_uptime_s,
+                }),
+            ))
+        })
+        .collect();
+    json!({
+        "schema_version": 1,
+        "firmware_version": version,
+        "counter_scope": "boot",
+        "uptime_s": diagnostics.uptime_s,
+        "cycle_duration_ms": diagnostics.cycle_duration_ms,
+        "cycles": diagnostics.cycles,
+        "failed_cycles": diagnostics.failed_cycles,
+        "current_error": error(diagnostics.current_error),
+        "last_error": error(diagnostics.last_error),
+        "last_error_uptime_s": diagnostics.last_error_uptime_s,
+        "events": events,
+        "probes": probes,
+    })
+}
 
 pub fn control_probe_state(selected: Option<Rom>) -> String {
     selected.map_or_else(|| "None".into(), |rom| rom.to_string())
@@ -130,6 +229,84 @@ mod tests {
             },
             detected: true,
         }
+    }
+
+    #[test]
+    fn diagnostic_payload_distinguishes_stale_reading_from_current_success() {
+        let mut reading = probe(1, Some(20.0));
+        reading.health = ProbeHealth::Stale;
+        reading.consecutive_failures = 1;
+        let mut cycle = crate::probes::diagnostics::SampleDiagnostics::default();
+        cycle.fail_probe(reading.rom, ReadFailure::ScratchpadCrc);
+        let mut totals = Diagnostics::default();
+        totals.update(&cycle, &[reading], 16, 802);
+        let payload = diagnostics_state(&totals, &[reading], "test-release");
+        assert_eq!(payload["schema_version"], 1);
+        assert_eq!(payload["counter_scope"], "boot");
+        assert_eq!(payload["firmware_version"], "test-release");
+        assert_eq!(payload["failed_cycles"], 1);
+        assert_eq!(payload["events"]["scratchpad_crc"], 1);
+        let rom = reading.rom.to_string();
+        assert_eq!(payload["probes"][&rom]["current_error"], "scratchpad_crc");
+        assert_eq!(payload["probes"][&rom]["failures"], 1);
+        assert_eq!(
+            payload["probes"][&rom]["last_success_uptime_s"],
+            Value::Null
+        );
+        assert_eq!(payload["probes"][&rom]["consecutive_failures"], 1);
+        assert_eq!(probe_state(&[reading])[&rom], 20.0);
+
+        reading.health = ProbeHealth::Ok;
+        reading.consecutive_failures = 0;
+        totals.update(&Default::default(), &[reading], 32, 805);
+        let payload = diagnostics_state(&totals, &[reading], "test-release");
+        assert_eq!(payload["current_error"], Value::Null);
+        assert_eq!(payload["last_error"], "scratchpad_crc");
+        assert_eq!(payload["probes"][&rom]["current_error"], Value::Null);
+        assert_eq!(payload["probes"][&rom]["successes"], 1);
+        assert_eq!(payload["probes"][&rom]["last_error_uptime_s"], 16);
+        assert_eq!(payload["probes"][&rom]["last_success_uptime_s"], 32);
+        assert_eq!(payload["failed_cycles"], 1);
+        assert_eq!(payload["cycles"], 2);
+    }
+
+    #[test]
+    fn diagnostic_discovery_has_stable_ids_boot_counters_and_missing_safe_attributes() {
+        let rom = probe(1, None).rom;
+        let config = probe_diagnostics_discovery(rom);
+        assert_eq!(
+            config["unique_id"],
+            format!("therment-01-probe-{rom}-failures")
+        );
+        assert_eq!(config["entity_category"], "diagnostic");
+        assert_eq!(config["state_class"], "total_increasing");
+        assert_eq!(config["state_topic"], PROBES_DIAGNOSTICS);
+        assert_eq!(config["json_attributes_topic"], PROBES_DIAGNOSTICS);
+        assert!(
+            config["json_attributes_template"]
+                .as_str()
+                .unwrap()
+                .contains("get(")
+        );
+        assert_eq!(config["availability"][0]["topic"], AVAILABILITY);
+        assert_eq!(config["availability"][1]["topic"], PROBES_DIAGNOSTICS);
+        assert_eq!(
+            probe_diagnostics_discovery_topic(rom),
+            format!("homeassistant/sensor/therment-01-probe-{rom}-failures/config")
+        );
+        let config = bus_diagnostics_discovery();
+        assert_eq!(
+            BUS_DIAGNOSTICS_DISCOVERY,
+            "homeassistant/sensor/therment-01-probe-failed-cycles/config"
+        );
+        assert_eq!(config["value_template"], "{{ value_json.failed_cycles }}");
+        assert_eq!(config["availability_topic"], AVAILABILITY);
+        assert_eq!(config["entity_category"], "diagnostic");
+        assert_eq!(config["state_class"], "total_increasing");
+        let initial = diagnostics_state(&Diagnostics::default(), &[], "test");
+        assert_eq!(initial["probes"], json!({}));
+        assert_eq!(initial["last_error"], Value::Null);
+        assert_eq!(initial["cycles"], 0);
     }
 
     #[test]
