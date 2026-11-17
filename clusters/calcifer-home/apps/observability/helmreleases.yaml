@@ -63,6 +63,7 @@ spec:
         namespace: monitoring
   values:
     fullnameOverride: node-exporter
+    prometheusScrape: false
     prometheus:
       monitor:
         enabled: false
