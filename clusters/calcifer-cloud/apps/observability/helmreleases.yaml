@@ -523,6 +523,37 @@ spec:
             forward_to = [prometheus.remote_write.victoriametrics.receiver]
           }
 
+          // Probe from Cloud: Home metrics cannot arrive while WireGuard is down.
+          prometheus.exporter.blackbox "private_transit" {
+            config = `
+          modules:
+            home_edge_https:
+              prober: http
+              timeout: 8s
+              http:
+                preferred_ip_protocol: ip4
+                follow_redirects: false
+                headers:
+                  Host: home.calcifer.tech
+                tls_config:
+                  server_name: home.calcifer.tech
+          `
+            target {
+              // The exporter uses this name as the metric's job label.
+              name = "cloud-home-edge-https"
+              address = "https://172.31.255.2/"
+              module = "home_edge_https"
+              labels = { probe_name = "cloud-home-edge-https" }
+            }
+          }
+
+          prometheus.scrape "private_transit" {
+            targets         = prometheus.exporter.blackbox.private_transit.targets
+            scrape_interval = "30s"
+            scrape_timeout  = "10s"
+            forward_to      = [prometheus.remote_write.victoriametrics.receiver]
+          }
+
           loki.process "pod_logs" {
             stage.labels {
               values = {

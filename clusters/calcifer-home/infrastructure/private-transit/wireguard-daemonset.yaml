@@ -31,6 +31,7 @@ spec:
               chmod 600 /run/wireguard/wg0.conf
               cleanup() { wg-quick down /run/wireguard/wg0.conf || true; }
               trap cleanup EXIT INT TERM
+              /bin/sh /health/healthcheck.sh init
               wg-quick up /run/wireguard/wg0.conf
               if command -v nc >/dev/null 2>&1 && nc -z -w 2 172.31.255.1 16379 >/dev/null 2>&1; then
                 echo "cloud redis private listener status=reachable"
@@ -38,6 +39,19 @@ spec:
                 echo "cloud redis private listener status=unreachable"
               fi
               while true; do sleep 3600 & wait "$!"; done
+          readinessProbe:
+            exec:
+              command: [/bin/sh, /health/healthcheck.sh, ready]
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 1
+          livenessProbe:
+            exec:
+              command: [/bin/sh, /health/healthcheck.sh, live]
+            periodSeconds: 30
+            timeoutSeconds: 5
+            # The script supplies startup grace and a persistent 30-minute cooldown.
+            failureThreshold: 1
           securityContext:
             privileged: true
             runAsUser: 0
@@ -49,6 +63,9 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /config
+              readOnly: true
+            - name: health
+              mountPath: /health
               readOnly: true
             - name: private-key
               mountPath: /secrets
@@ -64,6 +81,9 @@ spec:
         - name: config
           configMap:
             name: home-edge-wireguard-config
+        - name: health
+          configMap:
+            name: home-edge-wireguard-health
         - name: private-key
           secret:
             secretName: home-edge-wireguard

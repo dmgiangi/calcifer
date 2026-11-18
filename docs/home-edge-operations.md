@@ -184,6 +184,64 @@ connected, authorization telemetry should report `CONNECTED`; after the
  least 15 seconds. A 30-second stable-success window, a 30-second lease, a
  20-second gate, and a three-second drain precede automatic generation recovery.
 
+## WireGuard health and bounded recovery
+
+Home checks its single peer handshake every 30 seconds. Readiness fails when
+the handshake is absent, invalid, or older than 180 seconds. This is a status
+signal, not a firewall: the host-network tunnel remains available to recover.
+The 25-second persistent keepalive remains enabled; idle periods should still
+produce fresh handshakes without application traffic.
+
+After a 300-second startup grace, a missing handshake or one older than 300
+seconds requests a container restart through liveness. Only Home initiates
+automatic recovery; Cloud is not restarted. The restart recreates the Home
+UDP socket and re-applies its existing routes/firewall rules. It does not
+rotate keys or change the permitted network paths.
+
+The health script records each recovery attempt in the memory-backed `/run`
+volume **before** requesting the restart. Node uptime, rather than wall time,
+enforces at least 1,800 seconds between attempts, including failed attempts.
+During that cooldown liveness passes but readiness remains unhealthy. The
+budget survives container restarts, not Pod replacement, rollout or node reboot;
+those start a new budget and startup grace. This is bounded retry, not proof
+that a router or provider fault has been corrected.
+
+Cloud Alloy independently checks `https://172.31.255.2/` every 30 seconds with
+Host and verified TLS SNI `home.calcifer.tech`, without following redirects.
+The Grafana rule `cloud-home-private-transit-down` fires after five minutes
+of failed or missing probe samples (samples older than 90 seconds are ignored).
+These metrics stay in Cloud and do not depend on Home remote-write recovering
+first. An alert can also indicate a
+Home Traefik, certificate or Home Assistant failure, not just WireGuard.
+It appears in Grafana; external delivery requires a separately configured
+Grafana contact point and notification policy. This repository does not
+configure an email, chat or phone recipient for it.
+
+Validate locally, without applying resources:
+
+<augment_code_snippet mode="EXCERPT">
+````sh
+python3 -m unittest discover -s tests -p 'test_wireguard_health.py'
+kubectl kustomize clusters/calcifer-home/infrastructure/private-transit >/dev/null
+kubectl kustomize clusters/calcifer-cloud/apps/observability >/dev/null
+kubectl kustomize clusters/calcifer-cloud/apps/observability/grafana >/dev/null
+````
+</augment_code_snippet>
+
+An approved rollout must verify a fresh handshake on both peers, successful
+Cloud-origin HTTPS probes, and public HTTPS success. A controlled failure test
+must separately verify readiness, one recovery attempt, and cooldown before
+relying on automatic recovery. Do not deliberately break the production tunnel
+without approval. Do not log private keys, credentials or complete `wg` dumps.
+
+On 2026-11-18, public HTTPS returned 504 while LAN HTTPS returned 200. The last
+handshake was at 02:24:55 UTC. Restarting only Home WireGuard restored public
+HTTPS (200 in 0.75 seconds), and Cloud learned a different public peer address
+and port. A changed WAN address or stale UDP/NAT state is consistent with the
+evidence, but router/provider logs are needed to establish the root cause or
+link it conclusively to the previous day's incident. Keepalive was already 25
+seconds; there was no local link event near the last handshake.
+
 ## Rollback and incident recovery
 
 For a Home edge route rollback, remove or suspend the Cloud edge route first,

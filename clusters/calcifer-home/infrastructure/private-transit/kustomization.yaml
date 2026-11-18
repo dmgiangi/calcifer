@@ -5,3 +5,8 @@ resources:
   - wireguard-private-key.sops.yaml
   - wireguard-config.yaml
   - wireguard-daemonset.yaml
+configMapGenerator:
+  - name: home-edge-wireguard-health
+    namespace: private-transit
+    files:
+      - healthcheck.sh=wireguard-healthcheck.sh

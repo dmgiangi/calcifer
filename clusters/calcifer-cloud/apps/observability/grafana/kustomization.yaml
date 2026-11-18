@@ -10,6 +10,7 @@ resources:
   - dashboards.yaml
   - authorization-server-alerts.yaml
   - redis-alerts.yaml
+  - private-transit-alerts.yaml
   - authorization-server-outcomes.yaml
   - home-forwarding-dashboard.yaml
   - home-network-dashboard.yaml
