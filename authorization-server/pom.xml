@@ -95,6 +95,10 @@
         <groupId>org.graalvm.buildtools</groupId>
         <artifactId>native-maven-plugin</artifactId>
         <configuration>
+          <buildArgs>
+            <!-- Netty CleanerJava25 closes shared arenas when releasing Redis buffers. -->
+            <buildArg>-H:+SharedArenaSupport</buildArg>
+          </buildArgs>
           <metadataRepository>
             <enabled>true</enabled>
             <dependencies>
