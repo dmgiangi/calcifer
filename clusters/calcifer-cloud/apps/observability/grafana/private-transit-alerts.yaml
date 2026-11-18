@@ -33,7 +33,7 @@ spec:
             instant: true
             range: false
             # Ignore samples older than three scrapes; collector loss is not success.
-            expr: min(probe_success{cluster="calcifer-cloud",job="cloud-home-edge-https",probe_name="cloud-home-edge-https"} and (time() - timestamp(probe_success{cluster="calcifer-cloud",job="cloud-home-edge-https",probe_name="cloud-home-edge-https"}) < 90)) or vector(0)
+            expr: min(probe_success{cluster="calcifer-cloud",job="integrations/blackbox/cloud-home-edge-https",probe_name="cloud-home-edge-https"} and (time() - timestamp(probe_success{cluster="calcifer-cloud",job="integrations/blackbox/cloud-home-edge-https",probe_name="cloud-home-edge-https"}) < 90)) or vector(0)
             intervalMs: 1000
             maxDataPoints: 43200
             refId: A

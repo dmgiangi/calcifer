@@ -150,7 +150,7 @@ class WireGuardManifestTest(unittest.TestCase):
         expr = rule["data"][0]["model"]["expr"]
         self.assertIn('cluster="calcifer-cloud"', expr)
         self.assertIn('probe_name="cloud-home-edge-https"', expr)
-        self.assertIn(f'job="{target_name}"', expr)
+        self.assertIn(f'job="integrations/blackbox/{target_name}"', expr)
         self.assertIn("time() - timestamp(", expr)
         self.assertIn("< 90", expr)
         self.assertTrue(expr.endswith("or vector(0)"))
